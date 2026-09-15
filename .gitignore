@@ -1,4 +1,6 @@
 /build*/
 /dist/
 __pycache__/
+config/bridge.json
+config/bridge.json.*
 *.user

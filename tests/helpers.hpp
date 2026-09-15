@@ -1,0 +1,10 @@
+#pragma once
+#include "monaka_bridge/bridge.hpp"
+#include <stdexcept>
+#define CHECK(x) do{if(!(x))throw std::runtime_error("check failed: " #x);}while(false)
+inline bool near(double a,double b){return std::abs(a-b)<1e-6;}
+inline const std::string S1="00000000-0000-4000-8000-000000000001",S2="00000000-0000-4000-8000-000000000002",SB="00000000-0000-4000-8000-000000000003";
+inline mb::c1::TrackerObservation sample(std::string source="pico",std::int64_t sequence=0){mb::c1::TrackerObservation p;p.version={1,0};p.source_id=source;p.device_id="device";p.session_id=p.clock_id=S1;p.sequence=sequence;p.timestamp_ns=1000000000000;p.sent_at_ns=p.timestamp_ns+1000000;p.timestamp_kind="receive";p.position=mb::Vec{1,2,3};p.orientation=mb::Quat{.5,.5,.5,.5};p.validity={true,true};p.orientation_evidence="device";p.tracking_state="tracked";p.coordinate_space={"native","fixture-native",1};p.capabilities={"position","orientation"};return p;}
+inline mb::Config config(){mb::Config c;c.bridgeId="bridge-installation";c.policy=mb::Policy::Both;mb::Profile p;p.convention="fixture-native";p.quaternionAxes={-3,2,-1,4};p.approved=true;p.evidence="Task2 legacy compatibility";c.profiles["pico"]=p;mb::Binding b;b.source="pico";b.device="device";b.tracker="logical-pico";b.profile="pico";b.inputSpace="native";b.inputRevision=1;b.worldSpace="world";b.spaceApproved=true;c.bindings[{b.source,b.device}]=b;b.source="other";b.tracker="logical-other";c.bindings[{b.source,b.device}]=b;return c;}
+inline std::string wire(const mb::c1::Envelope& e){std::string bytes;mb::c1::Error error;if(!mb::c1::EncodeEnvelope(e,bytes,error))throw std::runtime_error(error.message);return bytes;}
+inline mb::c1::ObservationDeviceState state(const mb::c1::TrackerObservation& p,std::int64_t seq=0){mb::c1::ObservationDeviceState s;s.version=p.version;s.source_id=p.source_id;s.device_id=p.device_id;s.session_id=p.session_id;s.clock_id=p.clock_id;s.sequence=seq;s.timestamp_ns=p.timestamp_ns;s.sent_at_ns=p.sent_at_ns;s.timestamp_kind="receive";s.presence="present";s.tracking_state="initializing";s.coordinate_space=p.coordinate_space;s.capabilities=p.capabilities;return s;}
