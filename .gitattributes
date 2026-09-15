@@ -1,0 +1,4 @@
+third_party/** -text
+dependencies/** -text
+tests/fixtures/** -text
+*.zip binary

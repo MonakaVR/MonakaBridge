@@ -1,0 +1,20 @@
+{
+  "artifact": "vive-backend-handoff.zip",
+  "sha256": "d379df3a00ac93dd03a5f0216a8b06189a0e2a1834cfa0c6ec36f27c0d6227e1",
+  "source_commit": "eaaee63fcacb76d095ff743944fbff1f1427f015",
+  "contract_status": "candidate / master reconciliation pending",
+  "synthetic_fixtures": true,
+  "files": {
+    "config/vut-service.example.conf": "c165d3c3745af103bbbc5b6d90baf678b384ce456f12f47040b2c2afc15db917",
+    "dependencies/artifacts/monaka-protocol-kit-v1.0.zip": "eef5b7f2bc490926385b99dabcd44dc5a374228bf2a7869beea01f9dad936729",
+    "dependencies/monaka-protocol.handoff.json": "69de58dd2f25715a1f3bc27a60eaf9b6a0aa103e3b8f4e8b0703cc29441e5ff8",
+    "dependencies/monaka-protocol.lock.json": "234f0dffc46b808a179ec91da3c185794d7b7c83bc5b7d2bcb31fa73886bcb44",
+    "dependencies/task1-external-handoff.json": "1020f7ba9ec430308791be20bd1b4341323c119e69d0eeaf8e99bac7074d1aad",
+    "docs/task3/implementation.md": "fd750ce4164c56e243f0cf3bd4a4c639302b9708771f85429b942b5a285c879e",
+    "samples/vive-status-samples.jsonl": "8ab45802b32c14fce5d7a8ce61da3f17961c8de316c2df4ed88a2ecc8378456f",
+    "tests/fixtures/pose37.bin": "87930207d3816146d604400ec50164605f4b991be05aaeab20cb7a0806184e86",
+    "tests/fixtures/pose39.bin": "c6717b38e0f097d4134ca7f50e4e31efbc385a1b28783680cd4f786f01e355a8",
+    "tests/mock_consumer.cpp": "5ae8e0faa54792d9a684c7af94141df5f91fbfa124a7e0450cd87fe820ef12ad",
+    "tests/mock_consumer.hpp": "45e74c4a460e9c335146470f6b2cfcda179bb17623bbdec86db21f328770460c"
+  }
+}

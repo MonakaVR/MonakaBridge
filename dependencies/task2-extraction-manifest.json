@@ -1,0 +1,1122 @@
+{
+  "repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+  "audited_base_sha": "4c0321f02b56a8ce420ba40a988ca9c296f05f61",
+  "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+  "packager_source_commit": "c638f158516effd7fc6511daf179b9a927a099a6",
+  "license_status": "No root LICENSE/NOTICE at base; existing file notices preserved, no new grant.",
+  "external_dependencies": {
+    "openvr": {
+      "repository": "https://github.com/ValveSoftware/openvr",
+      "tag": "v2.15.6",
+      "verified_revision": "0924064316de3effbcd1acf1e309182a2deb1c05",
+      "included": false
+    },
+    "windows": "x64 Windows SDK / MSVC C++17 / CMake >=3.20",
+    "gui": ".NET Framework 4.8 Developer Pack (WPF), Windows csc.exe",
+    "runtime": "SteamVR and separately installed PICO HMD app; not included"
+  },
+  "include_closure": [
+    {
+      "from": "tools/steamvr_calibrator.cpp",
+      "include": "world_alignment_ipc.hpp",
+      "to": "outputs/steamvr/common/world_alignment_ipc.hpp"
+    },
+    {
+      "from": "tools/pc_bridge_service.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tools/pc_bridge_service.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "tools/pc_bridge_service.cpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "tools/pc_bridge_service.cpp",
+      "include": "pico_ot_bridge/service_contract.hpp",
+      "to": "include/pico_ot_bridge/service_contract.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/receiver.hpp",
+      "include": "pico_ot_bridge/clock_sync.hpp",
+      "to": "include/pico_ot_bridge/clock_sync.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/receiver.hpp",
+      "include": "pico_ot_bridge/protocol.hpp",
+      "to": "include/pico_ot_bridge/protocol.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/receiver.hpp",
+      "include": "pico_ot_bridge/udp_socket.hpp",
+      "to": "include/pico_ot_bridge/udp_socket.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/publisher.hpp",
+      "include": "pico_ot_backend/types.hpp",
+      "to": "include/pico_ot_backend/types.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/publisher.hpp",
+      "include": "pico_ot_bridge/protocol.hpp",
+      "to": "include/pico_ot_bridge/protocol.hpp"
+    },
+    {
+      "from": "include/pico_ot_bridge/publisher.hpp",
+      "include": "pico_ot_bridge/udp_socket.hpp",
+      "to": "include/pico_ot_bridge/udp_socket.hpp"
+    },
+    {
+      "from": "tools/monaka_smoke_publisher.cpp",
+      "include": "pico_ot_backend/types.hpp",
+      "to": "include/pico_ot_backend/types.hpp"
+    },
+    {
+      "from": "tools/monaka_smoke_publisher.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tools/monaka_smoke_publisher.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "tools/bridge_receiver_cli.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tools/bridge_receiver_cli.cpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "tests/udp_socket_tests.cpp",
+      "include": "pico_ot_bridge/udp_socket.hpp",
+      "to": "include/pico_ot_bridge/udp_socket.hpp"
+    },
+    {
+      "from": "tests/receiver_tests.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tests/receiver_tests.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "tests/receiver_tests.cpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "tests/receiver_c_api_tests.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tests/receiver_c_api_tests.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "tests/receiver_c_api_tests.cpp",
+      "include": "pico_ot_bridge/receiver_c_api.h",
+      "to": "include/pico_ot_bridge/receiver_c_api.h"
+    },
+    {
+      "from": "tests/receiver_c_api_tests.cpp",
+      "include": "pico_ot_bridge/service_contract.hpp",
+      "to": "include/pico_ot_bridge/service_contract.hpp"
+    },
+    {
+      "from": "tests/publisher_tests.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "tests/publisher_tests.cpp",
+      "include": "pico_ot_bridge/protocol.hpp",
+      "to": "include/pico_ot_bridge/protocol.hpp"
+    },
+    {
+      "from": "tests/publisher_tests.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "tests/publisher_tests.cpp",
+      "include": "pico_ot_bridge/udp_socket.hpp",
+      "to": "include/pico_ot_bridge/udp_socket.hpp"
+    },
+    {
+      "from": "tests/protocol_tests.cpp",
+      "include": "pico_ot_bridge/protocol.hpp",
+      "to": "include/pico_ot_bridge/protocol.hpp"
+    },
+    {
+      "from": "tests/clock_sync_tests.cpp",
+      "include": "pico_ot_bridge/clock_sync.hpp",
+      "to": "include/pico_ot_bridge/clock_sync.hpp"
+    },
+    {
+      "from": "src/bridge/udp_socket.cpp",
+      "include": "pico_ot_bridge/udp_socket.hpp",
+      "to": "include/pico_ot_bridge/udp_socket.hpp"
+    },
+    {
+      "from": "src/bridge/receiver_c_api.cpp",
+      "include": "pico_ot_bridge/receiver_c_api.h",
+      "to": "include/pico_ot_bridge/receiver_c_api.h"
+    },
+    {
+      "from": "src/bridge/receiver_c_api.cpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "src/bridge/receiver_c_api.cpp",
+      "include": "pico_ot_bridge/service_contract.hpp",
+      "to": "include/pico_ot_bridge/service_contract.hpp"
+    },
+    {
+      "from": "src/bridge/receiver.cpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "src/bridge/receiver.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "src/bridge/publisher.cpp",
+      "include": "pico_ot_bridge/publisher.hpp",
+      "to": "include/pico_ot_bridge/publisher.hpp"
+    },
+    {
+      "from": "src/bridge/publisher.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "src/bridge/protocol.cpp",
+      "include": "pico_ot_bridge/protocol.hpp",
+      "to": "include/pico_ot_bridge/protocol.hpp"
+    },
+    {
+      "from": "src/bridge/monotonic_clock.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "src/bridge/clock_sync.cpp",
+      "include": "pico_ot_bridge/clock_sync.hpp",
+      "to": "include/pico_ot_bridge/clock_sync.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/tracker_device.hpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/tracker_device.cpp",
+      "include": "tracker_device.hpp",
+      "to": "outputs/steamvr/driver/tracker_device.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/tracker_device.cpp",
+      "include": "driver_log.hpp",
+      "to": "outputs/steamvr/driver/driver_log.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+      "include": "device_provider.hpp",
+      "to": "outputs/steamvr/driver/device_provider.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.hpp",
+      "include": "pico_ot_bridge/receiver.hpp",
+      "to": "include/pico_ot_bridge/receiver.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.hpp",
+      "include": "tracker_device.hpp",
+      "to": "outputs/steamvr/driver/tracker_device.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.cpp",
+      "include": "device_provider.hpp",
+      "to": "outputs/steamvr/driver/device_provider.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.cpp",
+      "include": "driver_log.hpp",
+      "to": "outputs/steamvr/driver/driver_log.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.cpp",
+      "include": "pico_ot_bridge/monotonic_clock.hpp",
+      "to": "include/pico_ot_bridge/monotonic_clock.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.cpp",
+      "include": "pico_ot_bridge/service_contract.hpp",
+      "to": "include/pico_ot_bridge/service_contract.hpp"
+    },
+    {
+      "from": "outputs/steamvr/driver/device_provider.cpp",
+      "include": "world_alignment_ipc.hpp",
+      "to": "outputs/steamvr/common/world_alignment_ipc.hpp"
+    }
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "README.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "c2484958dcbe8a0d223040e86451711858d23c65",
+      "sha256": "0c893161a3c29c10efcc4a9ba421594c0d566d364f4e71a68391a04fc749bbb4",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/README.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "Start_All.cmd",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "Start_All.cmd",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "cb98a2c1f0c9e7233a901d19be5bd1d4b37202e4",
+      "sha256": "473b5d3894e9c936aeebf8bafd7e03c20f0e65bc7703b98e87a2aa4fbc828b2d",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/Start_All.cmd",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "Start_Bridge_Service.cmd",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "Start_Bridge_Service.cmd",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "62b0e6595f3a543f7814f6e870d9cf6e1d45cbff",
+      "sha256": "5a330c28095e04ad3ded79c8ed6fc02d0700ebbd347761b565e81de71fc64baa",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/Start_Bridge_Service.cmd",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "Start_GUI.cmd",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "Start_GUI.cmd",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "78599e7065aadce96a82e6b397b0a4040c551124",
+      "sha256": "b35cb863f75921307ddf593fed5cb2eeb94cef82c0b6954617937eb45c5f8275",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/Start_GUI.cmd",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "Start_PICO_Backend.cmd",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "Start_PICO_Backend.cmd",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "c78f22a218cc2572c441f013ef9fc92efc07da4e",
+      "sha256": "b376bdca856a0cd6a24a03e3ee1ad5b7485e12a17ba1be9d80af1696c95f1aa1",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/Start_PICO_Backend.cmd",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/ARCHITECTURE.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "f920f6510d8ad055a7b60f07b5001d1f2c95753e",
+      "sha256": "0ca36057c17a80f7671c32820d0ea4b1d1b0ba6694e92c3ed795f6c77ce00803",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/ARCHITECTURE.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/KNOWN_LIMITATIONS.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/KNOWN_LIMITATIONS.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "774731774ebfaafc9c8aa2d821758a23a79a1f9c",
+      "sha256": "4ecc1d3c52be6754666db05d8424911585010fb100bd45c4122bab2f51556b03",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/KNOWN_LIMITATIONS.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/OUTPUT_ROUTE_SWITCHING.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/OUTPUT_ROUTE_SWITCHING.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "b1cbe61a008f3f55ac3d5c1b35efc95d5d0b65a8",
+      "sha256": "e97b0ed202cc82dcc316f868b8d9b887ae8d3e3a1073853111c429228c03a601",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/OUTPUT_ROUTE_SWITCHING.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/RUNTIME_VALIDATION.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/RUNTIME_VALIDATION.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "e44d5376c434909f56de85f9c7e595eef0a2aa7c",
+      "sha256": "935b7f6a24874dc5cedc83548481ab14d4aee34f4eb59afea73f8c0a991b9725",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/RUNTIME_VALIDATION.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/STEAMVR_CONTROL_SERVICE.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/STEAMVR_CONTROL_SERVICE.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "c6d4513b277fc10e348e1683efe8045a78906c01",
+      "sha256": "1a15371e5fd95d7b3071934cb2f1dd0642cf136e851f4c09573e87340c449e57",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/STEAMVR_CONTROL_SERVICE.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/STEAMVR_COORDINATE_VALIDATION.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/STEAMVR_COORDINATE_VALIDATION.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "303a1359c65ab317cc8bc47324721c820ebb7a08",
+      "sha256": "eeaba80a10ef79a9b2c8269b5d8e9e19c79a512cbf21d2a42ec84b7530218722",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/STEAMVR_COORDINATE_VALIDATION.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/STEAMVR_OUTPUT_PLAN.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/STEAMVR_OUTPUT_PLAN.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "bf44da6ef41f43f3b835d429db15443fc59c0a06",
+      "sha256": "a6c281d32f9fd2d0ebd286cb0145adfa41149b7600f7a2e8cef33f0e05775803",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/STEAMVR_OUTPUT_PLAN.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "docs/STEAMVR_VALIDATION_STATUS.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "docs/STEAMVR_VALIDATION_STATUS.md",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "b97fc190197e1aa15fd189b4db5c1a7ce44cc01c",
+      "sha256": "92f48b44027fe1bbbd0ac1b08bda79abaa6e3b76bbbbf3784be19eb8cffa4938",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/docs/STEAMVR_VALIDATION_STATUS.md",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_backend/types.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_backend/types.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "74601c41d4470974f242c62d722a24b2732e7dbe",
+      "sha256": "93541778dda6f983612a3ecc24f0ef009be69dd0dcb8858e6afd48cf243cb678",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_backend/types.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/clock_sync.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/clock_sync.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "d408579304c258adfd637c4194fc2d7e61ddcef5",
+      "sha256": "7d9ee6657b85b82a9c25fff3c53e9682b5c6be3bbcb961f1036e9ebe9db016fc",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/clock_sync.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/monotonic_clock.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/monotonic_clock.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "ae24b2b5566f6374f051f9840f4c1478833fb2b3",
+      "sha256": "372d81f191b677a61d95762d78320069d03d0f0daf14b277d1cb4125e6a8d86d",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/monotonic_clock.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/protocol.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/protocol.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "9b4b5597861d539977dc8035d6e4dad19941c435",
+      "sha256": "7a0482f31ae1f57c590f70d48812fd9d97a754cd425a10dcffac0746dbb3a854",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/protocol.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/publisher.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/publisher.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "a0a3b4c18a490fb2568aba91ed0ed3585616ad98",
+      "sha256": "bfc091a253f845169480018bd02956f154457b4dff4695e2b88d76c151beaf2c",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/publisher.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/receiver.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/receiver.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "bbdcbff99c2610ece49221cdd619f3c0a55e7ac8",
+      "sha256": "655f5c5dfb311d22d0413467196c4e1dd43d5172eca2068b2d588fcbdffa9867",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/receiver.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/receiver_c_api.h",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/receiver_c_api.h",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "6443a46db00ba89812c972e5bca188b7454b33b0",
+      "sha256": "ad8421aca1673ad9e82614ac7bc124a9d499908f34be6b0b7cede4375d544fe3",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/receiver_c_api.h",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/service_contract.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/service_contract.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "e293289148a52968161d4a6dda438197d9828820",
+      "sha256": "7c96e38d589460086c271524293ee6c217332919527e149f844eea5add4c154e",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/service_contract.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "include/pico_ot_bridge/udp_socket.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "include/pico_ot_bridge/udp_socket.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "848351f71b51a2029dccba8e3df0399348b22b8d",
+      "sha256": "c18d2a2f31763c70d34d2e0610b1670664ba59753a57783da584e7ffe2f2ec8b",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/include/pico_ot_bridge/udp_socket.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "integrations/monaka/CMakeLists.txt",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "integrations/monaka/CMakeLists.txt",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "784ebd38da799c34039733ef8c74c5d84f89a86e",
+      "sha256": "baf949549951db4c3b3f18d75b2a054c47e57881510eadb2b075abf073c84519",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/integrations/monaka/CMakeLists.txt",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/common/output_route_ipc.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/common/output_route_ipc.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "489bcde07f7c4a15e84463c53b00091d649c8af5",
+      "sha256": "73bf5edb22fcd093caf86d288c98262fde5cd6428874ed5409c59b49fd228cbe",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/common/output_route_ipc.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/common/world_alignment_ipc.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/common/world_alignment_ipc.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "7058aaf0d4851a36745b5b617f6035a7358094fb",
+      "sha256": "d975dc4891bb5c9963aaa1f49c00a2d03c23d9d4ec6ec5c0fc69c66d7181532b",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/common/world_alignment_ipc.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/device_provider.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/device_provider.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "ec31e3925b5a8a0cb43182cc0aac94cb30f266c5",
+      "sha256": "5bcb286f00c6ee2732c71b0fd8e27d136f840580f1dc4cb357d1c55f0aa432aa",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/device_provider.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/device_provider.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/device_provider.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "16666141508b0e2345b39585da8d7936b06a3255",
+      "sha256": "dc7f450a62c2abd32e6c0dc87c713e84d5db96c215cbc8feffd9556dc1f63bea",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/device_provider.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/driver_log.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/driver_log.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "93ee0da6b91920cde3069837f5e5f16c3ebf226a",
+      "sha256": "6350685fde5cdedf3a490b93b009d4f26054727d476e3c6006c4947f832b49d7",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/driver_log.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "063d34387692a64d48c954fec99bc7fcfaa0a811",
+      "sha256": "641da1f410de3f699a02f80ad600face032d4dc53e697b4b534e309e071793bf",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/hmd_driver_factory.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/tracker_device.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+      "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/driver/tracker_device.hpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/driver/tracker_device.hpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "7cc7db94f776fad9f15b641c733cc186a6e78a9a",
+      "sha256": "30155b7cd7436682d8e910d42942c520b26209f3c16b647dbb20b4427979f449",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.hpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "outputs/steamvr/package/driver.vrdrivermanifest",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "outputs/steamvr/package/driver.vrdrivermanifest",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "ec376fc9bea4c977847d16a938d1a26490de9237",
+      "sha256": "c76f31ebfc6d481c642a1341943a4a071d24a73f8e77dc5b186028e194de9810",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/outputs/steamvr/package/driver.vrdrivermanifest",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "reference/CMakeLists.txt",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "CMakeLists.txt",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "cc50d980e7fbc34d2a5fd9d7ff003a6b340f9e88",
+      "sha256": "38e01d10173cb2565881cc8670949d10e99930e9b407a72b26d23c9cf79aef60",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/CMakeLists.txt",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/build_bridge_host.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/build_bridge_host.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "1e04fa9f33a5aa6e45d06acb506ded65916c19ef",
+      "sha256": "225e23a92d9790eafdba780c5971bf86742983df172bd1c9b45ec2823ab5382c",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/build_bridge_host.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/build_monaka_receiver_capi.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/build_monaka_receiver_capi.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "de22ff576c12664582f8e26159214e2af6f38996",
+      "sha256": "33b1175d0eadc1dc963f42a587841ab1398f3fd9f764cf6290631ce2ba3842e6",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/build_monaka_receiver_capi.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/build_pc_bridge_service.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/build_pc_bridge_service.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "ba3aa510c5b31e5248c133622335ba792a80f815",
+      "sha256": "57c2bab0860a1a373de76523cb19682f624cf148846b07ec1413eacfca1ff3de",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/build_pc_bridge_service.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/build_steamvr_driver.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/build_steamvr_driver.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "bf8e16e3d60b54d3e68dabdaa49e549117447527",
+      "sha256": "4a61fe112b6a8b30e169433a27f1c8b1d4e9dc82fb55e48a61c6d93bc7c2659d",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/build_steamvr_driver.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/ensure_pc_runtime.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/ensure_pc_runtime.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "95f8ba0c19e40f188216d7f79bc95a10a5e6407f",
+      "sha256": "82e0d6863d1ca5fef489d09b97428c17d0e639b810555bd075e37382df553cdf",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/ensure_pc_runtime.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/register_steamvr_driver.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/register_steamvr_driver.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "de25b300df3955b7b3b5c47039f692f423ba464c",
+      "sha256": "4fc05968f99e3fb4aec1447fdc8d526d4431572505aa048146327346d512dbed",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/register_steamvr_driver.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/start_pc_bridge_service.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/start_pc_bridge_service.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "6008fa95455a0c959d16d5a1c6a8d3e330795f23",
+      "sha256": "8d5fb8944de9676a3c9379e221572f73920749b2476989e6ba9c22c2c70914e0",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/start_pc_bridge_service.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/start_pico_backend.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/start_pico_backend.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "2371779d0f90cf16f37b3f3f58574be6033e47dd",
+      "sha256": "212275d8104a3df9b2971be50c35f3b809de4513844430f338093c9ee94a9cf3",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/start_pico_backend.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/steamvr_calibrate_translation.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/steamvr_calibrate_translation.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "acd06f90140991523746d41021251cebbde0f52a",
+      "sha256": "6fca282382ce3157e875af35d2b83cf8c0938f5e09eec1df33cc958ac3896eae",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/steamvr_calibrate_translation.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/steamvr_control_gui.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/steamvr_control_gui.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "a180fe173ff991bdbde54c6c775ac2db8beb5256",
+      "sha256": "d0125b20599bb714b65c534e5c5da87d249a5b5692e7594db3c4ce45dfd37b7e",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/steamvr_control_gui.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/steamvr_orientation_debug.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/steamvr_orientation_debug.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "cfab7af6f2e890477c714d6b4691f965d4829ad9",
+      "sha256": "e96a88eb8e46c65153ec7c3094f30a66c8c673e8f651be6937876ff40f54f846",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/steamvr_orientation_debug.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "scripts/steamvr_position_debug.ps1",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "scripts/steamvr_position_debug.ps1",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "71a8a8c32a9f1a928298d9bd862623817f4aa43d",
+      "sha256": "674b15fe4462738847352e75d0eef75383dc778d6fc2876e6b7c076ca10ba29a",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/scripts/steamvr_position_debug.ps1",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/clock_sync.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/clock_sync.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "20a473cfe363d3532dadb5c21c6e4425840b70f8",
+      "sha256": "d9c41e3a4281078d080ead0fa21c3239666b23eacfe2bb8a3ee4e08ae0e65670",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/clock_sync.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/monotonic_clock.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/monotonic_clock.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "54610239cfc051783c960d81af36c89d8cfb929c",
+      "sha256": "ad1252cc3951e35e106238f6ac273b51b5a8fbd42b2b7f3b18a22d6c439ae103",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/monotonic_clock.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/protocol.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/protocol.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "fe9e243caa1c02ac1f0fa0157bfcd2a2f28da7ea",
+      "sha256": "00f8827d2c2e289f36ba01b867e517ec32375a183ccaae0f4c4caaa64b13413c",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/protocol.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/publisher.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/publisher.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "2520ee24345ab412fd1557807f0ca295c8b1d4b0",
+      "sha256": "a948d2049f79a200990c0e86fa229bfeaeec7d7c73db079f149469dc077af87e",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/publisher.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/receiver.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/receiver.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "a62b760d5b739a50c3e09be222d7883a54197fc3",
+      "sha256": "d6ee127ae2dde2ab93f9bd5e9834c8044257d1b56aaa36a9654efd20a3623ef6",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/receiver.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/receiver_c_api.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/receiver_c_api.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "a9de6c8176965ca4ea4c53ef98836c279878a3e4",
+      "sha256": "f9f0fdea119c5ef73810dcd35bd44a348ef760e98fa6cdc60f57d5b7deb619be",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/receiver_c_api.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "src/bridge/udp_socket.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "src/bridge/udp_socket.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "337a29d32d0e9b31373a3ed5d929903c6e113dfb",
+      "sha256": "e119be514034ec0935dc314370eaff2804b0b42a634c2248c1509489f4006e95",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/src/bridge/udp_socket.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/clock_sync_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/clock_sync_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "66cec05e8916884a9ef6fd5a98d5cb1c1b18715f",
+      "sha256": "5c643e24f84212fea57f2f92de5e8acd978e45d2259cdf5da61d505a5279f8a7",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/clock_sync_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/protocol_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/protocol_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "c58a1446fdbc238402b53392720c61a17c0ce8b8",
+      "sha256": "ad1a6c4bc6625cb874db1095a154cfcf71ee0cc7c3d6898f68e66dc5b79b1e58",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/protocol_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/publisher_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/publisher_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "563b77805f0a5a09df77c42a580d8e6eef9e790a",
+      "sha256": "61306eb3327863656ba5999abb73fb331136741c1e2564c2424fa07c0aff0e16",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/publisher_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/receiver_c_api_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/receiver_c_api_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "f5be38f5b6e5a4d82f560bc20e4854e150ec894e",
+      "sha256": "d8355fe67fb7c853bc69d4fccd43fada50518985d465500a5d213f4dd787979d",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/receiver_c_api_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/receiver_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/receiver_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "e498d367dc5e941ee6a6e48713df5c1b992d2fba",
+      "sha256": "abea28b0942ac5a8c3438376bc2275171f489904daa2197345e587ab4809dfcb",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/receiver_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tests/udp_socket_tests.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tests/udp_socket_tests.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "0aedf22b4c45ea3b81473501d658d196803ef3cf",
+      "sha256": "3e5125d85d43bbf42ef363638a4f055ecfbad0ccebc404fbb14cb530acd3a0c9",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tests/udp_socket_tests.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/bridge_receiver_cli.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/bridge_receiver_cli.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "e3f09ff6891714ad23aa280eb9cef0c745e026e3",
+      "sha256": "ab2c86f68c4471138b4e66bcd57766e2c0b56840acc2d0e9ad1df15bde11f568",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/bridge_receiver_cli.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/monaka_smoke_publisher.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/monaka_smoke_publisher.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "85614de234223223d0481ca2a7e71721bae22fa1",
+      "sha256": "313421eeb2a4629501f9600c47b4464fa5ae1474cee167338b6dbbd4897ceab4",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/monaka_smoke_publisher.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/pc_bridge_service.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/pc_bridge_service.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "a8b353c78f437b64e2fb07548b988fc3cdb8b846",
+      "sha256": "44f49bc628e1c69dc427c05c228abd52117064bec5d8bcbd67c6a3d1b3de77c3",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/pc_bridge_service.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/steamvr_calibrator.cpp",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/steamvr_calibrator.cpp",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "7730cbcdd7d50443f87c741efbe907b9af048a6e",
+      "sha256": "648be4710c059f971f3383ec58f4ed7e73a78c0e2d5a2c73b5399fead94f6225",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/steamvr_calibrator.cpp",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/steamvr_control_gui.cs",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/steamvr_control_gui.cs",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "db0f3c657c26e22c8ad5662e3a0d665f0667087e",
+      "sha256": "180808ed41a0b0b06e37dcdfd30b1fff89961ef1fbb87caee46d93ca9772ae66",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/steamvr_control_gui.cs",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/steamvr_control_gui_main.cs",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/steamvr_control_gui_main.cs",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "6b898239ae8a3797713ad0603a533ba5589fc38a",
+      "sha256": "c85119b3bcbb110bf81346f5b72210215dc17b12ff92996801774dcfbede7dab",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/steamvr_control_gui_main.cs",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/steamvr_control_tray.cs",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/steamvr_control_tray.cs",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "9f0d61511fb08bdd1550ea00e96a38894e6824c6",
+      "sha256": "c737a4a87af1a71425854277e2983d98b74364e048e2c27fc6783156a7af8baf",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/steamvr_control_tray.cs",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "tools/steamvr_control_wpf.cs",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": "tools/steamvr_control_wpf.cs",
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": "74b97e94616c96365daae8ebfbf38e686ed52530",
+      "sha256": "1a5388254963977c2864a1b42dd7c8917a1fbe9b16b3071ab23e0873bff8ab99",
+      "generated": false,
+      "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+      "destination_candidate": "MonakaBridge/tools/steamvr_control_wpf.cs",
+      "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+    },
+    {
+      "path": "CMakeLists.txt",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": null,
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": null,
+      "sha256": "647d5336978b6f2a139de36bb077a584e2e2a5d3308aef31d6ca93b5070e7531",
+      "generated": true,
+      "license_notice_handling": "Generated migration support; no original source license inferred.",
+      "destination_candidate": "MonakaBridge/CMakeLists.txt",
+      "old_type_replacement_notes": "Generated migration support, not a historical source blob."
+    },
+    {
+      "path": "migration/README.md",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": null,
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": null,
+      "sha256": "f5f19042020a09d38a5f03c30b8d247dac9fd4c3a6c8411d227a966904ef3304",
+      "generated": true,
+      "license_notice_handling": "Generated migration support; no original source license inferred.",
+      "destination_candidate": "MonakaBridge/migration/README.md",
+      "old_type_replacement_notes": "Generated migration support, not a historical source blob."
+    },
+    {
+      "path": "migration/config-examples/output_route.txt",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": null,
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": null,
+      "sha256": "e4bb9d228fb57d311a40f5c4a12745b50c7c1ae1d61c818323caf0f7d06b9149",
+      "generated": true,
+      "license_notice_handling": "Generated migration support; no original source license inferred.",
+      "destination_candidate": "MonakaBridge/migration/config-examples/output_route.txt",
+      "old_type_replacement_notes": "Generated migration support, not a historical source blob."
+    },
+    {
+      "path": "migration/config-examples/steamvr_alignment.json",
+      "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+      "source_path": null,
+      "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+      "source_blob_sha": null,
+      "sha256": "9eb7d5d112118e9a364081732ca7058becc932b3d6237dd24c4c5b787f19ca07",
+      "generated": true,
+      "license_notice_handling": "Generated migration support; no original source license inferred.",
+      "destination_candidate": "MonakaBridge/migration/config-examples/steamvr_alignment.json",
+      "old_type_replacement_notes": "Generated migration support, not a historical source blob."
+    }
+  ]
+}
