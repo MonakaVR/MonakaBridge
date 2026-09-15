@@ -1,3 +1,4 @@
+* text=auto eol=lf
 third_party/** -text
 dependencies/** -text
 tests/fixtures/** -text

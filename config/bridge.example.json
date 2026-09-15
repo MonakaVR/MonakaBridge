@@ -1,0 +1,45 @@
+{
+  "namespace": "monaka.bridge",
+  "version": 2,
+  "bridge_id": "replace-with-persistent-bridge-installation-id",
+  "mapping_revision": 1,
+  "policy": "steamvr",
+  "pose_timeout_ms": 500,
+  "profiles": {
+    "pico-compat-v1": {
+      "convention": "replace-with-observed-pico-convention",
+      "position_axes": [
+        1,
+        2,
+        3
+      ],
+      "quaternion_axes": [
+        -3,
+        2,
+        -1,
+        4
+      ],
+      "approved": true,
+      "evidence": "Task2 legacy relative-axis compatibility; absolute origin requires explicit approval",
+      "angular_space_verified": false
+    },
+    "vive-unverified": {
+      "convention": "vut-native-v1",
+      "position_axes": [
+        1,
+        2,
+        3
+      ],
+      "quaternion_axes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "approved": false,
+      "evidence": "Hardware NOT RUN; illustrative mapping only",
+      "angular_space_verified": false
+    }
+  },
+  "mappings": []
+}
