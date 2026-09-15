@@ -1,0 +1,342 @@
+{
+  "task2_extraction_sha256": "5709881826a5ce9a5ad48060e67fc8195bb622c4fb80325e613d37fedb35a1d4",
+  "license_notice_handling": "No root LICENSE/NOTICE at base; existing file notices preserved, no new grant.",
+  "files": [
+    {
+      "path": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+      "sha256": "dde92ae83dadcebb3850a769ce9c46a32ebf11e8ad79548d18677e1b00d0458a",
+      "change_reason": "Common factory name; original OpenVR provider entry point retained",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/hmd_driver_factory.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "063d34387692a64d48c954fec99bc7fcfaa0a811",
+          "sha256": "641da1f410de3f699a02f80ad600face032d4dc53e697b4b534e309e071793bf",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/hmd_driver_factory.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/driver_log.hpp",
+      "sha256": "7440b0f0390e421e258b616af5b7d9538f20f1346646e84c09b40d59800d68d2",
+      "change_reason": "Common namespace; original driver logging wrapper retained",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/driver_log.hpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/driver_log.hpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "93ee0da6b91920cde3069837f5e5f16c3ebf226a",
+          "sha256": "6350685fde5cdedf3a490b93b009d4f26054727d476e3c6006c4947f832b49d7",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/driver_log.hpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/device_provider.hpp",
+      "sha256": "03f92fc1095292523174e3d6c4ad8397c7916e6e34c1609a1489bb03cfaf02d7",
+      "change_reason": "Thin common MTP feed replaces legacy receiver",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/device_provider.hpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/device_provider.hpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "16666141508b0e2345b39585da8d7936b06a3255",
+          "sha256": "dc7f450a62c2abd32e6c0dc87c713e84d5db96c215cbc8feffd9556dc1f63bea",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/device_provider.hpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/device_provider.cpp",
+      "sha256": "725331e77aa6c0c589f62483b953fbfb2bdab602db3aeb6c89a0c8332e68cd2f",
+      "change_reason": "Retain Init/Cleanup/dynamic lifecycle; remove vendor and calibration ownership",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/device_provider.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/device_provider.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "ec31e3925b5a8a0cb43182cc0aac94cb30f266c5",
+          "sha256": "5bcb286f00c6ee2732c71b0fd8e27d136f840580f1dc4cb357d1c55f0aa432aa",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/device_provider.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/tracker_device.hpp",
+      "sha256": "3f0f9e2aacacac4d058841b9e4b5bd01939be796e99a144761e45af0a931e680",
+      "change_reason": "Retain object lifecycle; accept calibrated DirectSample",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.hpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.hpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "7cc7db94f776fad9f15b641c733cc186a6e78a9a",
+          "sha256": "30155b7cd7436682d8e910d42942c520b26209f3c16b647dbb20b4427979f449",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.hpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/tracker_device.cpp",
+      "sha256": "7a0540a14846a40676b553a29b1c19832c1d2857853807579359df232c87366e",
+      "change_reason": "Retain activation/properties/submission; remove source profile and zero/calibration from driver",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+          "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "outputs/steamvr/driver/direct_pose.hpp",
+      "sha256": "4fd37cc0eada207029cf8f7759bca83a88fb85f8015d7c451386192dd9a4d4a0",
+      "change_reason": "Extract DriverPose conversion, disconnected pose, partial validity and clamped age; no calibration",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+          "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "include/monaka_bridge/calibration.hpp",
+      "sha256": "363eb320a4c8020f5f8f039668914dc1627cb4871dd2951d793ed6f3f1fec5db",
+      "change_reason": "Move Hamilton/shortest-arc angular velocity and diagnostic orientation-zero into generic layer",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+          "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "src/calibration/calibration.cpp",
+      "sha256": "f3df1e1a82c4884451fa8f14f5e06eb7ea1574b046a825740c3e32364fc96549",
+      "change_reason": "Preserve separate PICO position and quaternion mapping; explicit shared world and mount transforms",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+          "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "src/mapping/config.cpp",
+      "sha256": "fe5e8af715f060717647d2f252944ef34be6f46956c77333066463245b9a0616",
+      "change_reason": "Replace IPC with persistent versioned common configuration; migrate legacy alignment/route aliases with backups",
+      "origins": [
+        {
+          "path": "outputs/steamvr/common/world_alignment_ipc.hpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/common/world_alignment_ipc.hpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "7058aaf0d4851a36745b5b617f6035a7358094fb",
+          "sha256": "d975dc4891bb5c9963aaa1f49c00a2d03c23d9d4ec6ec5c0fc69c66d7181532b",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/common/world_alignment_ipc.hpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        },
+        {
+          "path": "tools/steamvr_control_tray.cs",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_control_tray.cs",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "9f0d61511fb08bdd1550ea00e96a38894e6824c6",
+          "sha256": "c737a4a87af1a71425854277e2983d98b74364e048e2c27fc6783156a7af8baf",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_control_tray.cs",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "tools/steamvr_calibrator.cpp",
+      "sha256": "d1fad4fa180963734937d3b222ed9af8d9cdd32bf34c403d0a94eae59ac76b19",
+      "change_reason": "Retain actual OpenVR reference measurement; persist shared source-space transform instead of legacy IPC",
+      "origins": [
+        {
+          "path": "tools/steamvr_calibrator.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_calibrator.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "7730cbcdd7d50443f87c741efbe907b9af048a6e",
+          "sha256": "648be4710c059f971f3383ec58f4ed7e73a78c0e2d5a2c73b5399fead94f6225",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_calibrator.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "ui/steamvr_control_gui_main.cs",
+      "sha256": "e81541dc7511c0f064f522e1dfdb82a675e91cb4b33ed854a0f5193e06b0b194",
+      "change_reason": "Retain WPF/tray launch pattern in common namespace",
+      "origins": [
+        {
+          "path": "tools/steamvr_control_gui_main.cs",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_control_gui_main.cs",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "6b898239ae8a3797713ad0603a533ba5589fc38a",
+          "sha256": "c85119b3bcbb110bf81346f5b72210215dc17b12ff92996801774dcfbede7dab",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_control_gui_main.cs",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "ui/steamvr_control_tray.cs",
+      "sha256": "5dad8de6e3f097dd29a887cfcec337f234d07711aa3c5b1603b403b41c445c59",
+      "change_reason": "Retain tray lifecycle/menu/window reuse; route and health use common configuration",
+      "origins": [
+        {
+          "path": "tools/steamvr_control_tray.cs",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_control_tray.cs",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "9f0d61511fb08bdd1550ea00e96a38894e6824c6",
+          "sha256": "c737a4a87af1a71425854277e2983d98b74364e048e2c27fc6783156a7af8baf",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_control_tray.cs",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "ui/steamvr_control_wpf.cs",
+      "sha256": "970a8dd7ae97bdeb046a1b0e295e0f957c9cbf4b5a335e6d7145e26ebe97bcc2",
+      "change_reason": "Adapt WPF controls/error/process patterns into common source/mapping/profile/alignment UI",
+      "origins": [
+        {
+          "path": "tools/steamvr_control_wpf.cs",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_control_wpf.cs",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "74b97e94616c96365daae8ebfbf38e686ed52530",
+          "sha256": "1a5388254963977c2864a1b42dd7c8917a1fbe9b16b3071ab23e0873bff8ab99",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_control_wpf.cs",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "scripts/build_gui.ps1",
+      "sha256": "752949ca9ff27850f1262a96c863325e1b5b23746f488cb3b345517d38062072",
+      "change_reason": "Retain csc/.NET Framework/WPF discovery; common paths and explicit optional launch",
+      "origins": [
+        {
+          "path": "scripts/steamvr_control_gui.ps1",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "scripts/steamvr_control_gui.ps1",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "a180fe173ff991bdbde54c6c775ac2db8beb5256",
+          "sha256": "d0125b20599bb714b65c534e5c5da87d249a5b5692e7594db3c4ce45dfd37b7e",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/scripts/steamvr_control_gui.ps1",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "tests/direct_regression.cpp",
+      "sha256": "8a1809d12eb92a7c639d44c9f713eece7100a9bf60b9ecb71d84b51208ee3855",
+      "change_reason": "Test links original verified TrackerDevice unchanged under a standalone mock context",
+      "origins": [
+        {
+          "path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "outputs/steamvr/driver/tracker_device.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "3e4736169864b680d3688223c49ab96a3d7d215d",
+          "sha256": "3b54a8da729de5fff6783953b524ab5fc4cc67b5f735220df4f9653d78238718",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/outputs/steamvr/driver/tracker_device.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
+      "path": "tests/udp_regression.py",
+      "sha256": "7e117286b892066ca688c3ee03a6b104d3267b7f6dd5d844b508ecccf3c9e3d1",
+      "change_reason": "Reads TestPoseRoundTrip position/quaternion/velocity fixture literals from verified extraction at runtime; sends fixed C1 stimulus",
+      "origins": [
+        {
+          "path": "tests/protocol_tests.cpp",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tests/protocol_tests.cpp",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "c58a1446fdbc238402b53392720c61a17c0ce8b8",
+          "sha256": "ad1a6c4bc6625cb874db1095a154cfcf71ee0cc7c3d6898f68e66dc5b79b1e58",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tests/protocol_tests.cpp",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    }
+  ],
+  "excluded": "PICO private runtime/ABI/Android and VIVE raw transports; POTB is test-reference-only inside original archive"
+}

@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/ValveSoftware/openvr",
+  "tag": "v2.15.6",
+  "revision": "0924064316de3effbcd1acf1e309182a2deb1c05",
+  "files": {
+    "headers/openvr.h": "641ef9791fa8a281c490c85337cb3cbea8929055cfad1c78275d26cef587884f",
+    "headers/openvr_driver.h": "914a17b6dbcc73d1cac5281d6253d5563879ec5029b5db43b9dfc6863b435528",
+    "lib/win64/openvr_api.lib": "a0bf57c5920f569e8d21ab3e5bc95bac4b73e2016217f8b5b93495a2a7197bbb",
+    "bin/win64/openvr_api.dll": "bab8ac6ef64e68a9ca53315b0014d131088584b2efdfa6db511d67ec03cfcb4a",
+    "LICENSE": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329"
+  }
+}
