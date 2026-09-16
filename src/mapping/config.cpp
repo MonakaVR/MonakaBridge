@@ -17,19 +17,19 @@ J read(const std::filesystem::path& p){std::ifstream f(p);if(!f)throw std::runti
 std::uint32_t u32(const J& j){if(!j.is_number_integer()||j<0||j>UINT32_MAX)throw std::invalid_argument("revision out of range");return j.get<std::uint32_t>();}
 Rigid rigid(const J& j){Rigid r;r.rotation=j.at("rotation").get<Quat>();r.translation=j.at("translation").get<Vec>();return r;}
 J toJson(const Rigid& r){return J{{"rotation",r.rotation},{"translation",r.translation}};}
-void id(const std::string& id){c1::MtpTrackerState s;s.version={1,0};s.source_id=id;s.tracker_id="check";s.session_id=s.clock_id="00000000-0000-4000-8000-000000000001";s.timestamp_kind="receive";s.presence="unknown";s.tracking_state="unknown";s.coordinate_space={"world","rh_y_up_neg_z_forward",0};std::string b;c1::Error e;if(!c1::EncodeEnvelope(s,b,e))throw std::invalid_argument("invalid ID: "+e.message);}
+void id(const std::string& id){c1::MtpTrackerState s;s.version={2,0};s.modality="none";s.publisher_id="validation";s.source_id=id;s.tracker_id="check";s.session_id=s.clock_id="00000000-0000-4000-8000-000000000001";s.timestamp_kind="receive";s.presence="unknown";s.tracking_state="unknown";s.coordinate_space={"world","rh_y_up_neg_z_forward",0};std::string b;c1::Error e;if(!c1::EncodeEnvelope(s,b,e))throw std::invalid_argument("invalid ID: "+e.message);}
 template<std::size_t N>void axes(const std::array<int,N>& a){std::set<int>s;for(int x:a){if(x==0||x>int(N)||x<-int(N))throw std::invalid_argument("invalid profile permutation");s.insert(std::abs(x));}if(s.size()!=N)throw std::invalid_argument("duplicate profile axis");}
 void transform(const Rigid& r){for(double v:r.translation)if(!std::isfinite(v))throw std::invalid_argument("nonfinite translation");auto q=normalized(r.rotation);double n=0;for(auto x:r.rotation)n+=x*x;if(std::abs(n-1)>1e-5)throw std::invalid_argument("configuration rotations must be unit quaternions");}
 void backup(const std::filesystem::path& p){if(!std::filesystem::exists(p))return;auto b=p;b+=".pre-monaka-bridge.bak";if(!std::filesystem::exists(b))std::filesystem::copy_file(p,b);}
 }
 void validateConfig(const Config& c){
  id(c.bridgeId);if(c.bindings.size()>256||c.profiles.size()>64||c.timeoutNs<1000000||c.timeoutNs>10000000000LL)throw std::invalid_argument("config bounds");
- std::set<std::string> trackers;
+ std::set<Key> trackers;
  for(auto& [name,p]:c.profiles){id(name);id(p.convention);axes(p.positionAxes);axes(p.quaternionAxes);if(p.approved&&p.evidence.empty())throw std::invalid_argument("approved profile needs evidence");}
  for(auto& [key,b]:c.bindings){
   if(key!=Key{b.source,b.device})throw std::invalid_argument("mapping key mismatch");
   for(const auto& v:{b.source,b.device,b.tracker,b.profile,b.inputSpace,b.worldSpace})id(v);
-  if(!trackers.insert(b.tracker).second)throw std::invalid_argument("logical tracker collision");transform(b.world);transform(b.mount);
+  if(!trackers.insert(Key{b.source,b.tracker}).second)throw std::invalid_argument("logical tracker collision");transform(b.world);transform(b.mount);
  }
 }
 Config loadConfig(const std::filesystem::path& path){

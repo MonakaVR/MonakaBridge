@@ -1,18 +1,18 @@
 #pragma once
-#include "monaka/protocol/v1/codec.hpp"
+#include "monaka/protocol/v2/codec.hpp"
 #include <map>
 #include <set>
 #include <string_view>
 namespace mb {
-namespace c1=monaka::protocol::v1;
+namespace c1=monaka::protocol::v2;
 using Key=std::pair<std::string,std::string>;
 struct Device {
  std::optional<c1::TrackerObservation> pose;
  std::optional<c1::ObservationDeviceState> state;
- std::int64_t poseSequence=-1,stateSequence=-1,fixedTime=-1,stateAt=-1;
+ std::int64_t poseSequence=-1,stateSequence=-1,fixedTime=-1,stateAt=-1,absentAt=-1;
  std::string space,convention;
  std::uint32_t revision=0;
- bool hasSpace=false,absent=false;
+ bool hasSpace=false,absent=false,collision=false;
 };
 struct Source {
  std::string session,clock,peer;

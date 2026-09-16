@@ -1,5 +1,5 @@
 import java.nio.file.*;
-import dev.monaka.protocol.v1.*;
+import dev.monaka.protocol.v2.*;
 // Test harness only. All validation/serialization remains in the supplied fixed JAR.
 public class CodecConsumer {
  public static void main(String[] args) throws Exception {

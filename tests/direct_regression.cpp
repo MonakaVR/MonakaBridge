@@ -18,7 +18,7 @@ int main()try{
  old.lastPoseSequence=2;old.lastPoseReceivePcNs=20000000;old.posePcMonotonicNs=19000000;old.pose.observedMonotonicNs=19000000;
  const auto& q=*next.orientation;old.pose.orientationXyzw={q[0],q[1],q[2],q[3]};legacy.Update(&old,false,20000000);
  bridge.receive(wire(next),"p",20000000);auto derived=*bridge.logical().at({"pico","device"}).pose;CHECK(derived.angular_velocity);for(int i=0;i<3;++i)CHECK(near((*derived.angular_velocity)[i],legacy.GetPose().vecAngularVelocity[i]));
- sample.pose->validity.position=false;sample.pose->position.reset();common=mb::steamvr::directPose(&sample,10000000);CHECK(!common.poseIsValid&&common.deviceIsConnected);CHECK(near(common.qRotation.w,output.orientation->at(3)));
+ sample.pose->modality="rotation_only";sample.pose->validity.position=false;sample.pose->position.reset();common=mb::steamvr::directPose(&sample,10000000);CHECK(!common.poseIsValid&&common.deviceIsConnected&&common.result==vr::TrackingResult_Fallback_RotationOnly);CHECK(near(common.qRotation.w,output.orientation->at(3)));
  common=mb::steamvr::directPose(&sample,600000000);CHECK(!common.deviceIsConnected&&!common.poseIsValid);
  legacy.RequestOrientationZero();legacy.Update(&old,false,20000000);CHECK(near(legacy.GetPose().qRotation.w,1));auto zeroed=mb::orientationZero(*derived.orientation,*derived.orientation);CHECK(near(zeroed[3],1));
  legacy.RequestPositionZero();legacy.Update(&old,false,20000000);for(int i=0;i<3;++i)CHECK(near(legacy.GetPose().vecPosition[i],0));

@@ -3,7 +3,7 @@ namespace mb {
 Calibrated calibrate(const c1::TrackerObservation& in,const Binding& b,const Profile& p,History& h,std::int64_t time){
  Calibrated out;
  std::optional<Quat> q;
- if(in.validity.orientation && in.orientation)q=normalized(permute(*in.orientation,p.quaternionAxes));
+ if(in.modality!="none" && in.validity.orientation && in.orientation)q=normalized(permute(*in.orientation,p.quaternionAxes));
  const bool offset=norm(b.mount.translation)>0;
  std::optional<Vec> omega;
  if(q && p.angularSpaceVerified && in.angular_velocity){
@@ -16,7 +16,7 @@ Calibrated calibrate(const c1::TrackerObservation& in,const Binding& b,const Pro
   out.orientation=normalized(mul(mul(b.world.rotation,*q),b.mount.rotation));
   h.q=q;h.timestamp=time;
  }else h=History{};
- if(in.validity.position && in.position && (!offset||q)){
+ if(in.modality=="full" && in.validity.position && in.position && (!offset||q)){
   auto local=permute(*in.position,p.positionAxes);
   if(offset)local=add(local,rotate(*q,b.mount.translation));
   out.position=add(rotate(b.world.rotation,local),b.world.translation);

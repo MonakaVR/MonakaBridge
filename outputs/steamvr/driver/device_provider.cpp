@@ -13,7 +13,7 @@ bool DeviceProvider::ShouldBlockStandbyMode(){return false;}
 void DeviceProvider::EnterStandby(){}void DeviceProvider::LeaveStandby(){}
 void DeviceProvider::RunFrame(){
  if(!receiver_)return;
- for(int i=0;i<128;++i){auto d=receiver_->receive();if(!d)break;feed_.receive(d->bytes,monotonicNs());}
+ for(int i=0;i<128;++i){auto d=receiver_->receive();if(!d)break;feed_.receive(d->bytes,monotonicNs(),d->peer);}
  for(auto& [key,sample]:feed_.devices){
   if(devices_.count(key)||!sample.pose)continue;
   auto serial=runtimeSerial(key.first,key.second);auto device=std::make_unique<TrackerDevice>(serial);

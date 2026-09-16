@@ -14,21 +14,23 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  auto& src=sources[id];
  const auto reject=[&]{++rejected;return false;};
  if(src.collision||src.retired.count(session))return reject();
- if(!src.session.empty()&&src.peer!=peer&&now-src.lastReceive<timeoutNs){src.collision=true;src.devices.clear();++collisions;return reject();}
+ if(!src.session.empty()&&((src.peer!=peer&&src.session==session)||(src.session!=session&&now-src.lastReceive<timeoutNs))){++collisions;return reject();}
  if(src.session!=session){
   if(src.retired.size()>=1024)return reject();
   if(!src.session.empty())src.retired.insert(src.session);
   src.session=session;src.clock=clock;src.peer=peer;src.devices.clear();
- }else if(src.clock!=clock||src.peer!=peer){src.collision=true;src.devices.clear();++collisions;return reject();}
+ }else if(src.clock!=clock||src.peer!=peer){++collisions;return reject();}
  if(!src.devices.count(device)&&src.devices.size()>=256)return reject();
  auto& d=src.devices[device];
+ if(d.collision)return reject();
  const auto& space=p?p->coordinate_space:s->coordinate_space;
  const auto seq=p?p->sequence:s->sequence;
  if((p&&seq<=d.poseSequence)||(s&&seq<=d.stateSequence)){
-  if(p&&seq==d.poseSequence&&d.pose&&!sameSample(*p,*d.pose)){src.collision=true;src.devices.clear();++collisions;}
+  if(p&&seq==d.poseSequence&&d.pose&&!sameSample(*p,*d.pose)){d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;}
   return reject();
  }
- if(d.hasSpace && (space.revision<d.revision || (space.revision==d.revision&&(space.id!=d.space||space.convention!=d.convention))))return reject();
+ if(d.hasSpace && space.revision<d.revision)return reject();
+ if(d.hasSpace && space.revision==d.revision&&(space.id!=d.space||space.convention!=d.convention)){d.pose.reset();d.fixedTime=-1;return reject();}
  if(!d.hasSpace||space.revision!=d.revision){
   // Sequence high-water marks stay monotonic within the source session.
   d.pose.reset();d.state.reset();d.fixedTime=-1;d.absent=false;
@@ -36,16 +38,20 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  }
  if(p){
   d.poseSequence=seq;
-  if(d.absent)return reject();
+  if(p->timestamp_ns<=d.absentAt)return reject();
+  d.absent=false;
   d.pose=*p;const auto age=p->sent_at_ns-p->timestamp_ns;d.fixedTime=age<=now?now-age:-1;
  }else{
   d.stateSequence=seq;d.state=*s;d.stateAt=now;
-  if(s->presence=="absent"){d.absent=true;d.pose.reset();d.fixedTime=-1;}
-  else if(s->presence=="present")d.absent=false;
+  if(s->presence=="absent"||s->tracking_state=="lost"||s->tracking_state=="disconnected"){
+   d.absentAt=std::max(d.absentAt,s->timestamp_ns);
+   // A delayed state must not invalidate a strictly newer pose already admitted.
+   if(!d.pose||d.pose->timestamp_ns<=d.absentAt){d.absent=true;d.pose.reset();d.fixedTime=-1;}
+  }
  }
  src.lastReceive=now;
  if(admitted)*admitted=std::move(e);return true;
 }
-const Device* Registry::find(const Key& k)const{auto s=sources.find(k.first);if(s==sources.end()||s->second.collision)return nullptr;auto d=s->second.devices.find(k.second);return d==s->second.devices.end()?nullptr:&d->second;}
+const Device* Registry::find(const Key& k)const{auto s=sources.find(k.first);if(s==sources.end()||s->second.collision)return nullptr;auto d=s->second.devices.find(k.second);return d==s->second.devices.end()||d->second.collision?nullptr:&d->second;}
 bool Registry::fresh(const Key& k,std::int64_t now)const{auto d=find(k);return d&&d->pose&&!d->absent&&d->fixedTime>=0&&now>=d->fixedTime&&now-d->fixedTime<timeoutNs;}
 }

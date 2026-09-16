@@ -1,10 +1,10 @@
 #pragma once
-#include "monaka/protocol/v1/codec.hpp"
+#include "monaka/protocol/v2/codec.hpp"
 #include <cmath>
 #include <optional>
 #include <stdexcept>
 namespace mb {
-namespace c1=monaka::protocol::v1;
+namespace c1=monaka::protocol::v2;
 using Vec=c1::Vec3; using Quat=c1::QuatXyzw;
 inline Vec add(Vec a,Vec b){for(int i=0;i<3;++i)a[i]+=b[i];return a;}
 inline Vec scale(Vec a,double b){for(auto& x:a)x*=b;return a;}

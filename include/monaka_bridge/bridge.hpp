@@ -29,7 +29,7 @@ class Bridge {
  Config config_;
  std::string session_;
  std::map<Key,Logical> logical_;
- std::map<std::string,Key> trackerOwners_;
+ std::map<Key,Key> trackerOwners_;
  void publish(const c1::Envelope&,std::int64_t now);
  bool approved(const Binding&,const Device&)const;
 public:
