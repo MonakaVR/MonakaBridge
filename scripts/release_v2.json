@@ -38,6 +38,17 @@
       ]
     },
     {
+      "name": "openvr-build-inputs",
+      "command": [
+        "{PYTHON}",
+        "scripts/check_release_sdk.py",
+        "--sdk",
+        "{OPENVR}",
+        "--output",
+        "{WORK}/openvr-inputs.json"
+      ]
+    },
+    {
       "name": "cmake-configure",
       "command": [
         "{CMAKE}",
@@ -121,6 +132,7 @@
     "java-version",
     "cmake-version",
     "pinned-v2-kit",
+    "openvr-build-inputs",
     "cmake-configure",
     "cmake-build",
     "ctest",
@@ -183,6 +195,10 @@
     {
       "name": "evidence/v2-interop.json",
       "path": "{WORK}/interop/result.json"
+    },
+    {
+      "name": "evidence/openvr-inputs.json",
+      "path": "{WORK}/openvr-inputs.json"
     }
   ]
 }
