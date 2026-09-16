@@ -1,0 +1,188 @@
+{
+  "repo": "MonakaBridge",
+  "commands": [
+    {
+      "name": "release-tool-tests",
+      "command": [
+        "{PYTHON}",
+        "scripts/test_release_v2.py"
+      ]
+    },
+    {
+      "name": "release-tool-tests-optimized",
+      "command": [
+        "{PYTHON}",
+        "-O",
+        "scripts/test_release_v2.py"
+      ]
+    },
+    {
+      "name": "java-version",
+      "command": [
+        "{JAVA}",
+        "-version"
+      ]
+    },
+    {
+      "name": "cmake-version",
+      "command": [
+        "{CMAKE}",
+        "--version"
+      ]
+    },
+    {
+      "name": "pinned-v2-kit",
+      "command": [
+        "{PYTHON}",
+        "scripts/verify_protocol_v2.py"
+      ]
+    },
+    {
+      "name": "cmake-configure",
+      "command": [
+        "{CMAKE}",
+        "-S",
+        "{ROOT}",
+        "-B",
+        "{BUILD}",
+        "-A",
+        "x64",
+        "-DBUILD_TESTING=ON",
+        "-DMONAKA_BUILD_TESTS=ON",
+        "-DCMAKE_CXX_FLAGS=/EHsc",
+        "-DMB_BUILD_STEAMVR=ON",
+        "-DOPENVR_SDK={OPENVR}"
+      ]
+    },
+    {
+      "name": "cmake-build",
+      "command": [
+        "{CMAKE}",
+        "--build",
+        "{BUILD}",
+        "--config",
+        "Release"
+      ]
+    },
+    {
+      "name": "ctest",
+      "command": [
+        "{CTEST}",
+        "--test-dir",
+        "{BUILD}",
+        "-C",
+        "Release",
+        "--output-on-failure",
+        "--no-tests=error",
+        "--output-junit",
+        "{WORK}/ctest.xml"
+      ]
+    },
+    {
+      "name": "direct-standalone",
+      "command": [
+        "{BUILD}/Release/direct_regression.exe"
+      ]
+    },
+    {
+      "name": "separate-process-udp",
+      "command": [
+        "{PYTHON}",
+        "tests/udp_regression.py",
+        "--bin",
+        "{BUILD}/Release"
+      ]
+    },
+    {
+      "name": "performance",
+      "command": [
+        "{BUILD}/Release/bridge_performance.exe"
+      ]
+    },
+    {
+      "name": "v2-interop",
+      "command": [
+        "{PYTHON}",
+        "scripts/release_interop.py",
+        "--kit",
+        "{ROOT}/third_party/monaka-protocol-v2",
+        "--cpp",
+        "{BUILD}/third_party/monaka-protocol-v2/cpp/Release/monaka_codec_runner_v2.exe",
+        "--java-home",
+        "{JAVA_HOME}",
+        "--work",
+        "{WORK}/interop"
+      ]
+    }
+  ],
+  "required_steps": [
+    "release-tool-tests",
+    "release-tool-tests-optimized",
+    "java-version",
+    "cmake-version",
+    "pinned-v2-kit",
+    "cmake-configure",
+    "cmake-build",
+    "ctest",
+    "direct-standalone",
+    "separate-process-udp",
+    "performance",
+    "v2-interop"
+  ],
+  "test_groups": [
+    {
+      "name": "native",
+      "paths": [
+        "{WORK}/ctest.xml"
+      ],
+      "required": [
+        "protocol_v2_integrity",
+        "architecture_revision",
+        "bridge_core",
+        "upstream_integrity",
+        "bridge_edges",
+        "separate_process_udp",
+        "direct_regression",
+        "old_context_null_read_reproduced",
+        "model_validation",
+        "model_validation_v2"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "runtime/monaka_bridge_service.exe",
+      "path": "{BUILD}/Release/monaka_bridge_service.exe"
+    },
+    {
+      "name": "runtime/monaka_bridge_config.exe",
+      "path": "{BUILD}/Release/monaka_bridge_config.exe"
+    },
+    {
+      "name": "runtime/monaka_bridge_calibrator.exe",
+      "path": "{BUILD}/Release/monaka_bridge_calibrator.exe"
+    },
+    {
+      "name": "runtime/openvr_api.dll",
+      "path": "{BUILD}/Release/openvr_api.dll"
+    },
+    {
+      "name": "steamvr/monaka_bridge/bin/win64/driver_monaka_bridge.dll",
+      "path": "{BUILD}/steamvr/monaka_bridge/bin/win64/driver_monaka_bridge.dll"
+    },
+    {
+      "name": "steamvr/monaka_bridge/driver.vrdrivermanifest",
+      "path": "{BUILD}/steamvr/monaka_bridge/driver.vrdrivermanifest"
+    },
+    {
+      "name": "steamvr/monaka_bridge/OpenVR-LICENSE",
+      "path": "{BUILD}/steamvr/monaka_bridge/OpenVR-LICENSE"
+    }
+  ],
+  "evidence": [
+    {
+      "name": "evidence/v2-interop.json",
+      "path": "{WORK}/interop/result.json"
+    }
+  ]
+}
