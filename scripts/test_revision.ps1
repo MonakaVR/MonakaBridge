@@ -55,6 +55,8 @@ function Invoke-RevisionStep {
 $BuildDir = Join-Path $RepoRoot ("build/revision-{0}" -f $Mode.ToLowerInvariant())
 $SteamVr = if ($Mode -eq 'Full') { 'ON' } else { 'OFF' }
 $Steps = @(
+    @{ Name='release-tooling'; File='python'; Args=@('scripts/test_release_v2.py') },
+    @{ Name='release-tooling-optimized'; File='python'; Args=@('-O','scripts/test_release_v2.py') },
     @{ Name='protocol-v2-kit'; File='python'; Args=@('scripts/verify_protocol_v2.py') },
     @{ Name='upstream-integrity'; File='python'; Args=@('scripts/import_upstream.py') },
     @{ Name='cmake-configure'; File='cmake'; Args=@('-S','.','-B',$BuildDir,'-A','x64','-DBUILD_TESTING=ON',("-DMB_BUILD_STEAMVR={0}" -f $SteamVr)) },
@@ -83,7 +85,7 @@ $summary = [ordered]@{
     steamvr_build = $(if ($Mode -eq 'Full') { 'REQUESTED' } else { 'SKIPPED' })
     steamvr_runtime = 'NOT RUN'
     hardware_validation = 'NOT RUN'
-    release_evidence = 'NOT RUN - historical Task4 release tooling still requires v2 migration'
+    release_evidence = 'NOT RUN - run scripts/release_v2.py separately for source-bound v2 evidence'
     steps = $StepResults
 }
 $summaryPath = Join-Path $ResultsDir 'summary.json'

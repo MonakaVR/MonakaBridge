@@ -1,6 +1,10 @@
 """Package this repository's committed source, actual built artifacts and validation evidence."""
 import datetime,hashlib,json,os,subprocess,zipfile
 from pathlib import Path
+
+if __name__ == "__main__":
+    raise SystemExit("Historical wire-v1 report is retired at current v2 HEAD. Use python scripts/release_v2.py; see docs/release-v2.md. Historical supplied artifacts remain immutable provenance.")
+
 root=Path(__file__).resolve().parents[1];os.chdir(root)
 def git(*args):return subprocess.check_output(['git',*args],text=True).strip()
 def sha(data):return hashlib.sha256(data).hexdigest()

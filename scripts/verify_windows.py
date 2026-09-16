@@ -1,6 +1,10 @@
 """Record actual exit codes and artifacts; never infer PASS from progress messages."""
 import argparse,datetime,hashlib,json,os,subprocess
 from pathlib import Path
+
+if __name__ == "__main__":
+    raise SystemExit("Historical wire-v1 report is retired at current v2 HEAD. Use python scripts/release_v2.py; see docs/release-v2.md. Historical supplied artifacts remain immutable provenance.")
+
 p=argparse.ArgumentParser();p.add_argument('--cmake-bin',type=Path,required=True);p.add_argument('--java-home',type=Path,required=True);p.add_argument('--dumpbin',type=Path,required=True);a=p.parse_args()
 root=Path(__file__).resolve().parents[1];os.chdir(root);evidence=root/'build/validation';evidence.mkdir(parents=True,exist_ok=True)
 results={};bins=root/'build/Release'
