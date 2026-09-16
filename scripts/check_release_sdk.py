@@ -15,7 +15,13 @@ require(git("rev-parse", "HEAD").decode().strip() == REVISION, "OpenVR SDK revis
 files = {}
 for name in ("headers/openvr.h", "headers/openvr_driver.h", "lib/win64/openvr_api.lib", "bin/win64/openvr_api.dll", "LICENSE"):
     actual = (a.sdk / name).read_bytes()
-    require(actual == git("show", REVISION + ":" + name), "Modified OpenVR input: " + name)
+    committed = git("show", REVISION + ":" + name)
+    # The SDK marks headers/license as Git text; Windows checkout uses CRLF.
+    # Canonicalize only those text inputs. Library/DLL bytes must match exactly.
+    text_input = name.endswith(".h") or name == "LICENSE"
+    canonical = actual.replace(b"\r\n", b"\n") if text_input else actual
+    expected = committed.replace(b"\r\n", b"\n") if text_input else committed
+    require(canonical == expected, "Modified OpenVR input: " + name)
     files[name] = sha(actual)
 save(a.output, {"result": "PASS", "source_commit": REVISION, "files_sha256": files,
                 "steamvr_interactive": "NOT RUN"})
