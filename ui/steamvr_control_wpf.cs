@@ -27,6 +27,7 @@ namespace MonakaBridge {
   }
   private sealed class ControlWindow:Window {
    readonly string root;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
+   readonly TextBlock livePose=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(2,4,2,8)};
    readonly ListBox devices=new ListBox{Height=160};readonly ListBox mappings=new ListBox{Height=130};
    readonly TextBox source=new TextBox(),device=new TextBox(),tracker=new TextBox(),profile=new TextBox(),space=new TextBox(),revision=new TextBox(),world=new TextBox();
    readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="This input space/revision has been approved"};
@@ -34,7 +35,8 @@ namespace MonakaBridge {
    Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();int editMappingIndex=-1;
    public ControlWindow(string root){this.root=root;Title="Monaka Bridge";Width=900;Height=820;
     var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
-    panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(devices);
+    panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(devices);panel.Children.Add(livePose);
+    devices.SelectionChanged+=delegate{UpdateLivePose();};
     Add(panel,"Refresh / load configuration",Reload);Add(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text="Persistent tracker mapping and profile",FontSize=18});panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{SelectMapping();};
     Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);panel.Children.Add(approved);
@@ -65,8 +67,25 @@ namespace MonakaBridge {
      if(selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;
     }
     if(restore>=0)devices.SelectedIndex=restore;
+    UpdateLivePose();
     if(DateTime.UtcNow-File.GetLastWriteTimeUtc(path)>TimeSpan.FromSeconds(3))status.Text="Bridge offline; displayed observations are historical.";
    }catch(Exception e){status.Text="Bridge health unavailable: "+e.Message;}}
+   static string ArrayText(object value,int expected){
+    var a=value as IList;if(a==null||a.Count!=expected)return "-";
+    var parts=new string[a.Count];for(int i=0;i<a.Count;++i)parts[i]=Convert.ToDouble(a[i],CultureInfo.InvariantCulture).ToString("F5",CultureInfo.InvariantCulture);
+    return "["+string.Join(", ",parts)+"]";
+   }
+   void UpdateLivePose(){
+    if(devices.SelectedIndex<0||devices.SelectedIndex>=observations.Count){livePose.Text="Select a source/device to inspect live pose.";return;}
+    var d=(Dictionary<string,object>)observations[devices.SelectedIndex];
+    var tracking=d.ContainsKey("tracking_state")?Convert.ToString(d["tracking_state"],CultureInfo.InvariantCulture):"unknown";
+    var fresh=d.ContainsKey("fresh")&&Convert.ToBoolean(d["fresh"],CultureInfo.InvariantCulture);
+    var pos=d.ContainsKey("position_valid")&&Convert.ToBoolean(d["position_valid"],CultureInfo.InvariantCulture);
+    var rot=d.ContainsKey("orientation_valid")&&Convert.ToBoolean(d["orientation_valid"],CultureInfo.InvariantCulture);
+    var p=d.ContainsKey("position")?ArrayText(d["position"],3):"-";
+    var q=d.ContainsKey("orientation_xyzw")?ArrayText(d["orientation_xyzw"],4):"-";
+    livePose.Text="Tracking: "+tracking+" | fresh="+fresh+" | pos="+pos+" rot="+rot+"\nPosition [m]: "+p+"\nQuaternion xyzw: "+q;
+   }
    void Migrate(){
     var route=new Microsoft.Win32.OpenFileDialog{Title="Select the legacy output route file"};if(route.ShowDialog(this)!=true)return;
     var alignment=new Microsoft.Win32.OpenFileDialog{Title="Select the legacy alignment JSON"};if(alignment.ShowDialog(this)!=true)return;
