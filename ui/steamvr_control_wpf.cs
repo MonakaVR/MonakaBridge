@@ -32,7 +32,7 @@ namespace MonakaBridge {
     Add(panel,"Refresh / load configuration",Reload);Add(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text="Persistent tracker mapping and profile",FontSize=18});panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{SelectMapping();};
     Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);panel.Children.Add(approved);
-    Add(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",delegate{var p=(Dictionary<string,object>)((Dictionary<string,object>)config["profiles"])[profile.Text];status.Text="Approved: "+p["approved"]+"\nEvidence: "+p["evidence"];});
+    Add(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",ShowProfileApproval);
     Add(panel,"Import legacy route / alignment",Migrate);
     panel.Children.Add(new TextBlock{Text="Shared alignment for the selected source map (metres)",FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
     Add(panel,"Apply shared translation",delegate{double.Parse(x.Text,CultureInfo.InvariantCulture);double.Parse(y.Text,CultureInfo.InvariantCulture);double.Parse(z.Text,CultureInfo.InvariantCulture);Command(root,"align "+Quote(tracker.Text)+" "+x.Text+" "+y.Text+" "+z.Text);Reload();});
@@ -47,13 +47,28 @@ namespace MonakaBridge {
    void Safe(Action a){try{a();}catch(Exception e){status.Text=e.Message;MessageBox.Show(this,e.Message,"Monaka Bridge",MessageBoxButton.OK,MessageBoxImage.Error);}}
    static void Field(Panel p,string label,TextBox field){var row=new DockPanel();var text=new TextBlock{Text=label,Width=140};row.Children.Add(text);field.Margin=new Thickness(2);row.Children.Add(field);p.Children.Add(row);}
    void Reload(){config=Read(ConfigPath(root));map=new ArrayList((ICollection)config["mappings"]);mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";Health();}
-   void Health(){try{var path=ConfigPath(root)+".status.json";var h=Read(path);devices.Items.Clear();observations=new ArrayList((ICollection)h["devices"]);foreach(Dictionary<string,object> d in observations)devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | fresh="+d["fresh"]);if(DateTime.UtcNow-File.GetLastWriteTimeUtc(path)>TimeSpan.FromSeconds(3))status.Text="Bridge offline; displayed observations are historical.";}catch(Exception e){status.Text="Bridge health unavailable: "+e.Message;}}
+   void Health(){try{
+    string selectedSource=null,selectedDevice=null;
+    if(devices.SelectedIndex>=0&&devices.SelectedIndex<observations.Count){var selected=(Dictionary<string,object>)observations[devices.SelectedIndex];selectedSource=(string)selected["source"];selectedDevice=(string)selected["device"];}
+    var path=ConfigPath(root)+".status.json";var h=Read(path);var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
+    foreach(Dictionary<string,object> d in observations){devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | fresh="+d["fresh"]);if(selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;}
+    if(restore>=0)devices.SelectedIndex=restore;
+    if(DateTime.UtcNow-File.GetLastWriteTimeUtc(path)>TimeSpan.FromSeconds(3))status.Text="Bridge offline; displayed observations are historical.";
+   }catch(Exception e){status.Text="Bridge health unavailable: "+e.Message;}}
    void Migrate(){
     var route=new Microsoft.Win32.OpenFileDialog{Title="Select the legacy output route file"};if(route.ShowDialog(this)!=true)return;
     var alignment=new Microsoft.Win32.OpenFileDialog{Title="Select the legacy alignment JSON"};if(alignment.ShowDialog(this)!=true)return;
     string target=ConfigPath(root),candidate=target+".migration-"+Guid.NewGuid().ToString("N");
     Command(root,"migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName)+" "+Quote(candidate));
     File.Replace(candidate,target,target+".backup-"+Guid.NewGuid().ToString("N"));Reload();status.Text="Legacy settings imported with backups; review each space before enabling output.";
+   }
+   void ShowProfileApproval(){
+    if(config==null)throw new InvalidOperationException("Configuration is not loaded.");
+    var name=profile.Text.Trim();if(name.Length==0)throw new InvalidOperationException("Enter or select a profile first.");
+    var profiles=(Dictionary<string,object>)config["profiles"];if(!profiles.ContainsKey(name))throw new InvalidOperationException("Unknown profile: "+name);
+    var p=(Dictionary<string,object>)profiles[name];
+    var message="Profile: "+name+"\nApproved: "+p["approved"]+"\nEvidence: "+p["evidence"];
+    status.Text=message;MessageBox.Show(this,message,"Profile approval",MessageBoxButton.OK,MessageBoxImage.Information);
    }
    void SelectObservation(){if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);approved.IsChecked=false;status.Text="Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
    void SelectMapping(){if(map==null||mappings.SelectedIndex<0)return;var b=(Dictionary<string,object>)map[mappings.SelectedIndex];source.Text=(string)b["source_id"];device.Text=(string)b["device_id"];tracker.Text=(string)b["tracker_id"];profile.Text=(string)b["profile"];space.Text=(string)b["input_space"];revision.Text=Convert.ToString(b["input_revision"],CultureInfo.InvariantCulture);world.Text=(string)b["world_space"];approved.IsChecked=(bool)b["space_approved"];var t=(IList)((Dictionary<string,object>)b["world"])["translation"];x.Text=Convert.ToString(t[0],CultureInfo.InvariantCulture);y.Text=Convert.ToString(t[1],CultureInfo.InvariantCulture);z.Text=Convert.ToString(t[2],CultureInfo.InvariantCulture);}
