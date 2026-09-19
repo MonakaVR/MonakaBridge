@@ -19,6 +19,14 @@ int main()try{
  auto flip=sample();for(auto& x:*flip.orientation)x=-x;auto continued=mb::calibrate(flip,b,c.profiles.at("pico"),h,20000000);CHECK(continued.orientation==out.orientation);CHECK(continued.omega&&near(mb::norm(*continued.omega),0));
  CHECK(!mb::angularVelocity({0,0,0,1},{0,0,1,0},.001));CHECK(!mb::angularVelocity({0,0,0,1},{0,0,0,1},.0001));CHECK(!mb::angularVelocity({0,0,0,1},{0,0,0,1},.101));
  CHECK(mb::orientationZero({.5,.5,.5,.5},{.5,.5,.5,.5})==mb::Quat({0,0,0,1}));
+ // 2026-09-20 VIVE HIL basis: native back=-X, up=+Y, left=-Z.
+ // Therefore rh_y_up_neg_z_forward = [native Z, native Y, -native X].
+ mb::Profile viveHil;viveHil.convention="vut-native-v1";viveHil.positionAxes={3,2,-1};viveHil.quaternionAxes={3,2,-1,4};viveHil.approved=true;viveHil.evidence="2026-09-20 HIL";
+ auto vivePose=sample();vivePose.coordinate_space.convention="vut-native-v1";vivePose.position=mb::Vec{1,2,3};vivePose.orientation=mb::Quat{0,0.7071067811865476,0,0.7071067811865476};
+ mb::Binding viveBinding=b;viveBinding.world.translation={0,0,0};viveBinding.world.rotation={0,0,0,1};viveBinding.mount={};mb::History viveHistory;
+ auto viveOut=mb::calibrate(vivePose,viveBinding,viveHil,viveHistory,10000000);
+ CHECK(viveOut.position&&near((*viveOut.position)[0],3)&&near((*viveOut.position)[1],2)&&near((*viveOut.position)[2],-1));
+ CHECK(viveOut.orientation&&near((*viveOut.orientation)[0],0)&&near((*viveOut.orientation)[1],0.7071067811865476)&&near((*viveOut.orientation)[2],0)&&near((*viveOut.orientation)[3],0.7071067811865476));
  mb::Profile identity;identity.convention="fixture-native";identity.approved=true;identity.evidence="synthetic";identity.angularSpaceVerified=true;
  p=sample();p.orientation=mb::Quat{0,0,0,1};p.linear_velocity=mb::c1::Derivative{{1,0,0},"space","measured"};p.capabilities.push_back("linear_velocity");b.world.translation={0,0,0};b.mount.translation={1,0,0};h={};
  auto offset=mb::calibrate(p,b,identity,h,10000000);CHECK(offset.position&&near((*offset.position)[0],2));CHECK(!offset.velocity);
