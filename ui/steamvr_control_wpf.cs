@@ -57,7 +57,13 @@ namespace MonakaBridge {
     string selectedSource=null,selectedDevice=null;
     if(devices.SelectedIndex>=0&&devices.SelectedIndex<observations.Count){var selected=(Dictionary<string,object>)observations[devices.SelectedIndex];selectedSource=(string)selected["source"];selectedDevice=(string)selected["device"];}
     var path=ConfigPath(root)+".status.json";var h=ReadHealth(path);var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
-    foreach(Dictionary<string,object> d in observations){devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | fresh="+d["fresh"]);if(selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;}
+    foreach(Dictionary<string,object> d in observations){
+     var tracking=d.ContainsKey("tracking_state")?Convert.ToString(d["tracking_state"],CultureInfo.InvariantCulture):"unknown";
+     var pos=d.ContainsKey("position_valid")&&Convert.ToBoolean(d["position_valid"],CultureInfo.InvariantCulture);
+     var rot=d.ContainsKey("orientation_valid")&&Convert.ToBoolean(d["orientation_valid"],CultureInfo.InvariantCulture);
+     devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | tracking="+tracking+" | pos="+pos+" rot="+rot+" | fresh="+d["fresh"]);
+     if(selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;
+    }
     if(restore>=0)devices.SelectedIndex=restore;
     if(DateTime.UtcNow-File.GetLastWriteTimeUtc(path)>TimeSpan.FromSeconds(3))status.Text="Bridge offline; displayed observations are historical.";
    }catch(Exception e){status.Text="Bridge health unavailable: "+e.Message;}}
