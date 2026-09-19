@@ -18,7 +18,12 @@ bool writeStatusAtomic(const std::filesystem::path& target,const nlohmann::json&
  try{
   {std::ofstream out(temp,std::ios::binary|std::ios::trunc);if(!out)return false;out<<status.dump(2);out.flush();if(!out)return false;}
 #ifdef _WIN32
-  if(!MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)){DeleteFileW(temp.c_str());return false;}
+  bool replaced=false;
+  for(int attempt=0;attempt<20&&!replaced;++attempt){
+   if(MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))replaced=true;
+   else if(attempt<19)Sleep(10);
+  }
+  if(!replaced){DeleteFileW(temp.c_str());return false;}
 #else
   std::filesystem::rename(temp,target);
 #endif
