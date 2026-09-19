@@ -63,9 +63,13 @@ int main(int argc,char** argv)try{
    const bool fixedFuture=fixedValid&&d.fixedTime>now;
    const double poseAgeMs=fixedValid&&!fixedFuture?double(now-d.fixedTime)/1000000.0:-1.0;
    const double sourceReceiveAgeMs=s.lastReceive>=0&&now>=s.lastReceive?double(now-s.lastReceive)/1000000.0:-1.0;
+   const std::string trackingState=d.pose?d.pose->tracking_state:(d.state?d.state->tracking_state:"unknown");
+   const bool positionValid=d.pose&&d.pose->validity.position;
+   const bool orientationValid=d.pose&&d.pose->validity.orientation;
    status["devices"].push_back({
     {"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},
     {"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision},
+    {"tracking_state",trackingState},{"position_valid",positionValid},{"orientation_valid",orientationValid},
     {"has_pose",bool(d.pose)},{"absent",d.absent},{"fixed_time_valid",fixedValid},{"fixed_time_future",fixedFuture},
     {"pose_age_ms",poseAgeMs},{"source_receive_age_ms",sourceReceiveAgeMs},
     {"pose_sequence",d.poseSequence},{"state_sequence",d.stateSequence}
