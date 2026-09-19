@@ -37,7 +37,24 @@
         4
       ],
       "approved": false,
-      "evidence": "Hardware NOT RUN; illustrative mapping only",
+      "evidence": "Legacy placeholder retained for existing installations; do not approve",
+      "angular_space_verified": false
+    },
+    "vive-hil-v1": {
+      "convention": "vut-native-v1",
+      "position_axes": [
+        3,
+        2,
+        -1
+      ],
+      "quaternion_axes": [
+        3,
+        2,
+        -1,
+        4
+      ],
+      "approved": true,
+      "evidence": "2026-09-20 HIL: world translation back=-X, up=+Y, left=-Z with metre scale; native yaw/pitch/roll quaternion axes observed; rigid basis conversion to rh_y_up_neg_z_forward is [z,y,-x,w]",
       "angular_space_verified": false
     }
   },
