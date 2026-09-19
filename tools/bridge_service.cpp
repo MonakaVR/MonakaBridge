@@ -10,7 +10,22 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-namespace {std::atomic_bool running{true};void stop(int){running=false;}}
+namespace {
+std::atomic_bool running{true};
+void stop(int){running=false;}
+bool writeStatusAtomic(const std::filesystem::path& target,const nlohmann::json& status){
+ auto temp=target;temp+=L".tmp";
+ try{
+  {std::ofstream out(temp,std::ios::binary|std::ios::trunc);if(!out)return false;out<<status.dump(2);out.flush();if(!out)return false;}
+#ifdef _WIN32
+  if(!MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)){DeleteFileW(temp.c_str());return false;}
+#else
+  std::filesystem::rename(temp,target);
+#endif
+  return true;
+ }catch(...){std::error_code ec;std::filesystem::remove(temp,ec);return false;}
+}
+}
 int main(int argc,char** argv)try{
  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"monaka_bridge_service CONFIG [INGRESS MONAKA DIRECT MIRROR] [--duration-ms N]\nmonaka_bridge_service --stop\n";return 0;}
 #ifdef _WIN32
@@ -38,7 +53,7 @@ int main(int argc,char** argv)try{
   try{auto change=std::filesystem::last_write_time(path);if(change!=modified){bridge.reconfigure(mb::loadConfig(path),now);modified=change;}}catch(const std::exception& e){std::cerr<<"config not applied: "<<e.what()<<'\n';}
   nlohmann::json status={{"policy",mb::policyName(bridge.config().policy)},{"mapping_revision",bridge.config().revision},{"malformed",bridge.registry.malformed},{"rejected",bridge.registry.rejected},{"collisions",bridge.registry.collisions},{"send_errors",bridge.fanout.errors},{"devices",nlohmann::json::array()}};
   for(auto& [source,s]:bridge.registry.sources)for(auto& [device,d]:s.devices){auto binding=bridge.config().bindings.find({source,device});status["devices"].push_back({{"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},{"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision}});}
-  std::ofstream health(path.string()+".status.json");health<<status.dump(2);
+  auto health=path;health+=L".status.json";if(!writeStatusAtomic(health,status))std::cerr<<"status write failed\n";
  }
  std::this_thread::sleep_for(std::chrono::milliseconds(1));
  }
