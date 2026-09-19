@@ -32,7 +32,7 @@ namespace MonakaBridge {
     Add(panel,"Refresh / load configuration",Reload);Add(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text="Persistent tracker mapping and profile",FontSize=18});panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{SelectMapping();};
     Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);panel.Children.Add(approved);
-    Add(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",ShowProfileApproval);
+    Add(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",delegate{var p=(Dictionary<string,object>)((Dictionary<string,object>)config["profiles"])[profile.Text];status.Text="Approved: "+p["approved"]+"\nEvidence: "+p["evidence"];});
     Add(panel,"Import legacy route / alignment",Migrate);
     panel.Children.Add(new TextBlock{Text="Shared alignment for the selected source map (metres)",FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
     Add(panel,"Apply shared translation",delegate{double.Parse(x.Text,CultureInfo.InvariantCulture);double.Parse(y.Text,CultureInfo.InvariantCulture);double.Parse(z.Text,CultureInfo.InvariantCulture);Command(root,"align "+Quote(tracker.Text)+" "+x.Text+" "+y.Text+" "+z.Text);Reload();});
@@ -61,14 +61,6 @@ namespace MonakaBridge {
     string target=ConfigPath(root),candidate=target+".migration-"+Guid.NewGuid().ToString("N");
     Command(root,"migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName)+" "+Quote(candidate));
     File.Replace(candidate,target,target+".backup-"+Guid.NewGuid().ToString("N"));Reload();status.Text="Legacy settings imported with backups; review each space before enabling output.";
-   }
-   void ShowProfileApproval(){
-    if(config==null)throw new InvalidOperationException("Configuration is not loaded.");
-    var name=profile.Text.Trim();if(name.Length==0)throw new InvalidOperationException("Enter or select a profile first.");
-    var profiles=(Dictionary<string,object>)config["profiles"];if(!profiles.ContainsKey(name))throw new InvalidOperationException("Unknown profile: "+name);
-    var p=(Dictionary<string,object>)profiles[name];
-    var message="Profile: "+name+"\nApproved: "+p["approved"]+"\nEvidence: "+p["evidence"];
-    status.Text=message;MessageBox.Show(this,message,"Profile approval",MessageBoxButton.OK,MessageBoxImage.Information);
    }
    void SelectObservation(){if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);approved.IsChecked=false;status.Text="Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
    void SelectMapping(){if(map==null||mappings.SelectedIndex<0)return;var b=(Dictionary<string,object>)map[mappings.SelectedIndex];source.Text=(string)b["source_id"];device.Text=(string)b["device_id"];tracker.Text=(string)b["tracker_id"];profile.Text=(string)b["profile"];space.Text=(string)b["input_space"];revision.Text=Convert.ToString(b["input_revision"],CultureInfo.InvariantCulture);world.Text=(string)b["world_space"];approved.IsChecked=(bool)b["space_approved"];var t=(IList)((Dictionary<string,object>)b["world"])["translation"];x.Text=Convert.ToString(t[0],CultureInfo.InvariantCulture);y.Text=Convert.ToString(t[1],CultureInfo.InvariantCulture);z.Text=Convert.ToString(t[2],CultureInfo.InvariantCulture);}
