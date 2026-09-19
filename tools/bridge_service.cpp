@@ -52,7 +52,20 @@ int main(int argc,char** argv)try{
   lastStatus=now;
   try{auto change=std::filesystem::last_write_time(path);if(change!=modified){bridge.reconfigure(mb::loadConfig(path),now);modified=change;}}catch(const std::exception& e){std::cerr<<"config not applied: "<<e.what()<<'\n';}
   nlohmann::json status={{"policy",mb::policyName(bridge.config().policy)},{"mapping_revision",bridge.config().revision},{"malformed",bridge.registry.malformed},{"rejected",bridge.registry.rejected},{"collisions",bridge.registry.collisions},{"send_errors",bridge.fanout.errors},{"devices",nlohmann::json::array()}};
-  for(auto& [source,s]:bridge.registry.sources)for(auto& [device,d]:s.devices){auto binding=bridge.config().bindings.find({source,device});status["devices"].push_back({{"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},{"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision}});}
+  for(auto& [source,s]:bridge.registry.sources)for(auto& [device,d]:s.devices){
+   auto binding=bridge.config().bindings.find({source,device});
+   const bool fixedValid=d.fixedTime>=0;
+   const bool fixedFuture=fixedValid&&d.fixedTime>now;
+   const double poseAgeMs=fixedValid&&!fixedFuture?double(now-d.fixedTime)/1000000.0:-1.0;
+   const double sourceReceiveAgeMs=s.lastReceive>=0&&now>=s.lastReceive?double(now-s.lastReceive)/1000000.0:-1.0;
+   status["devices"].push_back({
+    {"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},
+    {"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision},
+    {"has_pose",bool(d.pose)},{"absent",d.absent},{"fixed_time_valid",fixedValid},{"fixed_time_future",fixedFuture},
+    {"pose_age_ms",poseAgeMs},{"source_receive_age_ms",sourceReceiveAgeMs},
+    {"pose_sequence",d.poseSequence},{"state_sequence",d.stateSequence}
+   });
+  }
   auto health=path;health+=L".status.json";if(!writeStatusAtomic(health,status))std::cerr<<"status write failed\n";
  }
  std::this_thread::sleep_for(std::chrono::milliseconds(1));
