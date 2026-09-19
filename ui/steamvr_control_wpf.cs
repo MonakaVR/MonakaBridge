@@ -20,11 +20,17 @@ namespace MonakaBridge {
    using(var p=Process.Start(start)){string error=p.StandardError.ReadToEnd();p.WaitForExit();if(p.ExitCode!=0)throw new InvalidOperationException(error);}
   }
   internal static Dictionary<string,object> Read(string path){return new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(path,Encoding.UTF8));}
+  internal static Dictionary<string,object> ReadHealth(string path){
+   IOException last=null;
+   for(int i=0;i<4;++i){try{return Read(path);}catch(IOException e){last=e;if(i<3)System.Threading.Thread.Sleep(25);}}
+   throw last;
+  }
   private sealed class ControlWindow:Window {
    readonly string root;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly ListBox devices=new ListBox{Height=160};readonly ListBox mappings=new ListBox{Height=130};
    readonly TextBox source=new TextBox(),device=new TextBox(),tracker=new TextBox(),profile=new TextBox(),space=new TextBox(),revision=new TextBox(),world=new TextBox();
    readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="This input space/revision has been approved"};
+   readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","both","disabled"}};
    Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
    public ControlWindow(string root){this.root=root;Title="Monaka Bridge";Width=900;Height=820;
     var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
@@ -36,7 +42,7 @@ namespace MonakaBridge {
     Add(panel,"Import legacy route / alignment",Migrate);
     panel.Children.Add(new TextBlock{Text="Shared alignment for the selected source map (metres)",FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
     Add(panel,"Apply shared translation",delegate{double.Parse(x.Text,CultureInfo.InvariantCulture);double.Parse(y.Text,CultureInfo.InvariantCulture);double.Parse(z.Text,CultureInfo.InvariantCulture);Command(root,"align "+Quote(tracker.Text)+" "+x.Text+" "+y.Text+" "+z.Text);Reload();});
-    var routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","both","disabled"},SelectedIndex=0};panel.Children.Add(routes);Add(panel,"Apply output policy",delegate{Command(root,"policy "+routes.SelectedItem);Reload();});
+    panel.Children.Add(routes);Add(panel,"Apply output policy",delegate{if(routes.SelectedItem==null)throw new InvalidOperationException("Select an output policy.");Command(root,"policy "+routes.SelectedItem);Reload();});
     Add(panel,"Start Bridge",delegate{Process.Start(new ProcessStartInfo(Native(root,"monaka_bridge_service"),Quote(ConfigPath(root))){UseShellExecute=false,CreateNoWindow=true});});
     Add(panel,"Stop Bridge",delegate{Process.Start(new ProcessStartInfo(Native(root,"monaka_bridge_service"),"--stop"){UseShellExecute=false,CreateNoWindow=true});});
     panel.Children.Add(status);timer.Interval=TimeSpan.FromSeconds(1);timer.Tick+=delegate{Health();};timer.Start();Closed+=delegate{timer.Stop();};Loaded+=delegate{Safe(Reload);};
@@ -46,11 +52,11 @@ namespace MonakaBridge {
    void Add(Panel p,string text,Action action){var b=MakeButton(text,260);b.Click+=delegate{Safe(action);};p.Children.Add(b);}
    void Safe(Action a){try{a();}catch(Exception e){status.Text=e.Message;MessageBox.Show(this,e.Message,"Monaka Bridge",MessageBoxButton.OK,MessageBoxImage.Error);}}
    static void Field(Panel p,string label,TextBox field){var row=new DockPanel();var text=new TextBlock{Text=label,Width=140};row.Children.Add(text);field.Margin=new Thickness(2);row.Children.Add(field);p.Children.Add(row);}
-   void Reload(){config=Read(ConfigPath(root));map=new ArrayList((ICollection)config["mappings"]);mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";Health();}
+   void Reload(){config=Read(ConfigPath(root));map=new ArrayList((ICollection)config["mappings"]);mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";Health();}
    void Health(){try{
     string selectedSource=null,selectedDevice=null;
     if(devices.SelectedIndex>=0&&devices.SelectedIndex<observations.Count){var selected=(Dictionary<string,object>)observations[devices.SelectedIndex];selectedSource=(string)selected["source"];selectedDevice=(string)selected["device"];}
-    var path=ConfigPath(root)+".status.json";var h=Read(path);var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
+    var path=ConfigPath(root)+".status.json";var h=ReadHealth(path);var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
     foreach(Dictionary<string,object> d in observations){devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | fresh="+d["fresh"]);if(selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;}
     if(restore>=0)devices.SelectedIndex=restore;
     if(DateTime.UtcNow-File.GetLastWriteTimeUtc(path)>TimeSpan.FromSeconds(3))status.Text="Bridge offline; displayed observations are historical.";
