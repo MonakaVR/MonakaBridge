@@ -66,10 +66,14 @@ int main(int argc,char** argv)try{
    const std::string trackingState=d.pose?d.pose->tracking_state:(d.state?d.state->tracking_state:"unknown");
    const bool positionValid=d.pose&&d.pose->validity.position;
    const bool orientationValid=d.pose&&d.pose->validity.orientation;
+   nlohmann::json position=nullptr,orientation=nullptr;
+   if(d.pose&&d.pose->position)position=*d.pose->position;
+   if(d.pose&&d.pose->orientation)orientation=*d.pose->orientation;
    status["devices"].push_back({
     {"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},
     {"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision},
     {"tracking_state",trackingState},{"position_valid",positionValid},{"orientation_valid",orientationValid},
+    {"position",position},{"orientation_xyzw",orientation},
     {"has_pose",bool(d.pose)},{"absent",d.absent},{"fixed_time_valid",fixedValid},{"fixed_time_future",fixedFuture},
     {"pose_age_ms",poseAgeMs},{"source_receive_age_ms",sourceReceiveAgeMs},
     {"pose_sequence",d.poseSequence},{"state_sequence",d.stateSequence}
