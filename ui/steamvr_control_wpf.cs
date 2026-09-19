@@ -31,7 +31,7 @@ namespace MonakaBridge {
    readonly TextBox source=new TextBox(),device=new TextBox(),tracker=new TextBox(),profile=new TextBox(),space=new TextBox(),revision=new TextBox(),world=new TextBox();
    readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="This input space/revision has been approved"};
    readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","both","disabled"}};
-   Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
+   Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();int editMappingIndex=-1;
    public ControlWindow(string root){this.root=root;Title="Monaka Bridge";Width=900;Height=820;
     var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
     panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(devices);
@@ -52,7 +52,7 @@ namespace MonakaBridge {
    void Add(Panel p,string text,Action action){var b=MakeButton(text,260);b.Click+=delegate{Safe(action);};p.Children.Add(b);}
    void Safe(Action a){try{a();}catch(Exception e){status.Text=e.Message;MessageBox.Show(this,e.Message,"Monaka Bridge",MessageBoxButton.OK,MessageBoxImage.Error);}}
    static void Field(Panel p,string label,TextBox field){var row=new DockPanel();var text=new TextBlock{Text=label,Width=140};row.Children.Add(text);field.Margin=new Thickness(2);row.Children.Add(field);p.Children.Add(row);}
-   void Reload(){config=Read(ConfigPath(root));map=new ArrayList((ICollection)config["mappings"]);mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";Health();}
+   void Reload(){config=Read(ConfigPath(root));map=new ArrayList((ICollection)config["mappings"]);mappings.Items.Clear();editMappingIndex=-1;foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";Health();}
    void Health(){try{
     string selectedSource=null,selectedDevice=null;
     if(devices.SelectedIndex>=0&&devices.SelectedIndex<observations.Count){var selected=(Dictionary<string,object>)observations[devices.SelectedIndex];selectedSource=(string)selected["source"];selectedDevice=(string)selected["device"];}
@@ -68,12 +68,14 @@ namespace MonakaBridge {
     Command(root,"migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName)+" "+Quote(candidate));
     File.Replace(candidate,target,target+".backup-"+Guid.NewGuid().ToString("N"));Reload();status.Text="Legacy settings imported with backups; review each space before enabling output.";
    }
-   void SelectObservation(){if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);approved.IsChecked=false;status.Text="Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
-   void SelectMapping(){if(map==null||mappings.SelectedIndex<0)return;var b=(Dictionary<string,object>)map[mappings.SelectedIndex];source.Text=(string)b["source_id"];device.Text=(string)b["device_id"];tracker.Text=(string)b["tracker_id"];profile.Text=(string)b["profile"];space.Text=(string)b["input_space"];revision.Text=Convert.ToString(b["input_revision"],CultureInfo.InvariantCulture);world.Text=(string)b["world_space"];approved.IsChecked=(bool)b["space_approved"];var t=(IList)((Dictionary<string,object>)b["world"])["translation"];x.Text=Convert.ToString(t[0],CultureInfo.InvariantCulture);y.Text=Convert.ToString(t[1],CultureInfo.InvariantCulture);z.Text=Convert.ToString(t[2],CultureInfo.InvariantCulture);}
+   void SelectObservation(){if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);approved.IsChecked=false;status.Text=(editMappingIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
+   void SelectMapping(){if(map==null||mappings.SelectedIndex<0)return;editMappingIndex=mappings.SelectedIndex;var b=(Dictionary<string,object>)map[editMappingIndex];source.Text=(string)b["source_id"];device.Text=(string)b["device_id"];tracker.Text=(string)b["tracker_id"];profile.Text=(string)b["profile"];space.Text=(string)b["input_space"];revision.Text=Convert.ToString(b["input_revision"],CultureInfo.InvariantCulture);world.Text=(string)b["world_space"];approved.IsChecked=(bool)b["space_approved"];var t=(IList)((Dictionary<string,object>)b["world"])["translation"];x.Text=Convert.ToString(t[0],CultureInfo.InvariantCulture);y.Text=Convert.ToString(t[1],CultureInfo.InvariantCulture);z.Text=Convert.ToString(t[2],CultureInfo.InvariantCulture);}
    static Dictionary<string,object> Identity(){return new Dictionary<string,object>{{"rotation",new double[]{0,0,0,1}},{"translation",new double[]{0,0,0}}};}
    void SaveMapping(){
     var fresh=Read(ConfigPath(root));if(Convert.ToUInt32(fresh["mapping_revision"])!=Convert.ToUInt32(config["mapping_revision"]))throw new InvalidOperationException("Configuration changed; reload first.");
-    Dictionary<string,object> selected=null;foreach(Dictionary<string,object>b in map)if((string)b["source_id"]==source.Text&&(string)b["device_id"]==device.Text)selected=b;
+    Dictionary<string,object> selected=null;
+    if(editMappingIndex>=0&&editMappingIndex<map.Count)selected=(Dictionary<string,object>)map[editMappingIndex];
+    if(selected==null)foreach(Dictionary<string,object>b in map)if((string)b["source_id"]==source.Text&&(string)b["device_id"]==device.Text)selected=b;
     if(selected==null){selected=new Dictionary<string,object>{{"world",Identity()},{"mount",Identity()},{"world_revision",0}};map.Add(selected);}
     selected["source_id"]=source.Text;selected["device_id"]=device.Text;selected["tracker_id"]=tracker.Text;selected["profile"]=profile.Text;selected["input_space"]=space.Text;selected["input_revision"]=UInt32.Parse(revision.Text);selected["world_space"]=world.Text;selected["space_approved"]=approved.IsChecked==true;
     config["mappings"]=map.ToArray();config["mapping_revision"]=checked(Convert.ToUInt32(config["mapping_revision"])+1);
