@@ -1,5 +1,6 @@
 #include "monaka_bridge/bridge.hpp"
 #include "monaka_bridge/network.hpp"
+#include "monaka_bridge/health.hpp"
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <chrono>
@@ -13,23 +14,6 @@
 namespace {
 std::atomic_bool running{true};
 void stop(int){running=false;}
-bool writeStatusAtomic(const std::filesystem::path& target,const nlohmann::json& status){
- auto temp=target;temp+=L".tmp";
- try{
-  {std::ofstream out(temp,std::ios::binary|std::ios::trunc);if(!out)return false;out<<status.dump(2);out.flush();if(!out)return false;}
-#ifdef _WIN32
-  bool replaced=false;
-  for(int attempt=0;attempt<20&&!replaced;++attempt){
-   if(MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))replaced=true;
-   else if(attempt<19)Sleep(10);
-  }
-  if(!replaced){DeleteFileW(temp.c_str());return false;}
-#else
-  std::filesystem::rename(temp,target);
-#endif
-  return true;
- }catch(...){std::error_code ec;std::filesystem::remove(temp,ec);return false;}
-}
 }
 int main(int argc,char** argv)try{
  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"monaka_bridge_service CONFIG [INGRESS MONAKA DIRECT MIRROR] [--duration-ms N]\nmonaka_bridge_service --stop\n";return 0;}
@@ -41,6 +25,8 @@ int main(int argc,char** argv)try{
  if(argc>=6&&std::string(argv[2])!="--duration-ms"){for(int i=0;i<4;++i){auto p=std::stoul(argv[i+2]);if(!p||p>65535)throw std::invalid_argument("invalid port");ports[i]=static_cast<std::uint16_t>(p);}next=6;}
  std::int64_t duration=0;if(argc>next){if(argc!=next+2||std::string(argv[next])!="--duration-ms")throw std::invalid_argument("invalid arguments");duration=std::stoll(argv[next+1])*1000000;}
  mb::Udp input(ports[0]);mb::Udp output;const auto epoch=mb::monotonicNs();mb::Bridge bridge(config,mb::uuid());
+ std::unique_ptr<mb::HealthWriter> healthWriter;
+ try{auto health=path;health+=L".status.json";healthWriter=std::make_unique<mb::HealthWriter>(health);}catch(...){/* Diagnostic failure cannot disable tracking. */}
  std::signal(SIGINT,stop);std::signal(SIGTERM,stop);
 #ifdef _WIN32
  HANDLE stopEvent=CreateEventW(nullptr,TRUE,FALSE,L"Local\\MonakaBridge_Stop");if(!stopEvent)throw std::runtime_error("stop event unavailable");ResetEvent(stopEvent);
@@ -56,30 +42,14 @@ int main(int argc,char** argv)try{
  if(now-lastStatus>=500000000){
   lastStatus=now;
   try{auto change=std::filesystem::last_write_time(path);if(change!=modified){bridge.reconfigure(mb::loadConfig(path),now);modified=change;}}catch(const std::exception& e){std::cerr<<"config not applied: "<<e.what()<<'\n';}
-  nlohmann::json status={{"policy",mb::policyName(bridge.config().policy)},{"mapping_revision",bridge.config().revision},{"malformed",bridge.registry.malformed},{"rejected",bridge.registry.rejected},{"collisions",bridge.registry.collisions},{"send_errors",bridge.fanout.errors},{"devices",nlohmann::json::array()}};
-  for(auto& [source,s]:bridge.registry.sources)for(auto& [device,d]:s.devices){
-   auto binding=bridge.config().bindings.find({source,device});
-   const bool fixedValid=d.fixedTime>=0;
-   const bool fixedFuture=fixedValid&&d.fixedTime>now;
-   const double poseAgeMs=fixedValid&&!fixedFuture?double(now-d.fixedTime)/1000000.0:-1.0;
-   const double sourceReceiveAgeMs=s.lastReceive>=0&&now>=s.lastReceive?double(now-s.lastReceive)/1000000.0:-1.0;
-   const std::string trackingState=d.pose?d.pose->tracking_state:(d.state?d.state->tracking_state:"unknown");
-   const bool positionValid=d.pose&&d.pose->validity.position;
-   const bool orientationValid=d.pose&&d.pose->validity.orientation;
-   nlohmann::json position=nullptr,orientation=nullptr;
-   if(d.pose&&d.pose->position)position=*d.pose->position;
-   if(d.pose&&d.pose->orientation)orientation=*d.pose->orientation;
-   status["devices"].push_back({
-    {"source",source},{"device",device},{"space",d.space},{"convention",d.convention},{"revision",d.revision},
-    {"fresh",bridge.registry.fresh({source,device},now)},{"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},{"collision",s.collision},
-    {"tracking_state",trackingState},{"position_valid",positionValid},{"orientation_valid",orientationValid},
-    {"position",position},{"orientation_xyzw",orientation},
-    {"has_pose",bool(d.pose)},{"absent",d.absent},{"fixed_time_valid",fixedValid},{"fixed_time_future",fixedFuture},
-    {"pose_age_ms",poseAgeMs},{"source_receive_age_ms",sourceReceiveAgeMs},
-    {"pose_sequence",d.poseSequence},{"state_sequence",d.stateSequence}
-   });
-  }
-  auto health=path;health+=L".status.json";if(!writeStatusAtomic(health,status))std::cerr<<"status write failed\n";
+  if(healthWriter)try{
+   const auto unixMs=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+   auto snapshot=mb::healthSnapshot(bridge,now,unixMs);
+   snapshot["health_write_failures"]=healthWriter->writeFailures();
+   snapshot["health_replace_failures"]=healthWriter->replaceFailures();
+   snapshot["health_dropped"]=healthWriter->dropped();
+   healthWriter->publish(std::move(snapshot));
+  }catch(...){/* Snapshot allocation/format failure is also best effort. */}
  }
  std::this_thread::sleep_for(std::chrono::milliseconds(1));
  }
