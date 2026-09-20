@@ -1,4 +1,4 @@
-param([switch]$Run)
+param([switch]$Run, [string]$OutputDirectory = '', [switch]$Force)
 
 $ErrorActionPreference = "Stop"
 
@@ -6,10 +6,11 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $GuiSource = Join-Path $RepoRoot "ui\steamvr_control_wpf.cs"
 $GuiTraySource = Join-Path $RepoRoot "ui\steamvr_control_tray.cs"
 $GuiMainSource = Join-Path $RepoRoot "ui\steamvr_control_gui_main.cs"
-$BuildDir = Join-Path $RepoRoot "build-gui"
+$GuiModelsSource = Join-Path $RepoRoot "ui\control_models.cs"
+$BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "build-gui" }
 $GuiExe = Join-Path $BuildDir "monaka_bridge_control.exe"
 
-foreach ($path in @($GuiSource, $GuiTraySource, $GuiMainSource)) {
+foreach ($path in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource)) {
     if (-not (Test-Path $path)) {
         throw "SteamVR control GUI source was not found: $path"
     }
@@ -114,10 +115,10 @@ function Get-WpfReferenceSet {
 
 $WpfRefs = Get-WpfReferenceSet
 
-$needsBuild = -not (Test-Path $GuiExe)
+$needsBuild = $Force -or -not (Test-Path $GuiExe)
 if (-not $needsBuild) {
     $exeTime = (Get-Item $GuiExe).LastWriteTimeUtc
-    foreach ($source in @($GuiSource, $GuiTraySource, $GuiMainSource, $PSCommandPath)) {
+    foreach ($source in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $PSCommandPath)) {
         if ((Get-Item $source).LastWriteTimeUtc -gt $exeTime) {
             $needsBuild = $true
             break
@@ -146,6 +147,7 @@ if ($needsBuild) {
         "/reference:$($WpfRefs.SystemXaml)",
         $GuiSource,
         $GuiTraySource,
+        $GuiModelsSource,
         $GuiMainSource
     )
 

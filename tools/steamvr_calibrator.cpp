@@ -1,4 +1,5 @@
 #include "monaka_bridge/config.hpp"
+#include "monaka_bridge/mapping_selection.hpp"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -163,10 +164,7 @@ bool ParseArgs(int argc, char** argv, Options& options) {
 bool OpenAlignmentMapping(AlignmentMapping& ipc, const Options& options, std::string& error) {
  try {
   ipc.path=options.configPath;ipc.config=mb::loadConfig(ipc.path);
-  const mb::Binding* selected=nullptr;
-  for(const auto& [key,b]:ipc.config.bindings)
-   if(mb::runtimeSerial(ipc.config.bridgeId,b.tracker)==options.trackerSerial)selected=&b;
-  if(!selected)throw std::invalid_argument("select a mapped Monaka Direct serial");
+  const auto* selected=&mb::detail::runtimeTracker(ipc.config,options.trackerSerial);
   ipc.source=selected->source;ipc.space=selected->inputSpace;ipc.revision=selected->inputRevision;ipc.translation=selected->world.translation;
   return true;
  }catch(const std::exception& e){error=e.what();return false;}
