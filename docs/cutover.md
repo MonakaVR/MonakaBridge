@@ -19,6 +19,6 @@ Physical validation, all **NOT RUN** here:
 - Old/new SteamVR serial-role comparison and rollback rehearsal.
 - Interactive tray/WPF behavior and actual OpenVR calibrator measurement.
 
-Task3's VIVE hardware NOT RUN remains unchanged. Approve a VIVE profile/input map only after the above evidence exists. Generic signed permutations may be insufficient for an eventual measured vendor convention; extend the generic profile representation through a reviewed change if needed, without inventing a wire contract.
+Task3's historical VIVE hardware NOT RUN remains unchanged. The later `vive-hil-v1` candidate records limited axis/scale/rotation observations; it does not establish shared-map/reconnect continuity or complete the above cutover gates. Its source capture files are not in this tree. Profile selection and exact input-map/revision approval remain explicit; see [production integration](production-integration.md). Generic signed permutations must not be extended from unverified vendor assumptions.
 
 Other limits: fixed contract master reconciliation is pending; non-Windows build NOT RUN; transport timestamps do not synchronize clocks or estimate network delay; same-source collision quarantine requires restart; lifetime identity bounds require coordinated Bridge/SteamVR restart after substantial mapping churn. Task2's original source has no root LICENSE grant at its extraction base: preserve bundled file notices and provenance and resolve any redistribution rights separately; no new license is asserted here.

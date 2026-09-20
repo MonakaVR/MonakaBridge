@@ -1,10 +1,12 @@
 # Persistent configuration and migration
 
-`config/bridge.example.json` is a disabled-by-mapping template: default route `steamvr`, persistent ID placeholder, no devices mapped, and VIVE profile unapproved. Copy it once to `config/bridge.json`; never overwrite an existing installation's mapping. The GUI and tools read this common file. Health is in the adjacent `.status.json`; it contains counters and device metadata, not raw packets.
+`config/bridge.example.json` is a disabled-by-mapping template: default route `steamvr`, persistent ID placeholder and no devices mapped. `vive-unverified` remains unapproved; the separate `vive-hil-v1` candidate requires explicit selection and input-space approval. Copy the example once to `config/bridge.json`; never overwrite an existing installation's mapping. Health is in the adjacent `.status.json`; its pose is the native Observation stage, not final SteamVR output. See [production integration](production-integration.md) for asynchronous I/O, identity/rebind rules and evidence limits.
 
 Each profile declares the observed C1 convention, independent signed one-based position and quaternion permutations, approval plus evidence, and whether its angular-space mapping has been verified. PICO compatibility is relative-axis legacy evidence, not proof of the absolute playspace origin. The default placeholder PICO convention must be replaced by the actual observed convention.
 
 The VIVE HIL profile `vive-hil-v1` is based on 2026-09-20 VIVE Ultimate Tracker measurements: physical back translated along native `-X`, physical up along native `+Y`, and physical left along native `-Z`; native translation units matched metres. The resulting rigid coordinate-basis conversion into `rh_y_up_neg_z_forward` is position `[z, y, -x]` and quaternion `[z, y, -x, w]`. Yaw/Pitch/Roll captures were used as rotational consistency checks; tracker mounting orientation remains a separate per-device `mount` transform. Angular-velocity frame semantics remain unverified, so `angular_space_verified` stays false. Existing `vive-unverified` profiles are intentionally not upgraded implicitly.
+
+This paragraph records the earlier HIL report. Original captures and a capture manifest are not present in this tree. The current cleanup validates the profile in software; it does not claim a new hardware run or create capture hashes. Historical Task3 hardware NOT RUN remains unchanged.
 
 Each mapping includes exact source/device IDs, logical tracker ID, selected profile, input space/revision, approved-space flag, destination world space/revision, shared world transform and explicit per-device mount transform. Rotation arrays are xyzw unit quaternions; translation arrays are metres. Position Zero and Orientation Zero are diagnostic compatibility functions, never silently persisted into the normal world calibration.
 
@@ -19,6 +21,8 @@ Every route/mapping/profile/calibration edit must increase the unsigned 32-bit `
 ```
 
 The alignment command updates all mappings sharing the selected source/input-map/revision. The migrated OpenVR calibrator retains reference averaging and measurement from Task2 and uses the same grouping; it rejects a concurrent revision change during measurement. `--clear` additionally requires `--config` and `--tracker` so it cannot clear an unspecified playspace. Full rotation/mount/profile edits are explicit configuration edits followed by validation and revision increment.
+
+`align`/`rename` reject tracker-name shorthand if it occurs in multiple sources. Use an explicit source/device config edit in that case. The calibrator's runtime serial includes publisher, source and tracker. Same-source logical tracker reassignment to a different device still requires Bridge restart; a saved configuration is not proof of runtime application.
 
 Native edits retain the first original `.pre-monaka-bridge.bak` and atomically replace a fully written candidate. GUI edits validate a unique candidate and use `File.Replace` with a unique backup. Concurrent multi-writer edits should be avoided; the GUI/calibrator detect revision changes before their operation, but there is no distributed lock across separate configuration tools. Failed candidates are retained for inspection.
 

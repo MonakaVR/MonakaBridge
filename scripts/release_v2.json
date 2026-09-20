@@ -153,6 +153,10 @@
         "bridge_core",
         "upstream_integrity",
         "bridge_edges",
+        "health_async",
+        "coordinate_profiles",
+        "mapping_contract",
+        "gui_production",
         "separate_process_udp",
         "direct_regression",
         "old_context_null_read_reproduced",
@@ -162,6 +166,10 @@
     }
   ],
   "artifacts": [
+    {
+      "name": "runtime/monaka_bridge_control.exe",
+      "path": "{BUILD}/ui/monaka_bridge_control.exe"
+    },
     {
       "name": "runtime/monaka_bridge_service.exe",
       "path": "{BUILD}/Release/monaka_bridge_service.exe"

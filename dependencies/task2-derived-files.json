@@ -61,7 +61,7 @@
     },
     {
       "path": "outputs/steamvr/driver/device_provider.cpp",
-      "sha256": "725331e77aa6c0c589f62483b953fbfb2bdab602db3aeb6c89a0c8332e68cd2f",
+      "sha256": "a9ab5cdabef29a3c53716468529ef5ab53b23fb5f884a72d8753b86c8a2c5457",
       "change_reason": "Retain Init/Cleanup/dynamic lifecycle; remove vendor and calibration ownership",
       "origins": [
         {
@@ -118,7 +118,7 @@
     },
     {
       "path": "outputs/steamvr/driver/direct_pose.hpp",
-      "sha256": "4fd37cc0eada207029cf8f7759bca83a88fb85f8015d7c451386192dd9a4d4a0",
+      "sha256": "2fc584ed76dae9ce8f7e9d24210746bc59955d80ddcc5e2f7e996f68a7cfc047",
       "change_reason": "Extract DriverPose conversion, disconnected pose, partial validity and clamped age; no calibration",
       "origins": [
         {
@@ -137,7 +137,7 @@
     },
     {
       "path": "include/monaka_bridge/calibration.hpp",
-      "sha256": "363eb320a4c8020f5f8f039668914dc1627cb4871dd2951d793ed6f3f1fec5db",
+      "sha256": "d8b3c8901f53421f918468c99dc2034127a89eaa1ffd2816a0ebd072aaa3ab8f",
       "change_reason": "Move Hamilton/shortest-arc angular velocity and diagnostic orientation-zero into generic layer",
       "origins": [
         {
@@ -156,7 +156,7 @@
     },
     {
       "path": "src/calibration/calibration.cpp",
-      "sha256": "f3df1e1a82c4884451fa8f14f5e06eb7ea1574b046a825740c3e32364fc96549",
+      "sha256": "b3072bb817ba1172227197be16efc06c4240dae1adbedee3649954f9061928f5",
       "change_reason": "Preserve separate PICO position and quaternion mapping; explicit shared world and mount transforms",
       "origins": [
         {
@@ -175,7 +175,7 @@
     },
     {
       "path": "src/mapping/config.cpp",
-      "sha256": "fe5e8af715f060717647d2f252944ef34be6f46956c77333066463245b9a0616",
+      "sha256": "a991aa306c7d1ee7cdfff6d38526494ec7de22533268da367c0e3b3658203476",
       "change_reason": "Replace IPC with persistent versioned common configuration; migrate legacy alignment/route aliases with backups",
       "origins": [
         {
@@ -206,7 +206,7 @@
     },
     {
       "path": "tools/steamvr_calibrator.cpp",
-      "sha256": "d1fad4fa180963734937d3b222ed9af8d9cdd32bf34c403d0a94eae59ac76b19",
+      "sha256": "21c9041637682b24e9622091d9b433275f0f51546d7639d28a081061d27ee190",
       "change_reason": "Retain actual OpenVR reference measurement; persist shared source-space transform instead of legacy IPC",
       "origins": [
         {
@@ -263,7 +263,7 @@
     },
     {
       "path": "ui/steamvr_control_wpf.cs",
-      "sha256": "970a8dd7ae97bdeb046a1b0e295e0f957c9cbf4b5a335e6d7145e26ebe97bcc2",
+      "sha256": "5b043680b25bb8bca51e914c9fc31dcba25480b8a9b7a3942564501c0d75dfa8",
       "change_reason": "Adapt WPF controls/error/process patterns into common source/mapping/profile/alignment UI",
       "origins": [
         {
@@ -281,8 +281,27 @@
       ]
     },
     {
+      "path": "ui/control_models.cs",
+      "sha256": "6d96af99519da88ef6981418dd4b43f2b4f3735abba4b0aa4e93ba17361bd5e4",
+      "change_reason": "Separate migrated GUI mapping/diagnostic presentation into transactional candidate editing and bounded background health reader; no vendor transport",
+      "origins": [
+        {
+          "path": "tools/steamvr_control_wpf.cs",
+          "source_repository": "https://github.com/orzkwsk/PicoMotionTrackerBridge",
+          "source_path": "tools/steamvr_control_wpf.cs",
+          "source_base_sha": "22c7bd8cdbd9a52355b6ff182f0ddc462a998bd8",
+          "source_blob_sha": "74b97e94616c96365daae8ebfbf38e686ed52530",
+          "sha256": "1a5388254963977c2864a1b42dd7c8917a1fbe9b16b3071ab23e0873bff8ab99",
+          "generated": false,
+          "license_notice_handling": "Original bytes/notices preserved; no root license grant at base.",
+          "destination_candidate": "MonakaBridge/tools/steamvr_control_wpf.cs",
+          "old_type_replacement_notes": "See migration/README.md; retain provenance, replace POTB with Task 1 codec."
+        }
+      ]
+    },
+    {
       "path": "scripts/build_gui.ps1",
-      "sha256": "752949ca9ff27850f1262a96c863325e1b5b23746f488cb3b345517d38062072",
+      "sha256": "f93357b0edcfa209d29b7d9997cbf01b50aa22d8014cac72e2a21c585f6226c8",
       "change_reason": "Retain csc/.NET Framework/WPF discovery; common paths and explicit optional launch",
       "origins": [
         {
@@ -301,7 +320,7 @@
     },
     {
       "path": "tests/direct_regression.cpp",
-      "sha256": "8a1809d12eb92a7c639d44c9f713eece7100a9bf60b9ecb71d84b51208ee3855",
+      "sha256": "2b8e0c010d8a11a9a53db2fbbc1a0c0d8bacbf8f81c423fda4a024a15f56f1b3",
       "change_reason": "Test links original verified TrackerDevice unchanged under a standalone mock context",
       "origins": [
         {
@@ -320,7 +339,7 @@
     },
     {
       "path": "tests/udp_regression.py",
-      "sha256": "7e117286b892066ca688c3ee03a6b104d3267b7f6dd5d844b508ecccf3c9e3d1",
+      "sha256": "26812458c5192ca1ab18cc6326ffaed5234148de31f073b1659c09efd194d902",
       "change_reason": "Reads TestPoseRoundTrip position/quaternion/velocity fixture literals from verified extraction at runtime; sends fixed C1 stimulus",
       "origins": [
         {

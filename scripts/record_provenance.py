@@ -21,6 +21,7 @@ derived={
  'ui/steamvr_control_gui_main.cs':(['tools/steamvr_control_gui_main.cs'],'Retain WPF/tray launch pattern in common namespace'),
  'ui/steamvr_control_tray.cs':(['tools/steamvr_control_tray.cs'],'Retain tray lifecycle/menu/window reuse; route and health use common configuration'),
  'ui/steamvr_control_wpf.cs':(['tools/steamvr_control_wpf.cs'],'Adapt WPF controls/error/process patterns into common source/mapping/profile/alignment UI'),
+ 'ui/control_models.cs':(['tools/steamvr_control_wpf.cs'],'Separate migrated GUI mapping/diagnostic presentation into transactional candidate editing and bounded background health reader; no vendor transport'),
  'scripts/build_gui.ps1':(['scripts/steamvr_control_gui.ps1'],'Retain csc/.NET Framework/WPF discovery; common paths and explicit optional launch'),
  'tests/direct_regression.cpp':(['outputs/steamvr/driver/tracker_device.cpp'],'Test links original verified TrackerDevice unchanged under a standalone mock context'),
  'tests/udp_regression.py':(['tests/protocol_tests.cpp'],'Reads TestPoseRoundTrip position/quaternion/velocity fixture literals from verified extraction at runtime; sends fixed C1 stimulus')}
