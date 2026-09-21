@@ -37,6 +37,11 @@ WorldCalibrationTarget selectWorldCalibrationTarget(
     const std::string& inputSpace,
     std::uint32_t inputRevision);
 
+void validateCalibrationObservationIdentity(
+    const c1::TrackerObservation& observation,
+    const WorldCalibrationTarget& target,
+    std::optional<std::string>& lockedSession);
+
 // Validates exact identity/space/revision and locks the first source session.
 // Returns the profile-normalized point before the world transform. Existing
 // mount translation is included; mount rotation is intentionally untouched.

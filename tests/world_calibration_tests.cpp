@@ -92,6 +92,8 @@ int main() try {
     CHECK(session==S1);
     auto stale = observation; stale.coordinate_space.revision=2;
     rejected([&] { mb::calibrationSourcePoint(stale,target,session); });
+    auto rebound = observation; rebound.device_id="different-device";
+    rejected([&] { mb::calibrationSourcePoint(rebound,target,session); });
     auto newSession = observation; newSession.session_id=newSession.clock_id=S2;
     rejected([&] { mb::calibrationSourcePoint(newSession,target,session); });
 
@@ -108,6 +110,7 @@ int main() try {
     const auto& updated=applied.bindings.at({"pico","device"});
     sameRotation(updated.world.rotation,arbitrary.rotation);close(updated.world.translation,arbitrary.translation);
     CHECK(updated.mount.rotation==originalMount.rotation&&updated.mount.translation==originalMount.translation);
+    CHECK(updated.spaceApproved==binding.spaceApproved&&updated.worldRevision==binding.worldRevision);
     CHECK(applied.profiles.at(binding.profile).positionAxes==originalProfile.positionAxes);
     CHECK(applied.profiles.at(binding.profile).quaternionAxes==originalProfile.quaternionAxes);
     // Existing shared input-map semantics update same-source siblings, not another source.

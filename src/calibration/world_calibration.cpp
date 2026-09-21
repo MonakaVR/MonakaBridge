@@ -183,7 +183,7 @@ WorldCalibrationTarget selectWorldCalibrationTarget(
     return {config.revision, binding->second, profile->second};
 }
 
-Vec calibrationSourcePoint(
+void validateCalibrationObservationIdentity(
     const c1::TrackerObservation& observation,
     const WorldCalibrationTarget& target,
     std::optional<std::string>& lockedSession) {
@@ -197,9 +197,17 @@ Vec calibrationSourcePoint(
     if (!lockedSession) lockedSession = observation.session_id;
     else if (*lockedSession != observation.session_id)
         throw std::invalid_argument("observation session changed during calibration");
+}
+
+Vec calibrationSourcePoint(
+    const c1::TrackerObservation& observation,
+    const WorldCalibrationTarget& target,
+    std::optional<std::string>& lockedSession) {
+    validateCalibrationObservationIdentity(observation, target, lockedSession);
     if (observation.modality != "full" || !observation.validity.position || !observation.position)
         throw std::invalid_argument("calibration requires a valid full position observation");
 
+    const auto& binding = target.binding;
     Vec point = permute(*observation.position, target.profile.positionAxes);
     if (norm(binding.mount.translation) > 0) {
         if (!observation.validity.orientation || !observation.orientation)

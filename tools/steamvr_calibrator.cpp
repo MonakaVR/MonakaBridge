@@ -1,5 +1,5 @@
-#include "monaka_bridge/config.hpp"
-#include "monaka_bridge/mapping_selection.hpp"
+#include "monaka_bridge/network.hpp"
+#include "monaka_bridge/world_calibration.hpp"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -21,6 +21,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -36,34 +37,44 @@ struct Options {
     bool list = false;
     bool listTrackers = false;
     bool clear = false;
-    bool measureOnly = false;
-    std::string trackerSerial;
+    bool apply = false;
+    bool measureOnlyRequested = false;
+    std::string tracker, source, device, inputSpace;
+    std::uint32_t inputRevision = 0;
+    bool hasInputRevision = false;
     ReferenceKind reference = ReferenceKind::None;
-    int samples = 120;
+    int points = 3;
+    int samples = 60;
     int intervalMs = 8;
+    int mirrorPort = 29813;
 };
 
 struct AlignmentMapping {
     mb::Config config;
-    std::string path, source, space;
-    std::uint32_t revision=0;
-    mb::Vec translation{};
+    mb::WorldCalibrationTarget target;
+    std::string path;
 };
 
 void PrintUsage() {
     std::cout
-        << "Monaka Bridge SteamVR translation calibrator\n\n"
+        << "Monaka Bridge SteamVR rigid world calibrator\n\n"
         << "Usage (calibration requires --config CONFIG):\n"
-        << "  monaka_bridge_calibrator --list\n"
+        << "  monaka_bridge_calibrator [--config CONFIG] --list\n"
         << "  monaka_bridge_calibrator --list-trackers\n"
-        << "  monaka_bridge_calibrator --config PATH --tracker SERIAL --clear\n"
-        << "  monaka_bridge_calibrator --tracker <serial> --reference <left|right|hmd>\n"
-        << "      [--measure-only] [--samples <count>] [--interval-ms <milliseconds>]\n\n"
+        << "  monaka_bridge_calibrator --config PATH --tracker ID --source ID --device ID\n"
+        << "      --input-space ID --input-revision N --reference <left|right|hmd>\n"
+        << "      [--points N] [--samples N] [--interval-ms N] [--mirror-port N]\n"
+        << "      [--measure-only|--apply]\n"
+        << "  monaka_bridge_calibrator --config PATH --tracker ID --source ID --device ID\n"
+        << "      --input-space ID --input-revision N --clear --apply\n\n"
         << "Backward compatibility:\n"
-        << "  --controller <left|right> is accepted as an alias for --reference.\n\n"
-        << "Calibration assumes the selected reference device and Monaka Direct tracker pose\n"
-        << "reference points are held at the same physical point while sampling.\n"
-        << "--measure-only calculates the suggested translation without applying it.\n";
+        << "  --controller <left|right> is accepted as an alias for --reference;\n"
+        << "  --list-trackers still lists legacy Monaka Direct devices.\n\n"
+        << "Native tracker positions come from the read-only Observation mirror (default 29813),\n"
+        << "not health JSON or the Direct driver. Keep the tracker and reference rigidly fixed\n"
+        << "relative to each other and their orientation nearly unchanged while moving them to\n"
+        << "at least three non-collinear locations. Press Enter to capture each point.\n"
+        << "Default operation is measure-only; configuration changes require --apply.\n";
 }
 
 bool ParsePositiveInt(const char* text, int& value) {
@@ -76,6 +87,15 @@ bool ParsePositiveInt(const char* text, int& value) {
         return false;
     }
     value = static_cast<int>(parsed);
+    return true;
+}
+
+bool ParseRevision(const char* text, std::uint32_t& value) {
+    if (text == nullptr || *text == '\0' || *text == '-') return false;
+    char* end = nullptr;
+    const unsigned long long parsed = std::strtoull(text, &end, 10);
+    if (end == text || *end != '\0' || parsed > UINT32_MAX) return false;
+    value = static_cast<std::uint32_t>(parsed);
     return true;
 }
 
@@ -106,12 +126,20 @@ bool ParseArgs(int argc, char** argv, Options& options) {
         } else if (arg == "--clear") {
             options.clear = true;
         } else if (arg == "--measure-only") {
-            options.measureOnly = true;
-        } else if (arg == "--tracker") {
-            if (i + 1 >= argc) {
-                return false;
-            }
-            options.trackerSerial = argv[++i];
+            options.measureOnlyRequested = true;
+        } else if (arg == "--apply") {
+            options.apply = true;
+        } else if (arg == "--tracker" && i+1<argc) {
+            options.tracker = argv[++i];
+        } else if (arg == "--source" && i+1<argc) {
+            options.source = argv[++i];
+        } else if (arg == "--device" && i+1<argc) {
+            options.device = argv[++i];
+        } else if (arg == "--input-space" && i+1<argc) {
+            options.inputSpace = argv[++i];
+        } else if (arg == "--input-revision") {
+            if (i+1>=argc || !ParseRevision(argv[++i],options.inputRevision)) return false;
+            options.hasInputRevision = true;
         } else if (arg == "--reference") {
             if (i + 1 >= argc || !ParseReference(argv[++i], options.reference)) {
                 return false;
@@ -132,10 +160,14 @@ bool ParseArgs(int argc, char** argv, Options& options) {
             if (i + 1 >= argc || !ParsePositiveInt(argv[++i], options.samples)) {
                 return false;
             }
+        } else if (arg == "--points") {
+            if (i + 1 >= argc || !ParsePositiveInt(argv[++i], options.points)) return false;
         } else if (arg == "--interval-ms") {
             if (i + 1 >= argc || !ParsePositiveInt(argv[++i], options.intervalMs)) {
                 return false;
             }
+        } else if (arg == "--mirror-port") {
+            if (i+1>=argc || !ParsePositiveInt(argv[++i],options.mirrorPort) || options.mirrorPort>65535) return false;
         } else if (arg == "--help" || arg == "-h") {
             PrintUsage();
             std::exit(0);
@@ -146,35 +178,38 @@ bool ParseArgs(int argc, char** argv, Options& options) {
 
     const int modeCount = (options.list ? 1 : 0) +
                           (options.listTrackers ? 1 : 0) +
-                          (options.clear ? 1 : 0) +
-                          (!options.trackerSerial.empty() && !options.clear ? 1 : 0);
+                          (!options.tracker.empty() ? 1 : 0);
     if (modeCount != 1) {
         return false;
     }
-    if (options.clear && options.trackerSerial.empty()) return false;
-    if (!options.clear && !options.trackerSerial.empty() && options.reference == ReferenceKind::None) {
-        return false;
-    }
-    if (options.measureOnly && options.trackerSerial.empty()) {
-        return false;
-    }
+    if(options.apply&&options.measureOnlyRequested)return false;
+    if(!options.tracker.empty()){
+        if(options.configPath.empty()||options.source.empty()||options.device.empty()||
+           options.inputSpace.empty()||!options.hasInputRevision)return false;
+        if(options.clear){if(!options.apply||options.reference!=ReferenceKind::None)return false;}
+        else if(options.reference==ReferenceKind::None||options.points<3)return false;
+    }else if(options.apply||options.measureOnlyRequested||options.clear)return false;
     return true;
 }
 
 bool OpenAlignmentMapping(AlignmentMapping& ipc, const Options& options, std::string& error) {
  try {
   ipc.path=options.configPath;ipc.config=mb::loadConfig(ipc.path);
-  const auto* selected=&mb::detail::runtimeTracker(ipc.config,options.trackerSerial);
-  ipc.source=selected->source;ipc.space=selected->inputSpace;ipc.revision=selected->inputRevision;ipc.translation=selected->world.translation;
+  ipc.target=mb::selectWorldCalibrationTarget(ipc.config,options.source,options.device,
+      options.tracker,options.inputSpace,options.inputRevision);
   return true;
  }catch(const std::exception& e){error=e.what();return false;}
 }
-bool WriteTranslation(AlignmentMapping& ipc,const std::array<double,3>& t,std::string& error) {
+bool CheckMapping(const AlignmentMapping& ipc,std::string& error) {
  try {
-  // Refuse stale calibration result after concurrent config edits.
-  auto current=mb::loadConfig(ipc.path);if(current.revision!=ipc.config.revision)throw std::runtime_error("configuration changed during measurement");
-  for(auto& [key,b]:current.bindings)if(b.source==ipc.source&&b.inputSpace==ipc.space&&b.inputRevision==ipc.revision)b.world.translation=t;
-  if(current.revision==UINT32_MAX)throw std::runtime_error("revision exhausted");++current.revision;mb::saveConfig(ipc.path,current);return true;
+  mb::validateWorldCalibrationTarget(mb::loadConfig(ipc.path),ipc.target);return true;
+ }catch(const std::exception& e){error=e.what();return false;}
+}
+bool WriteAlignment(const AlignmentMapping& ipc,const mb::Rigid& transform,std::string& error) {
+ try {
+  auto current=mb::loadConfig(ipc.path);
+  auto candidate=mb::worldCalibrationCandidate(current,ipc.target,transform,true);
+  mb::saveConfig(ipc.path,candidate);return true;
  }catch(const std::exception& e){error=e.what();return false;}
 }
 
@@ -287,6 +322,17 @@ void ListDevices(vr::IVRSystem* system) {
     }
 }
 
+void ListMappings(const mb::Config& config) {
+    std::cout << "Configured calibration inputs (explicit selection is still required):\n";
+    for (const auto& [key,binding] : config.bindings)
+        std::cout << "  tracker=" << binding.tracker
+                  << " source=" << binding.source
+                  << " device=" << binding.device
+                  << " input-space=" << binding.inputSpace
+                  << " input-revision=" << binding.inputRevision
+                  << " profile=" << binding.profile << '\n';
+}
+
 void ListMonakaTrackers(vr::IVRSystem* system) {
     vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount]{};
     system->GetDeviceToAbsoluteTrackingPose(
@@ -304,20 +350,6 @@ void ListMonakaTrackers(vr::IVRSystem* system) {
             std::cout << serial << '\n';
         }
     }
-}
-
-std::optional<vr::TrackedDeviceIndex_t> FindTracker(
-    vr::IVRSystem* system,
-    const std::string& serial) {
-    for (vr::TrackedDeviceIndex_t i = 0; i < vr::k_unMaxTrackedDeviceCount; ++i) {
-        if (!IsMonakaBridgeTracker(system, i)) {
-            continue;
-        }
-        if (GetDeviceSerial(system, i) == serial) {
-            return i;
-        }
-    }
-    return std::nullopt;
 }
 
 std::optional<vr::TrackedDeviceIndex_t> FindReference(
@@ -347,16 +379,95 @@ std::optional<vr::TrackedDeviceIndex_t> FindReference(
     return std::nullopt;
 }
 
-int RunCalibration(vr::IVRSystem* system,
-                   AlignmentMapping& ipc,
-                   const Options& options) {
-    const auto trackerIndex = FindTracker(system, options.trackerSerial);
-    if (!trackerIndex.has_value()) {
-        std::cerr << "Monaka Direct tracker serial was not found in SteamVR: "
-                  << options.trackerSerial << '\n';
-        return 4;
+class MirrorReader {
+public:
+    MirrorReader(std::uint16_t port, const mb::WorldCalibrationTarget& target)
+        : input_(port), target_(target) {}
+
+    std::optional<mb::Vec> receivePoint() {
+        std::optional<mb::Vec> latest;
+        for (int count = 0; count < 128; ++count) {
+            const auto datagram = input_.receive();
+            if (!datagram) break;
+            mb::c1::Envelope envelope;mb::c1::Error error;
+            if (!mb::c1::DecodeEnvelope(
+                    reinterpret_cast<const std::uint8_t*>(datagram->bytes.data()),
+                    datagram->bytes.size(),envelope,error)) continue;
+            const auto* observation=std::get_if<mb::c1::TrackerObservation>(&envelope);
+            if (!observation || observation->source_id!=target_.binding.source ||
+                observation->device_id!=target_.binding.device) continue;
+            mb::validateCalibrationObservationIdentity(*observation,target_,session_);
+            if (lastSequence_>=0 && observation->sequence<lastSequence_)
+                throw std::runtime_error("observation sequence moved backward during calibration");
+            if (observation->sequence==lastSequence_) continue;
+            lastSequence_=observation->sequence;
+            if (observation->modality!="full" || !observation->validity.position ||
+                !observation->position) continue;
+            if (mb::norm(target_.binding.mount.translation)>0 &&
+                (!observation->validity.orientation || !observation->orientation)) continue;
+            latest=mb::calibrationSourcePoint(*observation,target_,session_);
+        }
+        return latest;
     }
 
+    const std::optional<std::string>& session() const { return session_; }
+
+private:
+    mb::Udp input_;
+    const mb::WorldCalibrationTarget& target_;
+    std::optional<std::string> session_;
+    std::int64_t lastSequence_=-1;
+};
+
+std::optional<mb::PointCorrespondence> CapturePoint(
+    vr::IVRSystem* system,
+    vr::TrackedDeviceIndex_t referenceIndex,
+    MirrorReader& mirror,
+    const AlignmentMapping& mapping,
+    const Options& options,
+    int pointIndex) {
+    std::string error;
+    if(!CheckMapping(mapping,error))throw std::runtime_error(error);
+    std::cout << "Point " << pointIndex+1 << "/" << options.points
+              << ": place the rigid tracker/reference fixture, keep it still, then press Enter.\n";
+    std::string confirmation;if(!std::getline(std::cin,confirmation))
+        throw std::runtime_error("capture cancelled before all points were measured");
+
+    mb::Vec sourceSum{},referenceSum{};
+    int valid=0;
+    vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount]{};
+    const auto timeoutMs=std::max<std::int64_t>(5000,std::min<std::int64_t>(60000,
+        static_cast<std::int64_t>(options.samples)*options.intervalMs*30));
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(timeoutMs);
+    while(valid<options.samples&&std::chrono::steady_clock::now()<deadline){
+        system->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding,0.0F,
+            poses,vr::k_unMaxTrackedDeviceCount);
+        const auto native=mirror.receivePoint();
+        const auto& reference=poses[referenceIndex];
+        if(native&&reference.bDeviceIsConnected&&reference.bPoseIsValid){
+            sourceSum=mb::add(sourceSum,*native);
+            referenceSum=mb::add(referenceSum,PoseTranslation(reference));
+            ++valid;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(options.intervalMs));
+    }
+    if(valid<options.samples){
+        std::cerr << "Too few valid paired mirror/reference frames at point "
+                  << pointIndex+1 << ": " << valid << "/" << options.samples << '\n';
+        return {};
+    }
+    if(!CheckMapping(mapping,error))throw std::runtime_error(error);
+    const auto sourceMean=mb::scale(sourceSum,1.0/static_cast<double>(valid));
+    const auto referenceMean=mb::scale(referenceSum,1.0/static_cast<double>(valid));
+    std::cout << std::fixed << std::setprecision(6)
+              << "  native/profile point: (" << sourceMean[0] << ", " << sourceMean[1] << ", " << sourceMean[2] << ") m\n"
+              << "  SteamVR reference:   (" << referenceMean[0] << ", " << referenceMean[1] << ", " << referenceMean[2] << ") m\n";
+    return mb::PointCorrespondence{sourceMean,referenceMean};
+}
+
+int RunCalibration(vr::IVRSystem* system,
+                   AlignmentMapping& mapping,
+                   const Options& options) {
     const auto referenceIndex = FindReference(system, options.reference);
     if (!referenceIndex.has_value()) {
         std::cerr << "Requested reference device was not found in SteamVR: "
@@ -364,86 +475,55 @@ int RunCalibration(vr::IVRSystem* system,
         return 5;
     }
 
-    std::array<double, 3> deltaSum{0.0, 0.0, 0.0};
-    int validSamples = 0;
-    vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount]{};
-
-    std::cout << "Tracker:   index=" << *trackerIndex
-              << " serial=" << options.trackerSerial << '\n';
+    MirrorReader mirror(static_cast<std::uint16_t>(options.mirrorPort),mapping.target);
+    std::cout << "Tracker:   source=" << options.source
+              << " device=" << options.device
+              << " tracker=" << options.tracker << '\n';
+    std::cout << "Input:     space=" << options.inputSpace
+              << " revision=" << options.inputRevision
+              << " profile=" << mapping.target.binding.profile
+              << " mirror=127.0.0.1:" << options.mirrorPort << '\n';
     std::cout << "Reference: index=" << *referenceIndex
               << " type=" << ReferenceName(options.reference) << '\n';
-    std::cout << "Sampling " << options.samples
-              << " frames; keep both reference points together and still.\n";
+    std::cout << "Capture plan: " << options.points << " non-collinear points, "
+              << options.samples << " new mirror frames averaged per point.\n";
 
-    for (int sample = 0; sample < options.samples; ++sample) {
-        system->GetDeviceToAbsoluteTrackingPose(
-            vr::TrackingUniverseStanding,
-            0.0F,
-            poses,
-            vr::k_unMaxTrackedDeviceCount);
-
-        const auto& trackerPose = poses[*trackerIndex];
-        const auto& referencePose = poses[*referenceIndex];
-        if (trackerPose.bDeviceIsConnected && trackerPose.bPoseIsValid &&
-            referencePose.bDeviceIsConnected && referencePose.bPoseIsValid) {
-            const auto trackerPosition = PoseTranslation(trackerPose);
-            const auto referencePosition = PoseTranslation(referencePose);
-            for (std::size_t axis = 0; axis < deltaSum.size(); ++axis) {
-                deltaSum[axis] += referencePosition[axis] - trackerPosition[axis];
-            }
-            ++validSamples;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(options.intervalMs));
+    std::vector<mb::PointCorrespondence> points;
+    for(int point=0;point<options.points;++point){
+        auto captured=CapturePoint(system,*referenceIndex,mirror,mapping,options,point);
+        if(!captured)return 6;
+        points.push_back(*captured);
     }
-
-    const int minimumValidSamples = std::max(10, options.samples / 4);
-    if (validSamples < minimumValidSamples) {
-        std::cerr << "Too few valid paired poses: " << validSamples
-                  << "/" << options.samples << '\n';
-        return 6;
+    const auto result=mb::solveRigidAlignment(points);
+    std::string mappingError;if(!CheckMapping(mapping,mappingError)){
+        std::cerr << mappingError << '\n';return 7;
     }
+    const auto& q=result.transform.rotation;const auto& t=result.transform.translation;
+    std::cout << std::fixed << std::setprecision(8)
+              << "World rotation xyzw: (" << q[0] << ", " << q[1] << ", " << q[2] << ", " << q[3] << ")\n"
+              << "World translation m: (" << t[0] << ", " << t[1] << ", " << t[2] << ")\n"
+              << "Residual RMS: " << result.rmsResidual << " m\n"
+              << "Residual max: " << result.maxResidual << " m\n"
+              << "CALIBRATION_RESULT " << q[0] << ' ' << q[1] << ' ' << q[2] << ' ' << q[3]
+              << ' ' << t[0] << ' ' << t[1] << ' ' << t[2] << '\n';
 
-    std::array<double, 3> meanDelta{};
-    std::array<double, 3> currentTranslation{
-        ipc.translation[0],
-        ipc.translation[1],
-        ipc.translation[2]};
-    std::array<double, 3> updatedTranslation{};
-    for (std::size_t axis = 0; axis < meanDelta.size(); ++axis) {
-        meanDelta[axis] = deltaSum[axis] / static_cast<double>(validSamples);
-        updatedTranslation[axis] = currentTranslation[axis] + meanDelta[axis];
-    }
-
-    std::cout << std::fixed << std::setprecision(6)
-              << "Valid samples: " << validSamples << '\n'
-              << "Current t: (" << currentTranslation[0] << ", "
-              << currentTranslation[1] << ", " << currentTranslation[2] << ") m\n"
-              << "Measured delta: (" << meanDelta[0] << ", "
-              << meanDelta[1] << ", " << meanDelta[2] << ") m\n"
-              << "Updated t: (" << updatedTranslation[0] << ", "
-              << updatedTranslation[1] << ", " << updatedTranslation[2] << ") m\n"
-              << "CALIBRATION_RESULT " << updatedTranslation[0] << ' '
-              << updatedTranslation[1] << ' ' << updatedTranslation[2] << '\n';
-
-    if (options.measureOnly) {
-        std::cout << "Measurement only; world translation was not changed.\n";
+    if (!options.apply) {
+        std::cout << "Measurement only (default); configuration was not changed. Re-run with --apply to persist this measurement.\n";
         return 0;
     }
 
-    std::string error;
-    if (!WriteTranslation(ipc, updatedTranslation, error)) {
+    std::string error;if (!WriteAlignment(mapping,result.transform,error)) {
         std::cerr << error << '\n';
         return 7;
     }
-
-    std::cout << "World translation update requested.\n";
+    std::cout << "Applied world.rotation/world.translation; mapping_revision incremented once.\n"
+              << "The tracking service was not restarted.\n";
     return 0;
 }
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
     Options options;
     if (!ParseArgs(argc, argv, options)) {
         PrintUsage();
@@ -458,13 +538,14 @@ int main(int argc, char** argv) {
     }
 
     if (options.clear) {
-        const std::array<double, 3> zero{0.0, 0.0, 0.0};
+        const mb::Rigid identity{};
         std::string error;
-        if (!WriteTranslation(ipc, zero, error)) {
+        if (!WriteAlignment(ipc, identity, error)) {
             std::cerr << error << '\n';
             return 7;
         }
-        std::cout << "World translation cleared.\n";
+        std::cout << "World rotation/translation cleared; mapping_revision incremented once.\n"
+                  << "The tracking service was not restarted.\n";
         return 0;
     }
 
@@ -475,16 +556,20 @@ int main(int argc, char** argv) {
                   << vr::VR_GetVRInitErrorAsEnglishDescription(initError) << '\n';
         return 8;
     }
+    struct ShutdownOpenVr { ~ShutdownOpenVr(){vr::VR_Shutdown();} } shutdownOpenVr;
 
     int result = 0;
     if (options.list) {
         ListDevices(system);
+        if(!options.configPath.empty())ListMappings(mb::loadConfig(options.configPath));
     } else if (options.listTrackers) {
         ListMonakaTrackers(system);
     } else {
         result = RunCalibration(system, ipc, options);
     }
 
-    vr::VR_Shutdown();
     return result;
+} catch(const std::exception& error) {
+    std::cerr << error.what() << '\n';
+    return 9;
 }

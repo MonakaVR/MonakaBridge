@@ -155,6 +155,7 @@
         "bridge_edges",
         "health_async",
         "coordinate_profiles",
+        "world_calibration",
         "mapping_contract",
         "gui_production",
         "separate_process_udp",
