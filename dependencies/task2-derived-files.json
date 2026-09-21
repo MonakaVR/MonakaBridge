@@ -206,7 +206,7 @@
     },
     {
       "path": "tools/steamvr_calibrator.cpp",
-      "sha256": "21c9041637682b24e9622091d9b433275f0f51546d7639d28a081061d27ee190",
+      "sha256": "c97a86c136f031ab2f2048b1f71b5833310925414a6f9606f09fa663b0673bc0",
       "change_reason": "Retain actual OpenVR reference measurement; persist shared source-space transform instead of legacy IPC",
       "origins": [
         {

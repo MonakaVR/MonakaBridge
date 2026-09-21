@@ -1,5 +1,6 @@
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/world_calibration.hpp"
+#include "monaka_bridge/trajectory_calibration.hpp"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -47,6 +48,8 @@ struct Options {
     int samples = 60;
     int intervalMs = 8;
     int mirrorPort = 29813;
+    std::string mode="static";
+    mb::TrajectoryOptions trajectory;
 };
 
 struct AlignmentMapping {
@@ -65,6 +68,7 @@ void PrintUsage() {
         << "      --input-space ID --input-revision N --reference <left|right|hmd>\n"
         << "      [--points N] [--samples N] [--interval-ms N] [--mirror-port N]\n"
         << "      [--measure-only|--apply]\n"
+        << "      [--mode static|trajectory] [--duration-seconds 5..15] [--max-pairing-ms 1..100]\n"
         << "  monaka_bridge_calibrator --config PATH --tracker ID --source ID --device ID\n"
         << "      --input-space ID --input-revision N --clear --apply\n\n"
         << "Backward compatibility:\n"
@@ -75,6 +79,9 @@ void PrintUsage() {
         << "relative to each other and their orientation nearly unchanged while moving them to\n"
         << "at least three non-collinear locations. Press Enter to capture each point.\n"
         << "Default operation is measure-only; configuration changes require --apply.\n";
+    std::cout << "Trajectory mode: hold the pair rigidly, move left/right in a figure-eight,\n"
+        << "also move up/down and forward/back; rotate through yaw, pitch and roll.\n"
+        << "It estimates both source world transform and device holding extrinsic.\n";
 }
 
 bool ParsePositiveInt(const char* text, int& value) {
@@ -171,6 +178,13 @@ bool ParseArgs(int argc, char** argv, Options& options) {
         } else if (arg == "--help" || arg == "-h") {
             PrintUsage();
             std::exit(0);
+        } else if (arg == "--mode" && i+1<argc) {
+            options.mode=argv[++i];if(options.mode!="static"&&options.mode!="trajectory")return false;
+        } else if (arg == "--duration-seconds" && i+1<argc) {
+            int seconds;if(!ParsePositiveInt(argv[++i],seconds)||seconds<5||seconds>15)return false;
+            options.trajectory.durationSeconds=seconds;
+        } else if (arg == "--max-pairing-ms" && i+1<argc) {
+            int ms;if(!ParsePositiveInt(argv[++i],ms)||ms>100)return false;options.trajectory.maxPairingDeltaNs=ms*1000000LL;
         } else {
             return false;
         }
@@ -521,6 +535,103 @@ int RunCalibration(vr::IVRSystem* system,
     return 0;
 }
 
+mb::Rigid ReferenceRigid(const vr::TrackedDevicePose_t& pose) {
+    // Fit transformed unit basis points with the existing proper rigid solver.
+    // Its residual rejects scale/shear rather than silently normalizing them.
+    const auto translation=PoseTranslation(pose);
+    std::vector<mb::PointCorrespondence> axes{{{0,0,0},translation}};
+    for(int k=0;k<3;++k){mb::Vec unit{},column{};unit[k]=1;for(int j=0;j<3;++j)column[j]=pose.mDeviceToAbsoluteTracking.m[j][k];axes.push_back({unit,mb::add(column,translation)});}
+    auto rigid=mb::solveRigidAlignment(axes);
+    if(rigid.maxResidual>.001)throw std::invalid_argument("OpenVR reference transform is not rigid");
+    return rigid.transform;
+}
+
+int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options& options) {
+    auto referenceIndex=FindReference(system,options.reference);
+    if(!referenceIndex)throw std::invalid_argument("requested SteamVR reference not found");
+    const std::string serial=GetDeviceSerial(system,*referenceIndex);
+    mb::TrajectoryRecorder recorder(mapping.config,mapping.target,serial,options.trajectory);
+    mb::Udp mirror(static_cast<std::uint16_t>(options.mirrorPort));
+    std::cout<<"Trajectory / measure-only="<<(!options.apply)<<" publisher="<<mapping.config.bridgeId
+        <<" source="<<options.source<<" device="<<options.device<<" tracker="<<options.tracker
+        <<" input-space="<<options.inputSpace<<" coordinate-revision="<<options.inputRevision
+        <<" mapping-revision="<<mapping.target.mappingRevision<<" profile="<<mapping.target.binding.profile
+        <<" reference="<<ReferenceName(options.reference)<<" serial="<<serial<<" universe=Standing\n"
+        <<"Keep the two devices rigidly fixed. Move left/right in a figure-eight, up/down,\n"
+        <<"and forward/back while rotating yaw, pitch and roll. Avoid abrupt motion.\n"
+        <<"Press Enter to record "<<options.trajectory.durationSeconds<<" seconds.\n";
+    std::string confirmation;if(!std::getline(std::cin,confirmation))throw std::invalid_argument("trajectory recording cancelled");
+    // Discard pre-recording backlog boundedly. No old pose becomes a new sample.
+    for(std::size_t i=0;i<options.trajectory.maxSamples;++i){if(!mirror.receive())break;if(i+1==options.trajectory.maxSamples)throw std::invalid_argument("mirror backlog exceeded startup bound");}
+    vr::VREvent_t event{};for(int i=0;i<1024&&system->PollNextEvent(&event,sizeof(event));++i){}
+    const auto start=mb::monotonicNs(),end=start+static_cast<std::int64_t>(options.trajectory.durationSeconds*1e9);
+    auto nextStatus=start,lastPoll=start;
+    while(mb::monotonicNs()<end){
+        for(int i=0;i<128&&system->PollNextEvent(&event,sizeof(event));++i)
+            if(event.eventType==vr::VREvent_ChaperoneUniverseHasChanged||event.eventType==vr::VREvent_StandingZeroPoseReset)
+                throw std::invalid_argument("SteamVR Standing universe changed during recording");
+        vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount]{};
+        const auto before=mb::monotonicNs();
+        if(before-lastPoll>options.trajectory.maxAgeNs)throw std::invalid_argument("trajectory polling stalled; queued packet timing is unreliable");
+        lastPoll=before;
+        system->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding,0.0F,poses,vr::k_unMaxTrackedDeviceCount);const auto after=mb::monotonicNs();
+        const auto selected=FindReference(system,options.reference);
+        if(selected&&(*selected!=*referenceIndex||GetDeviceSerial(system,*selected)!=serial))throw std::invalid_argument("reference device identity changed during recording");
+        const auto& reference=poses[*referenceIndex];
+        bool valid=selected&&reference.bDeviceIsConnected&&reference.bPoseIsValid&&reference.eTrackingResult==vr::TrackingResult_Running_OK&&after-before<=options.trajectory.maxPairingDeltaNs;
+        mb::Rigid referencePose;if(valid)referencePose=ReferenceRigid(reference);
+        recorder.reference({before+(after-before)/2,referencePose,valid},serial);
+        for(int count=0;count<128;++count){
+            auto datagram=mirror.receive();if(!datagram)break;const auto arrival=mb::monotonicNs();
+            mb::c1::Envelope envelope;mb::c1::Error error;
+            if(!mb::c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(datagram->bytes.data()),datagram->bytes.size(),envelope,error))continue;
+            if(auto p=std::get_if<mb::c1::TrackerObservation>(&envelope)){
+                if(p->source_id==options.source&&p->device_id==options.device)recorder.observation(*p,arrival);
+            }else if(auto state=std::get_if<mb::c1::ObservationDeviceState>(&envelope)){
+                if(state->source_id==options.source&&state->device_id==options.device)recorder.deviceState(*state);
+            }
+        }
+        recorder.checkConfig(mb::loadConfig(mapping.path));
+        if(after>=nextStatus){auto q=recorder.quality();std::cout<<"Recording elapsed="<<double(after-start)/1e9<<"s paired="<<q.samples<<" extent="<<q.extent[0]<<","<<q.extent[1]<<","<<q.extent[2]<<"m rotation="<<q.rotation<<"rad diversity="<<q.axisDiversity<<"\n";nextStatus=after+1000000000;}
+        std::this_thread::sleep_for(std::chrono::milliseconds(options.intervalMs));
+    }
+    recorder.checkConfig(mb::loadConfig(mapping.path));const auto solved=recorder.solve();
+    // Solver time is outside capture, but a new Standing origin invalidates W.
+    for(int i=0;i<1024;++i){
+        if(!system->PollNextEvent(&event,sizeof(event)))break;
+        if(event.eventType==vr::VREvent_ChaperoneUniverseHasChanged||event.eventType==vr::VREvent_StandingZeroPoseReset||i==1023)
+            throw std::invalid_argument("Standing origin changed or event backlog prevents final validation");
+    }
+    const auto finalReference=FindReference(system,options.reference);
+    if(!finalReference||*finalReference!=*referenceIndex||GetDeviceSerial(system,*finalReference)!=serial)
+        throw std::invalid_argument("reference identity unavailable after solve");
+    // Validate queued selected-device identity/revision changes before success or
+    // apply; these later samples are not part of the solved trajectory.
+    for(std::size_t i=0;i<options.trajectory.maxSamples;++i){
+        auto datagram=mirror.receive();if(!datagram)break;
+        if(i+1==options.trajectory.maxSamples)throw std::invalid_argument("mirror backlog prevents final identity validation");
+        mb::c1::Envelope envelope;mb::c1::Error error;
+        if(!mb::c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(datagram->bytes.data()),datagram->bytes.size(),envelope,error))continue;
+        if(auto p=std::get_if<mb::c1::TrackerObservation>(&envelope)){
+            if(p->source_id==options.source&&p->device_id==options.device)recorder.observation(*p,mb::monotonicNs());
+        }else if(auto state=std::get_if<mb::c1::ObservationDeviceState>(&envelope)){
+            if(state->source_id==options.source&&state->device_id==options.device)recorder.deviceState(*state);
+        }
+    }
+    const auto printRigid=[](const char* name,const mb::Rigid& r){std::cout<<name<<" rotation xyzw: ";for(auto v:r.rotation)std::cout<<v<<' ';std::cout<<"\n"<<name<<" translation xyz m: ";for(auto v:r.translation)std::cout<<v<<' ';std::cout<<'\n';};
+    std::cout<<std::fixed<<std::setprecision(9);printRigid("World",solved.world);printRigid("Estimated device extrinsic (not mount)",solved.extrinsic);
+    const auto& q=solved.quality;const auto& r=solved.residuals;const auto& all=solved.allResiduals;
+    std::cout<<"Trajectory quality: "<<q.reason<<" | paired="<<solved.pairs<<" inliers="<<solved.inliers<<" valid-ratio="<<q.validRatio<<" duration="<<q.spanSeconds<<"s\n"
+        <<"Inlier residual position RMS/max m: "<<r.rmsPosition<<" / "<<r.maxPosition<<"\nOrientation RMS/max rad: "<<r.rmsOrientation<<" / "<<r.maxOrientation
+        <<"\nAll-pair residual position RMS/max m: "<<all.rmsPosition<<" / "<<all.maxPosition<<"\nAll-pair orientation RMS/max rad: "<<all.rmsOrientation<<" / "<<all.maxOrientation
+        <<"\nTimestamp model: local arrival minus packet age; nearest pairing bound="<<options.trajectory.maxPairingDeltaNs/1000000<<"ms. Device/transport delay NOT calibrated.\n"
+        <<"Input session: "<<recorder.session().value_or("unknown")<<"\n";
+    if(!options.apply){std::cout<<"Measurement only; configuration unchanged. Explicit --apply is required.\n";return 0;}
+    const auto current=mb::loadConfig(mapping.path);recorder.checkConfig(current);
+    mb::saveConfig(mapping.path,mb::worldCalibrationCandidate(current,mapping.target,solved.world,true));
+    std::cout<<"Applied source-side world transform; mapping_revision incremented once. Extrinsic/mount/profile unchanged. Service not restarted.\n";return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) try {
@@ -565,7 +676,7 @@ int main(int argc, char** argv) try {
     } else if (options.listTrackers) {
         ListMonakaTrackers(system);
     } else {
-        result = RunCalibration(system, ipc, options);
+        result = options.mode=="trajectory"?RunTrajectory(system,ipc,options):RunCalibration(system, ipc, options);
     }
 
     return result;

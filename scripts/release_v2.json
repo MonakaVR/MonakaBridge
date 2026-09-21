@@ -156,6 +156,8 @@
         "health_async",
         "coordinate_profiles",
         "world_calibration",
+        "trajectory_calibration",
+        "trajectory_cli",
         "mapping_contract",
         "gui_production",
         "separate_process_udp",
