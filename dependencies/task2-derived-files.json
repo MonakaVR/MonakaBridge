@@ -263,7 +263,7 @@
     },
     {
       "path": "ui/steamvr_control_wpf.cs",
-      "sha256": "5b043680b25bb8bca51e914c9fc31dcba25480b8a9b7a3942564501c0d75dfa8",
+      "sha256": "174e2b71b37087a3b9820506edb701d88e15472b481b7cf85b40f1b464d2e36b",
       "change_reason": "Adapt WPF controls/error/process patterns into common source/mapping/profile/alignment UI",
       "origins": [
         {
@@ -282,7 +282,7 @@
     },
     {
       "path": "ui/control_models.cs",
-      "sha256": "6d96af99519da88ef6981418dd4b43f2b4f3735abba4b0aa4e93ba17361bd5e4",
+      "sha256": "5922753b2062750316d1f24fcb45c58f764a07a259f688537de1b5ce67e6cf63",
       "change_reason": "Separate migrated GUI mapping/diagnostic presentation into transactional candidate editing and bounded background health reader; no vendor transport",
       "origins": [
         {

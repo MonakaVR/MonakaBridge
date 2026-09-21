@@ -8,7 +8,40 @@ using System.Threading;
 using System.Web.Script.Serialization;
 [assembly:System.Runtime.CompilerServices.InternalsVisibleTo("bridge_ui_tests")]
 namespace MonakaBridge {
+ // The selection key refers to the loaded mapping, never to in-progress edits.
+ // Programmatic updates are synchronous and nest safely even when WPF fires events.
+ internal sealed class MappingEditorState {
+  int updateDepth;
+  internal bool Updating {get{return updateDepth!=0;}}
+  internal int SelectedIndex {get;private set;}
+  internal MappingEditorState(){SelectedIndex=-1;}
+  internal Tuple<string,string> SelectedKey {get;private set;}
+  internal bool Approved;
+  internal static Tuple<string,string> Key(Dictionary<string,object> row){return Tuple.Create((string)row["source_id"],(string)row["device_id"]);}
+  internal void Programmatic(Action update){++updateDepth;try{update();}finally{--updateDepth;}}
+  internal bool IdentityEdited(){if(Updating)return false;Approved=false;return true;}
+  internal void Select(IList rows,int index,Action<Dictionary<string,object>> render){
+   var row=rows!=null&&index>=0&&index<rows.Count?(Dictionary<string,object>)rows[index]:null;
+   SelectedIndex=row==null?-1:index;SelectedKey=row==null?null:Key(row);
+   Approved=row!=null&&Convert.ToBoolean(row["space_approved"],CultureInfo.InvariantCulture);
+   Programmatic(delegate{render(row);});
+  }
+  internal void Restore(IList rows,Tuple<string,string> key,Action<Dictionary<string,object>> render){
+   int found=-1;
+   if(key!=null)for(int i=0;i<rows.Count;++i)if(Key((Dictionary<string,object>)rows[i]).Equals(key)){
+    if(found>=0)throw new InvalidOperationException("Duplicate source/device mapping; correct the configuration before editing.");
+    found=i;
+   }
+   Select(rows,found,render);
+  }
+ }
  internal static class MappingEditor {
+  internal static Dictionary<string,object> RequireProfile(Dictionary<string,object> config,string name){
+   object value;var profiles=(Dictionary<string,object>)config["profiles"];
+   if(string.IsNullOrEmpty(name)||!profiles.TryGetValue(name,out value)||!(value is Dictionary<string,object>))
+    throw new InvalidOperationException("Select an existing profile from the configuration. Unknown or missing profile: "+(name??"(none)"));
+   return (Dictionary<string,object>)value;
+  }
   internal static Dictionary<string,object> Clone(Dictionary<string,object> value){
    var json=new JavaScriptSerializer();return json.Deserialize<Dictionary<string,object>>(json.Serialize(value));
   }
@@ -18,6 +51,7 @@ namespace MonakaBridge {
   // Build a candidate without mutating the loaded UI model. Native validation and
   // atomic replacement must succeed before the GUI adopts this candidate.
   internal static Dictionary<string,object> Candidate(Dictionary<string,object> loaded,int selectedIndex,Dictionary<string,object> edit){
+   RequireProfile(loaded,Convert.ToString(edit["profile"],CultureInfo.InvariantCulture));
    var result=Clone(loaded);var list=new ArrayList((ICollection)result["mappings"]);
    if(selectedIndex < -1 || selectedIndex>=list.Count)throw new InvalidOperationException("Mapping selection changed; reload first.");
    Dictionary<string,object> selected=selectedIndex<0?null:(Dictionary<string,object>)list[selectedIndex];
@@ -76,6 +110,12 @@ namespace MonakaBridge {
   public void Dispose(){Interlocked.Exchange(ref disposed,1);}
  }
  internal static class HealthPresentation {
+  internal static string MappingRevision(object configured,object observed,bool current,bool samePublisher){
+   string configText=Convert.ToString(configured,CultureInfo.InvariantCulture),healthText=observed==null?"unknown":Convert.ToString(observed,CultureInfo.InvariantCulture);
+   string comparison=!current||!samePublisher||observed==null?"unavailable / historical; application status unknown":
+    (configText==healthText?"match (diagnostic snapshot)":"different (diagnostic snapshot); check runtime/restart requirements");
+   return "Mapping revision: config="+configText+" | health="+healthText+" | "+comparison;
+  }
   internal static bool Current(DateTime snapshot,DateTime now){return snapshot!=DateTime.MinValue&&now>=snapshot&&now-snapshot<TimeSpan.FromSeconds(3);}
   static string Text(Dictionary<string,object> row,string name){return row.ContainsKey(name)?Convert.ToString(row[name],CultureInfo.InvariantCulture):"unknown";}
   static bool Flag(Dictionary<string,object> row,string name){return row.ContainsKey(name)&&Convert.ToBoolean(row[name],CultureInfo.InvariantCulture);}
