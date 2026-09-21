@@ -39,6 +39,15 @@ snapshot's creation time and configured pose timeout; delayed disk replacement
 cannot make an old diagnostic sample look new. Wall time here is only a diagnostic
 display clock; production MTP age/session logic continues using monotonic time.
 
+The calibration input audit distinguishes all runtime outputs. Port 29810 is the
+exclusive Observation ingress. Ports 29811 and 29812 carry already calibrated MTP
+for MonakaVR and Direct output respectively. Health JSON is delayed diagnostic
+state and is never a tracking-correctness input. Port 29813 is the existing bounded,
+output-policy-independent mirror of each admitted native Observation. The rigid
+world calibrator therefore listens read-only on 29813 and filters the exact
+source/device/input-space/revision/session; the Bridge receive and fan-out hot path
+is unchanged and Monaka Direct output need not be enabled.
+
 Required software regressions:
 
 | Test | Scope |
@@ -47,8 +56,9 @@ Required software regressions:
 | `gui_production` | Build actual WPF assembly, test its background health reader, one-job bound, failure/close handling, policy/stage/space/component presentation, transactional mapping candidates and real native config validation |
 | `mapping_contract` | Source/publisher-scoped output identity, collisions, exact runtime serial selection, same-source device rebind restart gate, source-change invalidation |
 | `coordinate_profiles` | Actual example config load/selection, +X/+Y/+Z translations, X/Y/Z/mixed rotation action against independent Rodrigues reference, q/-q equivalence, identity quaternion, unselected/other profile isolation |
+| `world_calibration` | OpenVR-free proper rigid recovery for translation/yaw/arbitrary 3-axis/noisy data, 3-point minimum, collinear/reflection rejection, stale session/input revision and concurrent mapping revision rejection, measure-only immutability, world-only shared-map apply and one revision increment |
 
-Quick and Full run these through CTest. The release-v2 gate requires all four and
+Quick and Full run these through CTest. The release-v2 gate requires all listed tests and
 packages the freshly built/tested GUI assembly alongside the native outputs. Final
 source-bound receipts, archive hashes and command logs are generated under ignored
 `build/release-v2` and `dist/release-v2`; prior-HEAD PASS artifacts are not reused.
@@ -141,3 +151,8 @@ Interactive GUI, physical VIVE/PICO coexistence, actual RF recovery, map continu
 world/mount calibration and Direct-versus-MTP physical comparison remain integration
 gates. Historical Task3 NOT RUN records remain historical records; the later HIL
 narrative does not retroactively change them or certify hardware cutover.
+
+The multi-point 29813/SteamVR world-calibration workflow is software-built and
+unit-tested only. Actual interactive captures with left controller, right controller
+and HMD references, residual acceptance thresholds for the physical fixture, apply/
+reload observation, and resulting SteamVR alignment are **NOT RUN**.

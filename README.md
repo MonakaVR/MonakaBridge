@@ -4,6 +4,11 @@ Common C1 Observation router and thin SteamVR output. Software validation and ha
 
 Bridge receives multiple backend sources on loopback 29810, resolves persistent identities and approved profiles, applies shared calibration and explicit mount transforms once, and supplies the same calibrated sample to MTP 29811 and the common Direct driver 29812. Utility Observation mirror 29813 stays active independently of output policy. Default policy is `steamvr`.
 
+The SteamVR world calibrator uses that read-only 29813 native Observation mirror,
+not health JSON or Monaka Direct output. It fits a proper rigid world transform from
+three or more explicit non-collinear tracker/reference captures; measure-only is the
+default and config mutation requires `--apply`.
+
 ## Build and run
 
 Use Windows x64, MSVC C++17, CMake >=3.20, Python 3, .NET Framework 4.8/WPF Developer Pack. `scripts/import_upstream.py` verifies the actual bundled Task1/2/3 ZIPs and manifests, then restores reference-only extraction under `build/upstream`. It never reconstructs missing upstream artifacts.

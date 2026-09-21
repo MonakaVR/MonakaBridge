@@ -29,14 +29,41 @@ Every route/mapping/profile/calibration edit must increase the unsigned 32-bit `
 ./build/Release/monaka_bridge_config.exe config/bridge.json policy monaka
 ./build/Release/monaka_bridge_config.exe config/bridge.json align LOGICAL_ID 0.1 0 0
 ./build/Release/monaka_bridge_config.exe config/bridge.json rename OLD_ID NEW_ID
-./build/Release/monaka_bridge_calibrator.exe --config config/bridge.json --tracker RUNTIME_SERIAL --reference left --measure-only
+./build/Release/monaka_bridge_calibrator.exe --config config/bridge.json --tracker waist --source vive-local-1 --device 23:32:03:81:fe:ec --input-space tracker-0-map --input-revision 56 --reference left --measure-only
 ```
 
-The alignment command updates all mappings sharing the selected source/input-map/revision. The migrated OpenVR calibrator retains reference averaging and measurement from Task2 and uses the same grouping; it rejects a concurrent revision change during measurement. `--clear` additionally requires `--config` and `--tracker` so it cannot clear an unspecified playspace. Full rotation/mount/profile edits are explicit configuration edits followed by validation and revision increment.
+The alignment command updates all mappings sharing the selected source/input-map/revision. The
+OpenVR calibrator now obtains the exact native tracker pose from the existing read-only Utility
+Observation mirror on `127.0.0.1:29813`; it does not require the Monaka Direct driver and never
+uses health JSON as a correctness input. The mirror is before profile/world/mount transformation,
+while the left/right controller or HMD reference is read from SteamVR's standing universe.
 
-`align`/`rename` reject tracker-name shorthand if it occurs in multiple sources. Use an explicit source/device config edit in that case. The calibrator's runtime serial includes publisher, source and tracker. Same-source logical tracker reassignment to a different device still requires Bridge restart; a saved configuration is not proof of runtime application.
+Calibration requires explicit logical tracker, source, device, input-space and input-revision
+selection. It locks the first source session and aborts if session or coordinate-space revision
+changes, if the config/profile/mapping changes, or if the mirror stops supplying the exact device.
+Unknown addresses are not rebound. The selected profile's signed position mapping and any existing
+mount translation are applied to the source points; profile axes, mount rotation/translation and
+input approval are never edited.
 
-Native edits retain the first original `.pre-monaka-bridge.bak` and atomically replace a fully written candidate. GUI edits validate a unique candidate and use `File.Replace` with a unique backup. Concurrent multi-writer edits should be avoided; the GUI/calibrator detect revision changes before their operation, but there is no distributed lock across separate configuration tools. Failed candidates are retained for inspection.
+Capture at least three non-collinear locations. At each location, keep the Altra and SteamVR
+reference device rigidly fixed relative to one another, keep their orientation nearly unchanged,
+hold the assembly still, and press Enter. Multiple new mirror/reference frames are averaged at
+each point. The solver computes one proper right-handed Hamilton-xyzw rigid transform in metres,
+rejects insufficient/collinear/reflected geometry, and prints RMS and maximum residuals. With a
+fixed nonzero device offset, keeping orientation constant lets that offset be absorbed into the
+translation; co-located reference origins or an accurately configured mount offset are preferable.
+
+Measurement is the default and does not mutate configuration. Add `--apply` only after reviewing
+the points and residuals. Apply reloads and revalidates the config, updates only `world.rotation`
+and `world.translation` for the existing shared source/input-map/revision group, increments
+`mapping_revision` exactly once, performs native validation, and uses the existing atomic
+replacement plus first-original backup. It does not change `world_revision`, mount/profile axes,
+space approval, or restart the tracking service. `--clear` additionally requires the full exact
+selection and `--apply` and restores the shared world transform to identity.
+
+`align`/`rename` reject tracker-name shorthand if it occurs in multiple sources. Use an explicit source/device config edit in that case. Calibration no longer selects a Direct runtime serial; it requires the exact logical tracker/source/device/input-space/revision tuple. `--list-trackers` remains only as a legacy Direct-device diagnostic. Same-source logical tracker reassignment to a different device still requires Bridge restart; a saved configuration is not proof of runtime application.
+
+Native edits retain the first original `.pre-monaka-bridge.bak` and atomically replace a fully written candidate. GUI edits validate a unique candidate and use `File.Replace` with a unique backup. Concurrent multi-writer edits should be avoided; the GUI/calibrator detect revision changes before their operation, but there is no distributed lock across separate configuration tools. Failed candidates are retained for inspection. The calibrator never overwrites the example config or discovers a local `bridge.json`; the operator must pass the intended path explicitly.
 
 Legacy route migration supports `steamvr-direct` and `monaka-external`; alignment supports Task2 version 1 `xMeters/yMeters/zMeters`. Provide an explicit mapping template and a new destination:
 

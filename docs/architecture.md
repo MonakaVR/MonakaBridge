@@ -10,6 +10,12 @@ VIVE backend ┘                    │                                      │
 
 Only `MonakaProtocol::Codec` decodes/encodes C1. Vendored JSON in configuration/service health and test harnesses is not an alternative wire implementation. PICO private ABI/POTB decode and VIVE HID/RF decode are absent from production targets. The original extraction includes legacy transport dependencies for provenance and the test-only old TrackerDevice baseline; those files are restored under ignored `build/upstream` and never linked into the common service/driver.
 
+World calibration reads exact native poses from the existing bounded Observation
+mirror on 29813 and SteamVR reference poses from the standing universe. It does not
+poll health JSON or require Direct output. Profile normalization precedes a proper
+right-handed rigid solve; only explicit apply persists shared `world` rotation and
+translation through the normal validated atomic config path.
+
 Registry keys use `(source_id, device_id)`. Each source owns its current session, clock ID, retired sessions, peer admission and independent device state/pose sequence high-water marks. A restart clears only that source. Peer addresses are transient collision evidence, never persistent identity. A concurrent different peer for the same active source, or the same pose sequence carrying different content, fails closed and quarantines that source until Bridge restart. A legitimate backend restart that also changes its UDP peer must wait the configured inactivity timeout; immediate ambiguous peer replacement is intentionally not accepted.
 
 Admission computes integer `age=sent_at_ns-timestamp_ns`, then fixes `local_timestamp=receipt-age`. Sender and receiver epochs are never directly subtracted. A sample predating the Bridge's local epoch is not made fresh. Device state cannot refresh pose age. Static numeric poses with increasing accepted sequence stay fresh. Default timeout is 500 ms, configurable from 1 to 10000 ms. Absence cancels pending pose output. Battery age is separately mapped from the state receipt time.
