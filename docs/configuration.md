@@ -1,5 +1,9 @@
 # Persistent configuration and migration
 
+For continuous 6DoF recording with an estimated device holding offset, see
+[trajectory world calibration](trajectory-calibration.md). It is selected by
+`--mode trajectory`; the static multi-point mode below remains the default.
+
 `config/bridge.example.json` is a disabled-by-mapping template: default route `steamvr`, persistent ID placeholder and no devices mapped. `vive-unverified` remains unapproved; the separate `vive-hil-v1` and `vive-hil-v2` profiles require explicit selection and input-space approval. No profile is selected automatically. Copy the example once to `config/bridge.json`; never overwrite an existing installation's mapping. Health is in the adjacent `.status.json`; its pose is the native Observation stage, not final SteamVR output. See [production integration](production-integration.md) for asynchronous I/O, identity/rebind rules and evidence limits.
 
 Each profile declares the observed C1 convention, independent signed one-based position and quaternion permutations, approval plus evidence, and whether its angular-space mapping has been verified. PICO compatibility is relative-axis legacy evidence, not proof of the absolute playspace origin. The default placeholder PICO convention must be replaced by the actual observed convention.
