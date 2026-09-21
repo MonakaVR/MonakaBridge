@@ -56,6 +56,23 @@
       "approved": true,
       "evidence": "2026-09-20 HIL: world translation back=-X, up=+Y, left=-Z with metre scale; native yaw/pitch/roll quaternion axes observed; rigid basis conversion to rh_y_up_neg_z_forward is [z,y,-x,w]",
       "angular_space_verified": false
+    },
+    "vive-hil-v2": {
+      "convention": "vut-native-v1",
+      "position_axes": [
+        1,
+        2,
+        3
+      ],
+      "quaternion_axes": [
+        -1,
+        -2,
+        3,
+        4
+      ],
+      "approved": true,
+      "evidence": "2026-09-21 physical HIL: physical +/-X, +/-Y, +/-Z translation matched canonical world directions; identity quaternion components reversed yaw/pitch while roll matched, and [-x,-y,z,w] matched yaw/pitch/roll directions; pose propagated through VIVE Backend, MonakaBridge, MTP v2, MonakaVR private HIP, Slime IK, SlimeVR OpenVR Driver, and SteamVR virtual tracker; angular velocity was not published or verified; no original capture file or hash-bound manifest exists",
+      "angular_space_verified": false
     }
   },
   "mappings": []

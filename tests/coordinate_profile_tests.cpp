@@ -11,6 +11,9 @@ void close(mb::Vec a,mb::Vec b){for(int i=0;i<3;++i)CHECK(near(a[i],b[i]));}
 int main()try{
  auto c=mb::loadConfig(std::filesystem::path(ROOT_DIR)/"config/bridge.example.json");
  const auto profile=c.profiles.at("vive-hil-v1");CHECK(profile.approved&&!profile.angularSpaceVerified);
+ const auto profileV2=c.profiles.at("vive-hil-v2");CHECK(profileV2.approved&&!profileV2.angularSpaceVerified);
+ const std::array<int,3> positionV2{1,2,3};const std::array<int,4> quaternionV2{-1,-2,3,4};
+ CHECK(profileV2.positionAxes==positionV2);CHECK(profileV2.quaternionAxes==quaternionV2);
  CHECK(!c.profiles.at("vive-unverified").approved);CHECK(c.bindings.empty());
  auto p=sample();p.coordinate_space.convention="vut-native-v1";
  mb::Binding b=config().bindings.at({"pico","device"});b.profile="vive-hil-v1";
@@ -39,10 +42,20 @@ int main()try{
  CHECK(out->coordinate_space.convention=="rh_y_up_neg_z_forward");
  auto unselected=c;unselected.bindings.at({b.source,b.device}).profile="vive-unverified";
  mb::Bridge blocked(unselected,SB);CHECK(blocked.receive(wire(p),"source",10000000));CHECK(!blocked.logical().at({b.source,b.device}).pose);
+ // The 2026-09-21 profile is not auto-selected, but exact config selection
+ // applies its independently observed signed quaternion components.
+ auto v2=c;auto v2Binding=b;v2Binding.profile="vive-hil-v2";
+ v2.bindings[{v2Binding.source,v2Binding.device}]=v2Binding;
+ p.position=mb::Vec{1,2,3};p.orientation=mb::normalized(mb::Quat{.1,.2,.3,.9});
+ mb::Bridge selectedV2(v2,SB);CHECK(selectedV2.receive(wire(p),"source",10000000));
+ const auto v2Pose=selectedV2.logical().at({v2Binding.source,v2Binding.device}).pose;CHECK(v2Pose);
+ close(*v2Pose->position,{1,2,3});
+ const auto expectedV2=mb::normalized(mb::Quat{-.1,-.2,.3,.9});
+ for(int component=0;component<4;++component)CHECK(near(v2Pose->orientation->at(component),expectedV2[component]));
  // Existing approved profile selection is unaffected by the candidate's presence.
  auto original=c;original.bindings.at({b.source,b.device}).profile="pico-compat-v1";
  p.coordinate_space.convention=original.profiles.at("pico-compat-v1").convention;p.orientation=mb::Quat{.5,.5,.5,.5};
  mb::Bridge unchanged(original,SB);CHECK(unchanged.receive(wire(p),"source",10000000));
  auto old=unchanged.logical().at({b.source,b.device}).pose;CHECK(old);close(*old->position,{1,2,3});CHECK(*old->orientation==mb::Quat({-.5,.5,-.5,.5}));
- std::cout<<"PASS coordinate profile: +X/+Y/+Z, X/Y/Z/mixed rotation actions, q/-q, identity, real config selection and isolation\n";
+ std::cout<<"PASS coordinate profiles: historical v1, HIL-v2 signed components, +X/+Y/+Z, rotations, q/-q, explicit selection and isolation\n";
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}

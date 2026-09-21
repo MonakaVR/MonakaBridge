@@ -1,12 +1,24 @@
 # Persistent configuration and migration
 
-`config/bridge.example.json` is a disabled-by-mapping template: default route `steamvr`, persistent ID placeholder and no devices mapped. `vive-unverified` remains unapproved; the separate `vive-hil-v1` candidate requires explicit selection and input-space approval. Copy the example once to `config/bridge.json`; never overwrite an existing installation's mapping. Health is in the adjacent `.status.json`; its pose is the native Observation stage, not final SteamVR output. See [production integration](production-integration.md) for asynchronous I/O, identity/rebind rules and evidence limits.
+`config/bridge.example.json` is a disabled-by-mapping template: default route `steamvr`, persistent ID placeholder and no devices mapped. `vive-unverified` remains unapproved; the separate `vive-hil-v1` and `vive-hil-v2` profiles require explicit selection and input-space approval. No profile is selected automatically. Copy the example once to `config/bridge.json`; never overwrite an existing installation's mapping. Health is in the adjacent `.status.json`; its pose is the native Observation stage, not final SteamVR output. See [production integration](production-integration.md) for asynchronous I/O, identity/rebind rules and evidence limits.
 
 Each profile declares the observed C1 convention, independent signed one-based position and quaternion permutations, approval plus evidence, and whether its angular-space mapping has been verified. PICO compatibility is relative-axis legacy evidence, not proof of the absolute playspace origin. The default placeholder PICO convention must be replaced by the actual observed convention.
 
 The VIVE HIL profile `vive-hil-v1` is based on 2026-09-20 VIVE Ultimate Tracker measurements: physical back translated along native `-X`, physical up along native `+Y`, and physical left along native `-Z`; native translation units matched metres. The resulting rigid coordinate-basis conversion into `rh_y_up_neg_z_forward` is position `[z, y, -x]` and quaternion `[z, y, -x, w]`. Yaw/Pitch/Roll captures were used as rotational consistency checks; tracker mounting orientation remains a separate per-device `mount` transform. Angular-velocity frame semantics remain unverified, so `angular_space_verified` stays false. Existing `vive-unverified` profiles are intentionally not upgraded implicitly.
 
 This paragraph records the earlier HIL report. Original captures and a capture manifest are not present in this tree. The current cleanup validates the profile in software; it does not claim a new hardware run or create capture hashes. Historical Task3 hardware NOT RUN remains unchanged.
+
+The `vive-hil-v2` profile records the separate 2026-09-21 physical HIL. Physical
+translations in both directions on X, Y and Z matched canonical world directions,
+so position remains `[x,y,z]`. With identity quaternion component mapping, yaw and
+pitch were reversed while roll was correct. The signed mapping `[-x,-y,z,w]`
+matched physical yaw, pitch and roll directions. Pose propagation was observed
+through VIVE Backend → MonakaBridge → MTP v2 → MonakaVR private HIP → Slime IK →
+SlimeVR OpenVR Driver → SteamVR virtual tracker. This does not verify angular
+velocity frame semantics: VUT Observation did not publish angular velocity, so
+`angular_space_verified` is deliberately false. Original capture files and a
+hash-bound manifest do not exist. The historical `vive-unverified` and
+`vive-hil-v1` entries remain unchanged and selectable; v2 is never auto-selected.
 
 Each mapping includes exact source/device IDs, logical tracker ID, selected profile, input space/revision, approved-space flag, destination world space/revision, shared world transform and explicit per-device mount transform. Rotation arrays are xyzw unit quaternions; translation arrays are metres. Position Zero and Orientation Zero are diagnostic compatibility functions, never silently persisted into the normal world calibration.
 

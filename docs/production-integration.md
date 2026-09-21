@@ -105,6 +105,17 @@ production candidate. It is never automatically selected for `vut-native-v1`.
 The example still has no mappings. Profile approval, exact input space/revision
 approval, and physical world/mount calibration remain independent decisions.
 
+The separate `vive-hil-v2` profile formalizes the 2026-09-21 physical HIL without
+rewriting either historical profile. Physical +/-X, +/-Y and +/-Z translations
+matched canonical world directions. Identity quaternion component mapping showed
+reversed yaw and pitch with correct roll; `[-x,-y,z,w]` matched all three physical
+rotation directions. The observed end-to-end path was VIVE Backend → MonakaBridge
+→ MTP v2 → MonakaVR private HIP → Slime IK → SlimeVR OpenVR Driver → SteamVR
+virtual tracker. `angular_space_verified` remains false because angular-velocity
+frame semantics were not tested and VUT Observation did not publish angular
+velocity. There is no original capture file or hash-bound manifest. The profile
+still requires explicit mapping selection and exact input-space/revision approval.
+
 Unverified hardware semantics include angular-velocity frame (`angular_space_verified`
 remains false), map sharing/reset continuity, loss-orientation usability, multiple
 tracker behavior and full physical end-to-end equivalence. No synthetic IMU stream,
