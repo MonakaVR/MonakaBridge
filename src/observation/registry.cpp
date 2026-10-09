@@ -1,4 +1,5 @@
 #include "monaka_bridge/registry.hpp"
+#include "monaka_bridge/diagnostic.hpp"
 namespace mb {
 namespace {
 bool sameSample(c1::TrackerObservation a,c1::TrackerObservation b){a.sent_at_ns=a.timestamp_ns;b.sent_at_ns=b.timestamp_ns;std::string x,y;c1::Error e;return c1::EncodeEnvelope(a,x,e)&&c1::EncodeEnvelope(b,y,e)&&x==y;}
@@ -12,7 +13,7 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  const auto& clock=p?p->clock_id:s->clock_id;const auto& device=p?p->device_id:s->device_id;
  if(!sources.count(id)&&sources.size()>=64){++rejected;return false;}
  auto& src=sources[id];
- const auto reject=[&]{++rejected;return false;};
+ const auto reject=[&]{++rejected;if(diagnostic)diagnostic->rejected(e,"admission_rejected");return false;};
  if(src.collision||src.retired.count(session))return reject();
  if(!src.session.empty()&&((src.peer!=peer&&src.session==session)||(src.session!=session&&now-src.lastReceive<timeoutNs))){++collisions;return reject();}
  if(src.session!=session){
@@ -50,6 +51,7 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
   }
  }
  src.lastReceive=now;
+ if(diagnostic)diagnostic->admitted(e,peer,now);
  if(admitted)*admitted=std::move(e);return true;
 }
 const Device* Registry::find(const Key& k)const{auto s=sources.find(k.first);if(s==sources.end()||s->second.collision)return nullptr;auto d=s->second.devices.find(k.second);return d==s->second.devices.end()||d->second.collision?nullptr:&d->second;}

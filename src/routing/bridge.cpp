@@ -1,4 +1,5 @@
 #include "monaka_bridge/bridge.hpp"
+#include "monaka_bridge/diagnostic.hpp"
 #include <limits>
 #include <algorithm>
 namespace mb {
@@ -32,10 +33,11 @@ bool Bridge::approved(const Binding& b,const Device& d)const{auto p=config_.prof
 void Bridge::publish(const c1::Envelope& e,std::int64_t now){if(config_.policy==Policy::Monaka||config_.policy==Policy::Both)fanout.put(Channel::Monaka,e,now);if(config_.policy==Policy::Steamvr||config_.policy==Policy::Both)fanout.put(Channel::Steamvr,e,now);}
 bool Bridge::receive(std::string_view bytes,std::string_view peer,std::int64_t now){c1::Envelope e;bool ok=registry.receive(bytes,peer,now,&e);if(ok)fanout.put(Channel::Mirror,std::move(e),now);tick(now);return ok;}
 void Bridge::tick(std::int64_t now){
+ if(registry.diagnostic)registry.diagnostic->tick(now,registry.timeoutNs);
  for(const auto& [key,b]:config_.bindings){
   auto& l=logical_[key];auto d=registry.find(key);bool active=d&&approved(b,*d);bool fresh=active&&registry.fresh(key,now);
   const auto src=registry.sources.find(key.first);const std::string inputSession=src==registry.sources.end()?"":src->second.session;
-  if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();}
+  if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();if(registry.diagnostic&&!inputSession.empty())registry.diagnostic->mapped(b.source,b.device,b.tracker);}
   if(fresh && d->pose && (l.inputSequence!=d->poseSequence || !l.pose)){
    const auto& in=*d->pose;
    if(l.poseSequence==std::numeric_limits<std::int64_t>::max())throw std::runtime_error("MTP sequence exhausted: restart Bridge");

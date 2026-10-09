@@ -1,6 +1,7 @@
 #include "monaka_bridge/bridge.hpp"
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/health.hpp"
+#include "monaka_bridge/diagnostic.hpp"
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <chrono>
@@ -8,14 +9,23 @@
 #include <fstream>
 #include <iostream>
 #include <thread>
+#include <cstdlib>
 #ifdef _WIN32
 #include <windows.h>
 #endif
 namespace {
 std::atomic_bool running{true};
 void stop(int){running=false;}
+std::unique_ptr<mb::DiagnosticWriter> diagnostic;
 }
 int main(int argc,char** argv)try{
+ if(argc==2&&std::string(argv[1])=="--version-json"){std::cout<<mb::DiagnosticWriter::build().dump()<<'\n';return 0;}
+ // A path is the opt-in. Opening and all writes occur on the diagnostic worker.
+ if(const auto path=std::getenv("MONAKA_DIAGNOSTIC_JSONL");path&&*path){
+  auto file=std::make_shared<std::ofstream>();auto output=std::string(path);
+  diagnostic=std::make_unique<mb::DiagnosticWriter>([file,output](const auto& event){if(!file->is_open())file->open(output,std::ios::out|std::ios::app);if(!*file)throw std::runtime_error("diagnostic output unavailable");*file<<event.dump()<<'\n';file->flush();if(!*file)throw std::runtime_error("diagnostic write failed");});
+  diagnostic->emit("component_started");
+ }
  if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"monaka_bridge_service CONFIG [INGRESS MONAKA DIRECT MIRROR] [--duration-ms N]\nmonaka_bridge_service --stop\n";return 0;}
 #ifdef _WIN32
  if(argc==2&&std::string(argv[1])=="--stop"){HANDLE e=OpenEventW(EVENT_MODIFY_STATE,FALSE,L"Local\\MonakaBridge_Stop");if(!e)return 1;SetEvent(e);CloseHandle(e);return 0;}
@@ -25,6 +35,8 @@ int main(int argc,char** argv)try{
  if(argc>=6&&std::string(argv[2])!="--duration-ms"){for(int i=0;i<4;++i){auto p=std::stoul(argv[i+2]);if(!p||p>65535)throw std::invalid_argument("invalid port");ports[i]=static_cast<std::uint16_t>(p);}next=6;}
  std::int64_t duration=0;if(argc>next){if(argc!=next+2||std::string(argv[next])!="--duration-ms")throw std::invalid_argument("invalid arguments");duration=std::stoll(argv[next+1])*1000000;}
  mb::Udp input(ports[0]);mb::Udp output;const auto epoch=mb::monotonicNs();mb::Bridge bridge(config,mb::uuid());
+ std::unique_ptr<mb::DiagnosticObserver> observer;
+ if(diagnostic){observer=std::make_unique<mb::DiagnosticObserver>(*diagnostic);bridge.registry.diagnostic=observer.get();diagnostic->emit("component_ready","observation-ingress",nullptr,nullptr,nullptr,{{"inventory_complete",false},{"role_authoritative_available",false}});}
  std::unique_ptr<mb::HealthWriter> healthWriter;
  try{auto health=path;health+=L".status.json";healthWriter=std::make_unique<mb::HealthWriter>(health);}catch(...){/* Diagnostic failure cannot disable tracking. */}
  std::signal(SIGINT,stop);std::signal(SIGTERM,stop);
@@ -56,5 +68,6 @@ int main(int argc,char** argv)try{
 #ifdef _WIN32
  CloseHandle(stopEvent);
 #endif
+ if(diagnostic){diagnostic->emit("component_stopping");diagnostic->emit("component_stopped");diagnostic->close();}
  return 0;
-}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
+}catch(const std::exception& e){if(diagnostic){diagnostic->emit("fatal_error","component",nullptr,nullptr,nullptr,{{"message",e.what()}});diagnostic->close();}std::cerr<<e.what()<<'\n';return 1;}

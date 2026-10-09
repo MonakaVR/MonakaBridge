@@ -4,6 +4,7 @@
 #include <set>
 #include <string_view>
 namespace mb {
+class DiagnosticObserver;
 namespace c1=monaka::protocol::v2;
 using Key=std::pair<std::string,std::string>;
 struct Device {
@@ -23,6 +24,7 @@ struct Source {
 };
 class Registry {
 public:
+ DiagnosticObserver* diagnostic=nullptr; // Optional observer; OFF leaves admission unchanged.
  std::int64_t timeoutNs=500000000;
  std::map<std::string,Source> sources;
  std::uint64_t malformed=0,rejected=0,collisions=0;
