@@ -7,6 +7,12 @@ allow={'CMakeLists.txt','include/monaka_bridge/common_world_live_ingress.hpp',
  'src/authority/common_world_live_ingress.cpp','tests/common_world_live_ingress_tests.cpp',
  'tests/verify_common_world_live_ingress_dormancy.py','tests/validate_live_ingress_common_world_streams.py',
  'docs/common-world-live-source-runtime-integration-v2.1.md'}
+# 5AF adds a separate software-only sender library. All original frozen/production
+# checks below remain unchanged; the 5AF scope gate audits this exact extension.
+allow.update({'include/monaka_bridge/common_world_live_sender.hpp',
+ 'src/publication/common_world_live_sender.cpp','tests/common_world_live_sender_tests.cpp',
+ 'tests/verify_common_world_live_sender_scope.py','tests/validate_live_sender_streams.py',
+ 'tests/CommonWorldLiveSenderReplay.java','docs/common-world-ordered-publisher-live-transport-v2.1.md'})
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:
