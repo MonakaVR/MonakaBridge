@@ -20,6 +20,8 @@ allow.update({'include/monaka_bridge/common_world_activation_config.hpp',
  'src/activation/common_world_activation_config.cpp','src/activation/common_world_production_activation.cpp',
  'src/activation/common_world_runtime_main.cpp','tests/common_world_activation_tests.cpp',
  'tests/verify_common_world_activation_scope.py','docs/common-world-production-activation-gate-v2.1.md'})
+# 5AH-A adds only the isolated deployment observer/host/tooling.
+allow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:

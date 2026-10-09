@@ -10,6 +10,8 @@ new={'include/monaka_bridge/common_world_activation_config.hpp',
  'tests/verify_common_world_activation_scope.py','docs/common-world-production-activation-gate-v2.1.md'}
 gates={'tests/verify_common_world_live_ingress_dormancy.py','tests/verify_common_world_live_sender_scope.py'}
 allow=new|gates|{'CMakeLists.txt'}
+# 5AH-A adds only the isolated deployment observer/host/tooling.
+allow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:
@@ -18,6 +20,7 @@ with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
 for name in gates:
  prior=subprocess.check_output(['git','-C',str(root),'show',base+':'+name]).decode()
  current=(root/name).read_text()
+ current=current[:current.index('# 5AH-A adds')]+current[current.index('archive=subprocess'):]
  extension=current[current.index('# 5AG adds'):current.index('archive=subprocess')]
  assert current.replace(extension,'')==prior,'earlier checks changed: '+name
  assert set(re.findall(r"'([^']+)'",extension))==new,'unexpected scope extension'

@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "mode": "production",
+  "transport": "udp-ipv4",
+  "codec": "monaka-wire-2.1",
+  "endpoint": "",
+  "owner_id": "",
+  "world_space_id": "",
+  "source_publisher_id": "",
+  "revision_path": "../state/common-world.rev",
+  "queue_capacity": 64,
+  "retry_limit": 3,
+  "peer_policy": "explicit-authority-association-no-implicit-world-replacement"
+}

@@ -1,0 +1,21 @@
+[
+ "CMakeLists.txt",
+ "include/monaka_bridge/common_world_deployment_readiness.hpp",
+ "src/deployment/common_world_deployment_readiness.cpp",
+ "src/deployment/common_world_preflight_main.cpp",
+ "src/deployment/common_world_hil_runtime_main.cpp",
+ "deployment/common_world_build_identity.hpp.in",
+ "deployment/production.activation.json",
+ "deployment/hil-evidence-template.json",
+ "deployment/phase-scope.json",
+ "scripts/common_world_artifact.py",
+ "scripts/rollback_common_world_artifact.ps1",
+ "scripts/new_common_world_hil_report.py",
+ "tests/common_world_readiness_tests.cpp",
+ "tests/common_world_deployment_tooling_tests.py",
+ "tests/verify_common_world_deployment_scope.py",
+ "tests/verify_common_world_activation_scope.py",
+ "tests/verify_common_world_live_sender_scope.py",
+ "tests/verify_common_world_live_ingress_dormancy.py",
+ "docs/common-world-deployment-hil-readiness-v2.1.md"
+]
