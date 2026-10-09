@@ -13,6 +13,13 @@ allow.update({'include/monaka_bridge/common_world_live_sender.hpp',
  'src/publication/common_world_live_sender.cpp','tests/common_world_live_sender_tests.cpp',
  'tests/verify_common_world_live_sender_scope.py','tests/validate_live_sender_streams.py',
  'tests/CommonWorldLiveSenderReplay.java','docs/common-world-ordered-publisher-live-transport-v2.1.md'})
+# 5AG adds only the separated activation policy/host. The new scope gate audits
+# this exact allowlist insertion and keeps every earlier behavioral contract exact.
+allow.update({'include/monaka_bridge/common_world_activation_config.hpp',
+ 'include/monaka_bridge/common_world_production_activation.hpp',
+ 'src/activation/common_world_activation_config.cpp','src/activation/common_world_production_activation.cpp',
+ 'src/activation/common_world_runtime_main.cpp','tests/common_world_activation_tests.cpp',
+ 'tests/verify_common_world_activation_scope.py','docs/common-world-production-activation-gate-v2.1.md'})
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:
