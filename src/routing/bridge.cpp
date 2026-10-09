@@ -3,18 +3,23 @@
 #include <algorithm>
 namespace mb {
 namespace {
-std::string queueKey(const c1::Envelope& e){return std::visit([](const auto& v){
+std::string queueKey(const c1::Envelope& e){return std::visit([](const auto& v)->std::string{
  using T=std::decay_t<decltype(v)>;std::string id;
+ if constexpr(std::is_same_v<T,c1::TrackerObservation>||std::is_same_v<T,c1::ObservationDeviceState>||
+              std::is_same_v<T,c1::MtpPose>||std::is_same_v<T,c1::MtpTrackerState>){
  if constexpr(std::is_same_v<T,c1::TrackerObservation>||std::is_same_v<T,c1::ObservationDeviceState>)id=v.device_id;
  else id=v.tracker_id;
- return std::to_string(v.source_id.size())+":"+v.source_id+id+":"+std::to_string(c1::Envelope(v).index());},e);}
+ return std::to_string(v.source_id.size())+":"+v.source_id+id+":"+std::to_string(c1::Envelope(v).index());
+ } else return {}; // Authority messages never enter the existing latest-only MTP/mirror fanout.
+ },e);}
 template<class T>void header(T& out,const Config& c,const std::string& session,const Binding& b,std::int64_t seq,std::int64_t timestamp,std::int64_t now){out.version={2,0};out.modality="none";out.source_id=b.source;out.publisher_id=c.bridgeId;out.session_id=out.clock_id=session;out.tracker_id=b.tracker;out.sequence=seq;out.timestamp_ns=timestamp;out.sent_at_ns=now;out.timestamp_kind="receive";out.coordinate_space={b.worldSpace,"rh_y_up_neg_z_forward",b.worldRevision};out.mapping_revision=c.revision;}
 }
-void Fanout::put(Channel c,c1::Envelope e,std::int64_t now){auto& q=queues_[c];
+void Fanout::put(Channel c,c1::Envelope e,std::int64_t now){
+ auto key=queueKey(e);if(key.empty()){++errors;return;}auto& q=queues_[c];
  if(auto state=std::get_if<c1::MtpTrackerState>(&e);state && (state->presence=="absent"||state->tracking_state=="disconnected"||state->tracking_state=="lost")){
   c1::MtpPose p;p.source_id=state->source_id;p.tracker_id=state->tracker_id;auto stale=queueKey(p);q.latest.erase(stale);q.order.erase(std::remove(q.order.begin(),q.order.end(),stale),q.order.end());
  }
- auto key=queueKey(e);if(!q.latest.count(key)){if(q.latest.size()>=capacity){++dropped;return;}q.order.push_back(key);}q.latest.insert_or_assign(key,Item{std::move(e),now});}
+ if(!q.latest.count(key)){if(q.latest.size()>=capacity){++dropped;return;}q.order.push_back(key);}q.latest.insert_or_assign(key,Item{std::move(e),now});}
 void Fanout::clear(Channel c){queues_[c]=Queue{};}
 std::size_t Fanout::pending(Channel c)const{auto i=queues_.find(c);return i==queues_.end()?0:i->second.latest.size();}
 void Fanout::flush(const Send& send,std::int64_t now,std::size_t budget){

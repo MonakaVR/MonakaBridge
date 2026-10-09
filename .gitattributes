@@ -4,4 +4,5 @@ dependencies/** -text
 tests/fixtures/** -text
 tests/fixtures/vive-v2-synthetic-status-samples.jsonl whitespace=cr-at-eol
 *.zip binary
-third_party/monaka-protocol-v2/** -text
+third_party/monaka-protocol-v2/** -text whitespace=cr-at-eol
+dependencies/protocol-v2.1/** whitespace=cr-at-eol
