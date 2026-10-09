@@ -155,7 +155,7 @@ def package(build, output):
                 'files': [{'path': name, 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
                           for name, data in sorted(files.items())]}
     (output / 'artifact-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-    (output / 'artifact-manifest.sha256').write_text(digest(output / 'artifact-manifest.json') + '\n', encoding='ascii')
+    (output / 'artifact-manifest.sha256').write_bytes((digest(output / 'artifact-manifest.json') + '\n').encode('ascii'))
     validate(output)
     print(json.dumps({'artifact': str(output), 'commit': commit, 'manifest_sha256': digest(output / 'artifact-manifest.json'),
                       'files': len(files), 'activation_default': False}, indent=2))

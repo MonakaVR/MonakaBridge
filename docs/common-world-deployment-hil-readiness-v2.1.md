@@ -36,7 +36,8 @@ No backend DLL, SteamVR/SlimeVR process, device or credential is required for pr
 Python and PowerShell are operator tooling dependencies, not native host dependencies.
 
 The manifest lists every payload file, size and SHA256 plus commit/branch/build input,
-Release/x64/native framework and default OFF. Its detached digest is non-circular.
+Release/x64/native framework and default OFF. Its detached digest is non-circular and
+uses canonical ASCII/LF bytes on Windows as well.
 The digest proves byte correspondence, not signer authenticity: 5AH-B must retain the
 reviewed digest through a trusted handoff. Toolchain equality alone does not promise
 bit-identical PE files across machines; reviewed artifact bytes are the HIL identity.
