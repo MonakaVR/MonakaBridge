@@ -218,7 +218,8 @@ actual commands/counts, artifact hashes, 5S hashes and final local/remote/clean 
 All previous suites remain required; static allowlist extensions retain earlier assertions.
 
 Executed 2026-10-10 JST: Bridge **41/41** (all prior 36 retained, 5 additions), new
-readiness **55 cases / 713 assertions**, deployment tooling **11 cases**, unchanged
+readiness **55 cases / 713 assertions**, deployment tooling **12 cases** (including
+canonical digest bytes across native/Python verification), unchanged
 5AG **81/882**, Live Source **41/696**, Persistent Store **32/513**, Sender **41/838**,
 Core **1,875**, Desktop **153** with zero failures/errors/skips, original actual receiver
 replay **14 streams / 82 events**, plus sender **2 positive/10 events + 1 expected

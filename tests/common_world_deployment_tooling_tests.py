@@ -20,7 +20,7 @@ def artifact(name):
     save(root,m); return root
 def save(root,m):
     (root/'artifact-manifest.json').write_text(json.dumps(m))
-    (root/'artifact-manifest.sha256').write_text(digest(root/'artifact-manifest.json')+'\n')
+    (root/'artifact-manifest.sha256').write_bytes((digest(root/'artifact-manifest.json')+'\n').encode('ascii'))
 def reject(fn):
     try: fn()
     except (ValueError,KeyError,OSError): return
@@ -38,6 +38,9 @@ run('unmanifested state rejected',unknown)
 def malformed():
     p=artifact('malformed'); (p/'artifact-manifest.json').write_text('{'); reject(lambda:validate(p))
 run('corrupt manifest rejected',malformed)
+def noncanonical_digest():
+    p=artifact('noncanonical-digest'); (p/'artifact-manifest.sha256').write_bytes((digest(p/'artifact-manifest.json')+'\r\n').encode('ascii')); reject(lambda:validate(p))
+run('CRLF manifest digest rejected consistently with native preflight',noncanonical_digest)
 def traversal():
     p=artifact('traversal'); m=json.loads((p/'artifact-manifest.json').read_text()); m['files'][0]['path']='../escape'; save(p,m); reject(lambda:validate(p))
 run('manifest traversal rejected',traversal)

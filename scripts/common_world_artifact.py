@@ -69,7 +69,7 @@ def validate(artifact):
     manifest = strict_json(artifact / 'artifact-manifest.json')
     if manifest['schema'] != 'monaka-common-world-artifact-1' or manifest['activation_default'] is not False:
         raise ValueError('invalid artifact contract')
-    if (artifact / 'artifact-manifest.sha256').read_text() != digest(artifact / 'artifact-manifest.json') + '\n':
+    if (artifact / 'artifact-manifest.sha256').read_bytes() != (digest(artifact / 'artifact-manifest.json') + '\n').encode('ascii'):
         raise ValueError('manifest hash mismatch')
     listed = set()
     for row in manifest['files']:
