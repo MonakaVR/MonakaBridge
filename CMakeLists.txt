@@ -242,3 +242,10 @@ if(BUILD_TESTING)
  add_test(NAME common_world_dormancy COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/verify_common_world_dormancy.py")
  set_tests_properties(common_world_dormancy PROPERTIES DEPENDS common_world_generated_streams)
 endif()
+# BEGIN 5AI-R2 RECEIVER SCOPE
+if(BUILD_TESTING)
+ add_test(NAME common_world_receiver_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/receiver_scope.py")
+ add_test(NAME common_world_receiver_runtime COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/receiver_ctest.py")
+ set_tests_properties(common_world_receiver_runtime PROPERTIES TIMEOUT 180)
+endif()
+# END 5AI-R2 RECEIVER SCOPE

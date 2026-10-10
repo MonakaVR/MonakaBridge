@@ -20,7 +20,10 @@ PATHS={
  'tests/common_world_activation_tests.cpp','tests/common_world_readiness_tests.cpp','docs/common-world-publisher-identity-wire-v2.2.md'}|{'tests/'+n for n in GATES}
 def approved(root):
     kit=root/'third_party/monaka-protocol-v22'
-    return PATHS|{p.relative_to(root).as_posix() for p in kit.rglob('*') if p.is_file()}
+    # BEGIN 5AI-R2 RECEIVER SCOPE
+    from receiver_scope import approved_receiver
+    # END 5AI-R2 RECEIVER SCOPE
+    return PATHS|approved_receiver(root)|{p.relative_to(root).as_posix() for p in kit.rglob('*') if p.is_file()}
 
 # Exact textual adaptation only for the audited minor-version exception.
 REPLACEMENTS={

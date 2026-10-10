@@ -1,0 +1,73 @@
+{
+  "repository": "MonakaVR/MonakaVR",
+  "commit": "299dda9d31d98ac28da018c5be2a916e36193566",
+  "scope": "two Common World state classes and ktmath only; receiver recovery API additions documented separately",
+  "files": [
+    {
+      "source_path": "server/core/src/main/java/dev/monaka/tracking/CommonWorldAuthority.kt",
+      "path": "receiver/upstream/dev/monaka/tracking/CommonWorldAuthority.kt",
+      "original_sha256": "bdf989a6ba6c1400e5db83ce35f7c1a35eb58479eea72f8b2c9de92b1081d49d",
+      "git_blob_sha256": "40352a2776808950dabee8f3869820480d8517846dd60f9cfaae3b1cc9aff28c"
+    },
+    {
+      "source_path": "server/core/src/main/java/dev/monaka/tracking/TrustedHmdCommonWorldStream.kt",
+      "path": "receiver/upstream/dev/monaka/tracking/TrustedHmdCommonWorldStream.kt",
+      "original_sha256": "6d84d0f937bb7c1fab73d3e683566ddce68bfd65940fac25b86ecf08a7cebc67",
+      "git_blob_sha256": "6d84d0f937bb7c1fab73d3e683566ddce68bfd65940fac25b86ecf08a7cebc67"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/Vector3.kt",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/Vector3.kt",
+      "original_sha256": "d3f735056789657f301fbd0b208aca2c34e4b859901b25ed0b12781315e8e515",
+      "git_blob_sha256": "f9e8ae23f429dd9d423b0a01dcb4d6ee1cba4f7bde40ba43fcdd97f3c12b6a3a"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/Quaternion.kt",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/Quaternion.kt",
+      "original_sha256": "1125d7f96ffcf40894c3b6acfebc7a786bed814ae68c357ba773a71097af51eb",
+      "git_blob_sha256": "0ba2c879b76486fb08e6b2304a34da7a86c2e0432ca32cb5840b50ef8855d5ef"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/Matrix3.kt",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/Matrix3.kt",
+      "original_sha256": "6af2f4aa3b0390ccdce39cd87b83ac1d84b34eb85fa34672b5cc1087f6aaa1af",
+      "git_blob_sha256": "87eeb8cfaadc6ae3e3536f6032c29627261f0d4dbe33061d661dbc8436446167"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/EulerAngles.kt",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/EulerAngles.kt",
+      "original_sha256": "980bc93c2d870e8faa5c6ca864c1894e6a8d68546fad799d8585649a3c9e878d",
+      "git_blob_sha256": "3d39b19d592455904467432123f42ad1fa60fb8f93f3ce3a7ae22b6cfec4627a"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/Transform.kt",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/Transform.kt",
+      "original_sha256": "e711a3d7092c0ef6bdd0be34e915ac11dfe70e35a52d6755e54505640742bcb6",
+      "git_blob_sha256": "0116d3d2bbc94050bc4573b5de3509a4c93004b6d6a30b50cc3131e9cdb5b6db"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/LICENSE-MIT",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/LICENSE-MIT",
+      "original_sha256": "b883693ddba044a8e68683203f891773bc58dbb6c56da40605a5c7760cbdc74a",
+      "git_blob_sha256": "879a8b6c586700edb7a67184bab0d6fe52482832a4241d28e853a7869b612252"
+    },
+    {
+      "source_path": "server/core/src/main/java/io/github/axisangles/ktmath/LICENSE-APACHE",
+      "path": "receiver/upstream/io/github/axisangles/ktmath/LICENSE-APACHE",
+      "original_sha256": "ec4f2152c0e0e36ae9781f2d755532c63ca076b31a8a3718ac021ef799cd9482",
+      "git_blob_sha256": "ba95c7ca0aac6698b34a4a9e93b49ce44c4a64b31c4a8dda7f456c8f0982a07b"
+    },
+    {
+      "source_path": "LICENSE-MIT",
+      "path": "receiver/upstream/LICENSE-MIT",
+      "original_sha256": "47f19b70e5b8d959234d18b15df66effa82c88cce47c97760f59e8bd8ae65085",
+      "git_blob_sha256": "2e346fcf6cade89094253b7e9b60dcd46487d317962face924e0719f06500fad"
+    },
+    {
+      "source_path": "LICENSE-APACHE",
+      "path": "receiver/upstream/LICENSE-APACHE",
+      "original_sha256": "6be8518283bc6ec6bc036fab47227b84ae069b0ea7613386ac05082aae84f7d6",
+      "git_blob_sha256": "cf2f7e3362900c6c74e1d21a08075e66e92a6ee33e38e58008ffc9c8224d5d26"
+    }
+  ]
+}

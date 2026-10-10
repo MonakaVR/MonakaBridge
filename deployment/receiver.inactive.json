@@ -1,0 +1,8 @@
+{
+  "schema": "monaka-common-world-receiver-config-1",
+  "enabled": false,
+  "required_wire": "monaka-wire-2.2",
+  "bind_ipv4": "",
+  "udp_port": 0,
+  "association_path": ""
+}
