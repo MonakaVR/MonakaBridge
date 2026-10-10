@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "source_publisher_id": "",
+  "source_id": "",
+  "source_space_id": "",
+  "queue_capacity": 16,
+  "pipe_name": ""
+}

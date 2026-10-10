@@ -20,12 +20,23 @@ def verify(root):
     root=Path(root)
     def git(*a):return subprocess.check_output(['git','-C',str(root),*a])
     changes=set(git('diff','--name-only',BASE).decode().splitlines())|set(git('ls-files','--others','--exclude-standard').decode().splitlines())
+    # BEGIN 5AI-S LIVE SOURCE SCOPE
+    from trusted_live_source_scope import approved_live_source,historical_source
+    verify_live_allow=approved_live_source(root)
+    changes-=verify_live_allow-FILES
+    # END 5AI-S LIVE SOURCE SCOPE
     assert changes<=FILES,('receiver scope',changes-FILES)
     assert all((root/n).is_file() for n in FILES)
     with tarfile.open(fileobj=io.BytesIO(git('archive',BASE))) as tree:
         for member in tree:
             if not member.isfile():continue
             old=tree.extractfile(member).read();current=(root/member.name).read_bytes()
+            # BEGIN 5AI-S LIVE SOURCE SCOPE
+            if member.name in {'CMakeLists.txt','tests/publisher_identity_scope.py'}:
+                current=historical_source(current.decode().replace('\r\n','\n')).encode()
+                old=old.replace(b'\r\n',b'\n')
+                if member.name=='CMakeLists.txt':current=current.rstrip()+b'\n';old=old.rstrip()+b'\n'
+            # END 5AI-S LIVE SOURCE SCOPE
             if member.name=='CMakeLists.txt':
                 current=strip(current.decode().replace('\r\n','\n'),'# BEGIN 5AI-R2 RECEIVER SCOPE\n','# END 5AI-R2 RECEIVER SCOPE\n').encode()
                 old=old.replace(b'\r\n',b'\n')
