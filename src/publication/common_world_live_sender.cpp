@@ -66,6 +66,8 @@ struct CommonWorldLiveSender::State {
  std::optional<CommonWorldDurableReceipt> receipt;
  std::optional<CommonWorldLiveSnapshot> context;
  std::optional<std::int64_t> cursor;
+ std::optional<CommonWorldLocalSubmissionRecord> lastSubmission;
+ std::size_t queueHighWater=0;
  State(std::shared_ptr<CommonWorldRevisionStore> s,std::string e,std::string p,std::unique_ptr<CommonWorldDatagramTransport> t,std::size_t cap,std::size_t limit)
   :store(s),ingress(std::move(s),std::move(e),std::move(p)),transport(std::move(t)),capacity(cap),retryLimit(limit) {
   if(!transport || cap<2 || !limit || limit>32) throw std::invalid_argument("transport, capacity >=2 and retry limit 1..32 required");
@@ -84,10 +86,14 @@ struct CommonWorldLiveSender::State {
   if(!enabled || !receipt || !context) return "publisher-disabled";
   if(events.size()>capacity-queue.size()) { retire(); return "queue-overflow"; }
   for(const auto& e:events) queue.push_back({e,*receipt,*context,publisherGeneration,transportGeneration,0});
+  queueHighWater=std::max(queueHighWater,queue.size());
   return "queued";
  }
  std::string outcome(const std::shared_ptr<const Plan>& p,DatagramSubmissionResult result) {
   if(!current(p)) return "stale-completion";
+  if(lastSubmission && lastSubmission->orderingPosition==p->id)
+   lastSubmission->result=result.status==DatagramSubmission::Accepted && result.acceptedBytes==frameSize?"local-accepted":
+    result.status==DatagramSubmission::Rejected && result.acceptedBytes==0?"local-rejected":"local-ambiguous";
   if(result.status==DatagramSubmission::Accepted && result.acceptedBytes==frameSize) {
    cursor=sequence(p->envelope); queue.pop_front(); plan.reset(); awaiting=false; headAttempts=0; return "local-accepted";
   }
@@ -186,15 +192,24 @@ CommonWorldLiveSender::PumpResult CommonWorldLiveSender::submit(Attempt a,const 
    if(!w::EncodeEnvelope(a.plan_->envelope,bytes,error)) { result.status="serialization-failed"; return; }
    if(cancel && cancel->load()) { result.status="cancelled-before-send"; return; }
    s->frameSize=bytes.size(); ++s->headAttempts;
+   const auto& world=a.plan_->context.runtime.world->world;
+   auto observation=CommonWorldLocalSubmissionRecord{a.plan_->receipt.committed.authorizationEpoch,
+    world.owner_id,world.world_epoch,world.coordinate_space.id,a.plan_->context.runtime.sourcePublisher,
+    a.plan_->context.runtime.world->anchor_source.source_id,"entered-local-api",world.coordinate_space.revision,
+    a.plan_->receipt.committed.mappingRevision,a.plan_->transportGeneration,a.plan_->publisherGeneration,
+    a.plan_->id,sequence(a.plan_->envelope),0};
    // SEND LINEARIZATION POINT: entry into the nonblocking local datagram API.
    // Revocation effective before this entry excludes send; after entry cannot recall bytes.
-   entered=true;
+   // Prepare allocating observation fields before entry; moving it cannot grant authority.
+   observation.monotonicNs=mb::monotonicNs();
+   entered=true; s->lastSubmission=std::move(observation);
    const auto submitted=s->transport->submit(bytes);
    if(submitted.status==DatagramSubmission::Pending && submitted.acceptedBytes==0) {
+    s->lastSubmission->result="pending-local-completion";
     s->awaiting=true; result={"pending-local-completion",a};
    } else result.status=s->outcome(a.plan_,submitted);
   });
- } catch(...) { s->retire(); s->connected=false; s->transport->close(); s->increment(s->transportGeneration); return {entered?"submission-exception-ambiguous":"authorization-exception-before-send",{}}; }
+ } catch(...) { if(entered && s->lastSubmission) s->lastSubmission->result="local-exception-ambiguous"; s->retire(); s->connected=false; s->transport->close(); s->increment(s->transportGeneration); return {entered?"submission-exception-ambiguous":"authorization-exception-before-send",{}}; }
  if(!gated || result.status=="authorization-unavailable" || result.status=="cancelled-before-send" || result.status=="serialization-failed") s->retire();
  return result;
 }
@@ -216,6 +231,6 @@ void CommonWorldLiveSender::dispose() {
 }
 CommonWorldSenderSnapshot CommonWorldLiveSender::snapshot() const {
  auto s=state_; std::lock_guard<std::mutex> g(s->mutex);
- return {s->connected,s->enabled,s->disposed,s->awaiting,s->publisherGeneration,s->transportGeneration,s->queue.size(),s->capacity,s->headAttempts,s->cursor,s->ingress.snapshot()};
+ return {s->connected,s->enabled,s->disposed,s->awaiting,s->publisherGeneration,s->transportGeneration,s->queue.size(),s->capacity,s->headAttempts,s->cursor,s->ingress.snapshot(),s->lastSubmission,s->queueHighWater};
 }
 }

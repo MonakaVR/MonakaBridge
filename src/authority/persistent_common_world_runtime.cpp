@@ -14,7 +14,7 @@ CommonWorldAuthorityOwner::TokenFactory tokenFactory(const std::string& epoch,co
 }
 }
 PersistentCommonWorldRuntime::PersistentCommonWorldRuntime(std::shared_ptr<CommonWorldRevisionStore> store,
- std::string epoch,std::string source,std::size_t capacity):store_(std::move(store)),epoch_(std::move(epoch)) {
+ std::string epoch,std::string source,std::size_t capacity):store_(std::move(store)),epoch_(std::move(epoch)),sourcePublisher_(source) {
  check(bool(store_),"store required");
  // Reserve the fresh lifetime BEFORE constructing owner; restore never creates active authority.
  const auto s=store_->acquireAuthorization(epoch_);
@@ -39,7 +39,9 @@ void PersistentCommonWorldRuntime::changedRequest(const std::optional<CommonWorl
 }
 CommonWorldRuntimeSnapshot PersistentCommonWorldRuntime::snapshot() const {
  std::lock_guard<std::mutex> guard(mutex_); const auto& o=coordinator_->owner();
- return {o.highWater(),o.pendingTransition(),o.currentWorld(),o.currentMapping(),coordinator_->publisher().sessionActive(),disposed_};
+ return {o.highWater(),o.pendingTransition(),o.currentWorld(),o.currentMapping(),coordinator_->publisher().sessionActive(),disposed_,epoch_,sourcePublisher_,
+  sourceSession_,sourceClock_,coordinator_->sourceStream().sequenceHighWater(),
+  coordinator_->sourceStream().currentAuthority(),coordinator_->sourceStream().candidate()};
 }
 CommonWorldOperationResult PersistentCommonWorldRuntime::beginSourceSession(const std::string& publisher,const std::string& session,
  const std::string& clock,const w::Envelope& bootstrap,std::int64_t at) {
@@ -48,6 +50,7 @@ CommonWorldOperationResult PersistentCommonWorldRuntime::beginSourceSession(cons
  if(!guardedGate([&] { result=coordinator_->beginSourceSession(publisher,session,clock,bootstrap,at); },at)) {
   invalidate(); result.events=coordinator_->onSourceTransportDisconnected(at);
  }
+ if(result.status=="authority") { sourceSession_=session; sourceClock_=clock; }
  changedRequest(before); return result;
 }
 CommonWorldOperationResult PersistentCommonWorldRuntime::receiveSource(const w::Envelope& event,std::int64_t at) {

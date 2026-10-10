@@ -2,6 +2,8 @@
 #include "monaka_bridge/network.hpp"
 #include "../authority/common_world_facts.hpp"
 #include <stdexcept>
+#include <fstream>
+#include <chrono>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -21,7 +23,7 @@ class ProductionDatagram final : public CommonWorldDatagramTransport {
 #endif
 public:
  explicit ProductionDatagram(const CommonWorldActivationConfig& c):ip_(c.ipv4),port_(c.port) {
-  if(!c.valid || !c.enabled || c.mode!=CommonWorldExecutionMode::Production || c.transport!="udp-ipv4" ||
+  if(!c.valid || c.mode!=CommonWorldExecutionMode::Production || c.transport!="udp-ipv4" ||
    c.codec!="monaka-wire-2.1" || !ip_ || !port_) throw std::invalid_argument("production transport registration rejected");
  }
  ~ProductionDatagram() override { close(); }
@@ -85,7 +87,8 @@ struct CommonWorldProductionActivation::Session {
  StagedTransport* transport = nullptr; // owned by sender, session-scoped, never exposed
  std::optional<CommonWorldDurableReceipt> receipt;
  std::string epoch;
- bool recovered = false;
+ bool recovered = false, armed = false;
+ std::filesystem::path configPath; std::string configBytes; std::filesystem::file_time_type configVersion;
  ~Session() { if(sender) sender->dispose(); }
 };
 const char* commonWorldActivationStatusName(CommonWorldActivationStatus s) {
@@ -95,6 +98,7 @@ const char* commonWorldActivationStatusName(CommonWorldActivationStatus s) {
  case CommonWorldActivationStatus::RecoveryPending:return "RecoveryPending";
  case CommonWorldActivationStatus::OwnerUnavailable:return "OwnerUnavailable";
  case CommonWorldActivationStatus::ReadyButInactive:return "ReadyButInactive";
+ case CommonWorldActivationStatus::ArmedDisabled:return "ArmedDisabled";
  case CommonWorldActivationStatus::Activating:return "Activating";
  case CommonWorldActivationStatus::Active:return "Active";
  case CommonWorldActivationStatus::Deactivating:return "Deactivating";
@@ -110,11 +114,11 @@ CommonWorldProductionActivation::CommonWorldProductionActivation():CommonWorldPr
  deps.freshEpoch=[] { return mb::uuid(); };
  return deps;
 }()) {}
-CommonWorldProductionActivation::CommonWorldProductionActivation(Dependencies deps):dependencies_(std::move(deps)) {}
+CommonWorldProductionActivation::CommonWorldProductionActivation(Dependencies deps):dependencies_(std::move(deps)),runtimeInstance_(mb::uuid()),controlSession_(mb::uuid()) {}
 CommonWorldProductionActivation::~CommonWorldProductionActivation() { shutdown(); }
 void CommonWorldProductionActivation::increment() {
  if(generation_==UINT64_MAX) { shutdown_=true; status_=CommonWorldActivationStatus::Faulted; retirePublication(); throw std::runtime_error("activation generation exhausted"); }
- ++generation_;
+ ++generation_; readinessToken_.clear();
 }
 void CommonWorldProductionActivation::retirePublication() {
  if(session_ && session_->sender) {
@@ -125,9 +129,15 @@ void CommonWorldProductionActivation::retirePublication() {
  }
 }
 std::string CommonWorldProductionActivation::prepare(const std::optional<std::filesystem::path>& path,const w::Envelope& bootstrap,std::int64_t at) {
+ return prepareImpl(path,bootstrap,at,false);
+}
+std::string CommonWorldProductionActivation::prepareArmed(const std::filesystem::path& path,const w::Envelope& bootstrap,std::int64_t at) {
+ return prepareImpl(path,bootstrap,at,true);
+}
+std::string CommonWorldProductionActivation::prepareImpl(const std::optional<std::filesystem::path>& path,const w::Envelope& bootstrap,std::int64_t at,bool armed) {
  std::uint64_t ticket;
  {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if(shutdown_) return "shutdown";
   if(preparing_) return "startup-in-progress";
   if(session_) return "already-prepared"; // no runtime reconfiguration/implicit world replacement
@@ -136,21 +146,31 @@ std::string CommonWorldProductionActivation::prepare(const std::optional<std::fi
  auto candidate=std::make_shared<Session>();
  const auto stage=[&](CommonWorldStartupStage value,CommonWorldActivationStatus status) {
   {
-   std::lock_guard<std::mutex> lock(mutex_);
+   std::lock_guard<std::recursive_mutex> lock(mutex_);
    if(ticket!=generation_ || shutdown_) throw std::runtime_error("startup-retired");
    stages_.push_back(value); status_=status;
   }
   if(dependencies_.beforeStage) dependencies_.beforeStage(value);
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if(ticket!=generation_ || shutdown_) throw std::runtime_error("startup-retired");
  };
  try {
   stage(CommonWorldStartupStage::ConfigLoad,CommonWorldActivationStatus::DisabledByDefault);
-  candidate->config=loadCommonWorldActivationConfig(path);
+  candidate->armed=armed;
+  if(armed) {
+   if(!path) throw std::runtime_error("explicit armed config required");
+   candidate->configPath=std::filesystem::absolute(*path);
+   std::ifstream f(*path,std::ios::binary); if(!f) throw std::runtime_error("armed config unavailable");
+   candidate->configBytes=std::string((std::istreambuf_iterator<char>(f)),{});
+   if(f.bad()) throw std::runtime_error("armed config read failure");
+   candidate->configVersion=std::filesystem::last_write_time(*path);
+   candidate->config=parseCommonWorldActivationConfig(candidate->configBytes,*path,true);
+   if(candidate->config.enabled) throw std::runtime_error("armed preparation requires configuration OFF");
+  } else candidate->config=loadCommonWorldActivationConfig(path);
   stage(CommonWorldStartupStage::Validation,CommonWorldActivationStatus::ConfigInvalid);
   if(!candidate->config.valid) throw std::invalid_argument(candidate->config.error);
-  if(!candidate->config.enabled) {
-   std::lock_guard<std::mutex> lock(mutex_); if(ticket!=generation_ || shutdown_) { preparing_=false; return "startup-retired"; }
+  if(!candidate->config.enabled && !armed) {
+   std::lock_guard<std::recursive_mutex> lock(mutex_); if(ticket!=generation_ || shutdown_) { preparing_=false; return "startup-retired"; }
    preparing_=false; status_=CommonWorldActivationStatus::DisabledByDefault; return "disabled";
   }
   if(candidate->config.mode!=dependencies_.mode) throw std::invalid_argument("test/production registration mismatch");
@@ -181,11 +201,13 @@ std::string CommonWorldProductionActivation::prepare(const std::optional<std::fi
   if(!snap.ingress.runtime.world) throw std::runtime_error("owner unavailable");
   const auto denied=gate(*candidate,snap.ingress.runtime.world->world);
   if(!denied.empty()) throw std::runtime_error(denied);
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if(ticket!=generation_ || shutdown_) { preparing_=false; return "startup-retired"; }
-  session_=std::move(candidate); preparing_=false; status_=CommonWorldActivationStatus::ReadyButInactive; return "ready-inactive";
+  lastTransitionNs_=at; session_=std::move(candidate); sourceLease_=mb::uuid(); preparing_=false;
+  status_=armed?CommonWorldActivationStatus::ArmedDisabled:CommonWorldActivationStatus::ReadyButInactive;
+  return armed?"armed-disabled":"ready-inactive";
  } catch(const std::exception& e) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
   if(ticket!=generation_ || shutdown_) { preparing_=false; return "startup-retired"; }
   preparing_=false; reason_=e.what();
   status_=stages_.size()<=2?CommonWorldActivationStatus::ConfigInvalid:CommonWorldActivationStatus::Faulted;
@@ -193,7 +215,9 @@ std::string CommonWorldProductionActivation::prepare(const std::optional<std::fi
  }
 }
 std::string CommonWorldProductionActivation::gate(const Session& s,const w::CommonWorldReference& expected) const {
- if(!s.config.valid || !s.config.enabled || s.config.mode!=dependencies_.mode) return "config-invalid";
+ if(!s.config.valid || (!s.config.enabled && !s.armed) || s.config.mode!=dependencies_.mode) return "config-invalid";
+ if(s.armed && !configurationCurrent(s)) return "configuration-changed";
+ if(ownerRevoked_ || emergencyRevoked_) return "authorization-revoked";
  if(!s.recovered || !s.store) return "recovery-pending";
  if(!s.sender) return "publisher-unavailable";
  const auto snap=s.sender->snapshot(); const auto& live=snap.ingress;
@@ -208,9 +232,13 @@ std::string CommonWorldProductionActivation::gate(const Session& s,const w::Comm
  return {};
 }
 std::string CommonWorldProductionActivation::activate(const w::CommonWorldReference& expected,std::int64_t at) {
- std::lock_guard<std::mutex> lock(mutex_);
+ return activateImpl(expected,at,false);
+}
+std::string CommonWorldProductionActivation::activateImpl(const w::CommonWorldReference& expected,std::int64_t at,bool controlled) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
  if(shutdown_) return "shutdown";
  if(!session_) return preparing_?"startup-in-progress":"not-ready";
+ if(session_->armed && !controlled) return "current-readiness-required";
  try {
  if(status_==CommonWorldActivationStatus::Active) {
   const auto snap=session_->sender->snapshot();
@@ -218,10 +246,10 @@ std::string CommonWorldProductionActivation::activate(const w::CommonWorldRefere
   if(snap.enabled && snap.connected && snap.ingress.ownerApproved && session_->store->matchesCurrentCommit(*session_->receipt)) return "already-active";
   retirePublication(); status_=CommonWorldActivationStatus::Faulted; reason_="activation-authority-retired"; return reason_;
  }
- if(status_!=CommonWorldActivationStatus::ReadyButInactive) return "not-ready";
+ if(status_!=CommonWorldActivationStatus::ReadyButInactive && status_!=CommonWorldActivationStatus::ArmedDisabled) return "not-ready";
  status_=CommonWorldActivationStatus::Activating;
   const auto denied=gate(*session_,expected);
-  if(!denied.empty()) { status_=CommonWorldActivationStatus::ReadyButInactive; reason_=denied; return denied; }
+  if(!denied.empty()) { status_=session_->armed?CommonWorldActivationStatus::ArmedDisabled:CommonWorldActivationStatus::ReadyButInactive; reason_=denied; return denied; }
   stages_.push_back(CommonWorldStartupStage::ExplicitEnable);
   if(dependencies_.beforeStage) dependencies_.beforeStage(CommonWorldStartupStage::ExplicitEnable);
   // Staging reports sender connection readiness; it does not touch the real endpoint.
@@ -241,29 +269,29 @@ std::string CommonWorldProductionActivation::activate(const w::CommonWorldRefere
   // ACTIVATION LINEARIZATION: all gates + explicit enable + endpoint activation have
   // succeeded, while both authorization and orchestration boundaries are serialized.
   // Every pump revalidates current authority at the unchanged 5AF send entry point.
-  reason_.clear(); return "active";
+  lastTransitionNs_=at; readinessToken_.clear(); reason_.clear(); return "active";
  } catch(const std::exception& e) {
   retirePublication(); status_=CommonWorldActivationStatus::Faulted; reason_=e.what(); return "activation-failed";
  }
 }
 void CommonWorldProductionActivation::deactivate() {
- std::lock_guard<std::mutex> lock(mutex_); if(shutdown_) return;
- if(!preparing_ && (status_==CommonWorldActivationStatus::ReadyButInactive || status_==CommonWorldActivationStatus::DisabledByDefault)) return;
- status_=CommonWorldActivationStatus::Deactivating; increment(); // invalidates delayed startup/completion
+ std::lock_guard<std::recursive_mutex> lock(mutex_); if(shutdown_) return;
+ if(!preparing_ && (status_==CommonWorldActivationStatus::ReadyButInactive || status_==CommonWorldActivationStatus::ArmedDisabled || status_==CommonWorldActivationStatus::DisabledByDefault)) return;
+ lastTransitionNs_=mb::monotonicNs(); status_=CommonWorldActivationStatus::Deactivating; increment(); // invalidates delayed startup/completion
  retirePublication();
- status_=session_?CommonWorldActivationStatus::ReadyButInactive:CommonWorldActivationStatus::DisabledByDefault;
+ status_=session_?(session_->armed?CommonWorldActivationStatus::ArmedDisabled:CommonWorldActivationStatus::ReadyButInactive):CommonWorldActivationStatus::DisabledByDefault;
  reason_="explicitly-deactivated";
 }
 void CommonWorldProductionActivation::shutdown(std::int64_t at) {
- std::lock_guard<std::mutex> lock(mutex_); if(shutdown_) return;
- status_=CommonWorldActivationStatus::Deactivating; increment(); retirePublication(); // revoke first
+ std::lock_guard<std::recursive_mutex> lock(mutex_); if(shutdown_) return;
+ lastTransitionNs_=at; status_=CommonWorldActivationStatus::Deactivating; increment(); retirePublication(); // revoke first
  shutdown_=true;
  if(session_) { session_->sender->stopSource(session_->source,at); session_->sender->revokeOwner(at); session_->sender->dispose(); }
  status_=CommonWorldActivationStatus::Shutdown; reason_="shutdown";
 }
 void CommonWorldProductionActivation::revokeOwner(std::int64_t at) {
- std::lock_guard<std::mutex> lock(mutex_); if(shutdown_) return;
- increment(); retirePublication();
+ std::lock_guard<std::recursive_mutex> lock(mutex_); if(shutdown_) return;
+ lastTransitionNs_=at; increment(); retirePublication(); ownerRevoked_=true;
  if(session_) session_->sender->revokeOwner(at);
  status_=CommonWorldActivationStatus::OwnerUnavailable; reason_="owner-revoked";
 }
@@ -275,10 +303,17 @@ void CommonWorldProductionActivation::observeSenderFault() {
  }
 }
 CommonWorldSenderSourceResult CommonWorldProductionActivation::receive(const w::Envelope& event,std::int64_t at) {
- std::lock_guard<std::mutex> lock(mutex_);
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
  if(shutdown_ || !session_) return {{shutdown_?"shutdown":"not-ready",{}},"publisher-disabled"};
+ if(session_->armed && !configurationCurrent(*session_)) { emergencyRevoke(at); return {{"configuration-changed",{}},"publisher-disabled"}; }
  const auto before=session_->sender->snapshot();
  auto result=session_->source.receive(event,at);
+ if(session_->armed) readinessToken_.clear();
+ lastSourceResult_=result.source.status;
+ const auto seq=std::visit([](const auto& e) { return e.sequence; },event);
+ if(lastSourceResult_=="authority" || lastSourceResult_=="pose" || lastSourceResult_=="unavailable" || lastSourceResult_=="revoked" || lastSourceResult_=="duplicate") {
+  lastAcceptedSourceResult_=lastSourceResult_; lastAcceptedSourceNs_=at; lastAcceptedSourceSequence_=seq;
+ } else { lastRejectedSourceResult_=lastSourceResult_; lastRejectedSourceNs_=at; lastRejectedSourceSequence_=seq; }
  const auto after=session_->sender->snapshot();
  // Do not implicitly commit a source transition into a new world. New preparation
  // requires a fresh runtime and explicit matching durable-world activation.
@@ -288,20 +323,199 @@ CommonWorldSenderSourceResult CommonWorldProductionActivation::receive(const w::
  observeSenderFault(); return result;
 }
 CommonWorldProductionActivation::Submission CommonWorldProductionActivation::pump(const std::atomic_bool* cancel) {
- std::lock_guard<std::mutex> lock(mutex_);
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
  if(shutdown_ || status_!=CommonWorldActivationStatus::Active || !session_) return {"activation-inactive",{}};
+ if(session_->armed && !configurationCurrent(*session_)) { emergencyRevoke(mb::monotonicNs()); return {"configuration-changed",{}}; }
  auto result=session_->sender->pump(cancel); Completion completion;
  if(result.completion) { completion.session_=session_; completion.generation_=generation_; completion.attempt_=result.completion; }
  observeSenderFault(); return {std::move(result.status),std::move(completion)};
 }
 std::string CommonWorldProductionActivation::complete(const Completion& c,DatagramSubmissionResult result) {
- std::lock_guard<std::mutex> lock(mutex_);
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
  if(shutdown_ || status_!=CommonWorldActivationStatus::Active || !session_ || c.session_.lock()!=session_ || c.generation_!=generation_) return "stale-completion";
  auto status=session_->sender->complete(c.attempt_,result); observeSenderFault(); return status;
 }
 CommonWorldActivationSnapshot CommonWorldProductionActivation::snapshot() const {
- std::lock_guard<std::mutex> lock(mutex_);
- return {status_.load(),generation_,session_ && session_->recovered,shutdown_,reason_,stages_,
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ CommonWorldActivationSnapshot out{status_.load(),generation_,session_ && session_->recovered,shutdown_,reason_,stages_,
   session_?std::optional<CommonWorldSenderSnapshot>(session_->sender->snapshot()):std::nullopt};
+ out.lastTransitionNs=lastTransitionNs_; out.lastAcceptedSourceNs=lastAcceptedSourceNs_; out.lastRejectedSourceNs=lastRejectedSourceNs_;
+ out.lastAcceptedSourceResult=lastAcceptedSourceResult_; out.lastRejectedSourceResult=lastRejectedSourceResult_;
+ out.lastAcceptedSourceSequence=lastAcceptedSourceSequence_; out.lastRejectedSourceSequence=lastRejectedSourceSequence_;
+ out.runtimeInstance=runtimeInstance_; out.controlSession=controlSession_; out.sourceLease=sourceLease_;
+ out.readinessToken=readinessToken_; out.readinessGeneration=readinessGeneration_;
+ out.emergencyRevoked=emergencyRevoked_; out.ownerRevoked=ownerRevoked_;
+ out.lastOperation=lastOperation_; out.lastControlResult=lastControlResult_;
+ out.lastSourceResult=lastSourceResult_; out.lastReconnectResult=lastReconnectResult_;
+ if(session_) {
+  out.ownerEpoch=session_->epoch; out.configurationEnabled=session_->config.enabled;
+  try { out.durableState=session_->store->tryObserve();
+   if(!out.durableState) out.storeError="store-busy";
+   out.durableReceiptCurrent=session_->receipt && out.durableState && out.durableState->latest && out.durableState->currentAuthorizationEpoch==session_->epoch &&
+    sameCommonWorldRevisionCandidate(*out.durableState->latest,session_->receipt->committed);
+  } catch(const std::exception& e) { out.storeError="store-observation-unavailable"; }
+  if(!readinessToken_.empty() && out.sender && out.sender->ingress.runtime.world) {
+   try { out.readinessValid=out.durableReceiptCurrent && readinessGeneration_==generation_ && !shutdown_ && !ownerRevoked_ && !emergencyRevoked_ &&
+    status_==CommonWorldActivationStatus::ArmedDisabled && configurationCurrent(*session_) && out.sender->ingress.ownerApproved &&
+    out.sender->ingress.sourceActive && !out.sender->ingress.runtime.pending && bool(out.sender->ingress.runtime.mapping) &&
+    !out.sender->enabled && !out.sender->queued && !out.sender->awaitingCompletion; }
+   catch(...) { out.readinessValid=false; }
+  }
+ }
+ out.observedAtNs=mb::monotonicNs();
+ out.observedAtUnixMs=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+ return out;
 }
+bool CommonWorldProductionActivation::configurationCurrent(const Session& s) const {
+ try {
+  std::ifstream f(s.configPath,std::ios::binary); if(!f) return false;
+  std::string bytes((std::istreambuf_iterator<char>(f)),{});
+  return !f.bad() && bytes.size()<=65536 && bytes==s.configBytes && std::filesystem::last_write_time(s.configPath)==s.configVersion;
+ } catch(...) { return false; }
+}
+std::string CommonWorldProductionActivation::refreshReadiness() {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ readinessToken_.clear();
+ if(shutdown_) return "shutdown";
+ if(!session_ || status_!=CommonWorldActivationStatus::ArmedDisabled) return "not-armed-disabled";
+ try {
+  const auto snap=session_->sender->snapshot();
+  if(!snap.ingress.runtime.world) return "owner-unavailable";
+  const auto denied=gate(*session_,snap.ingress.runtime.world->world);
+  if(!denied.empty()) return denied;
+  increment(); readinessGeneration_=generation_; readinessToken_=mb::uuid(); return "readiness-current";
+ } catch(...) { return "readiness-unavailable"; }
+}
+std::string CommonWorldProductionActivation::activateReady(const std::string& token,bool enable,std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(shutdown_) return "shutdown";
+ if(!enable) return "explicit-enable-required";
+ if(token.empty() || token!=readinessToken_ || readinessGeneration_!=generation_) return "stale-readiness";
+ if(!session_ || !session_->armed) return "not-armed-disabled";
+ const auto snap=session_->sender->snapshot();
+ if(!snap.ingress.runtime.world) { readinessToken_.clear(); return "owner-unavailable"; }
+ // The token only binds an observation. CURRENT config, owner, source, world,
+ // publisher and exact store receipt are revalidated again inside activateImpl.
+ readinessToken_.clear();
+ return activateImpl(snap.ingress.runtime.world->world,at,true);
+}
+std::string CommonWorldProductionActivation::reconnectSource(std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(shutdown_) return "shutdown";
+ if(!session_) return "not-ready";
+ increment(); retirePublication();
+ session_->sender->stopSource(session_->source,at);
+ session_->source=session_->sender->startSource(at); sourceLease_=mb::uuid();
+ // startSource issues a fresh callback generation but grants NO owner approval.
+ status_=CommonWorldActivationStatus::OwnerUnavailable;
+ return lastReconnectResult_="source-reconnected-awaiting-explicit-authorization";
+}
+void CommonWorldProductionActivation::disconnectSource(std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(shutdown_ || !session_) return;
+ increment(); retirePublication(); session_->sender->stopSource(session_->source,at);
+ status_=CommonWorldActivationStatus::OwnerUnavailable; lastSourceResult_="producer-disconnected";
+}
+std::string CommonWorldProductionActivation::authorizeReconnectedSource(const w::Envelope& bootstrap,std::int64_t at,const std::string& expectedLease,std::uint64_t expectedGeneration) {
+ std::shared_ptr<Session> current; CommonWorldLiveSender::Source source; std::uint64_t ticket;
+ {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if(shutdown_) return "shutdown";
+  if(ownerRevoked_ || emergencyRevoked_) return "authorization-revoked";
+  if(!session_ || !session_->armed || status_!=CommonWorldActivationStatus::OwnerUnavailable) return "source-authorization-not-permitted";
+  if(!expectedLease.empty() && (expectedLease!=sourceLease_ || expectedGeneration!=session_->source.generation())) return "stale-source";
+  if(!configurationCurrent(*session_)) return "configuration-changed";
+  const auto* a=std::get_if<w::TrustedHmdSourceAuthority>(&bootstrap);
+  if(!a || a->publisher_id!=session_->config.sourcePublisher) return "source-identity-mismatch";
+  const auto authorized=session_->sender->authorizeSource(session_->source,a->publisher_id,a->session_id,a->clock_id,bootstrap,at);
+  lastSourceResult_=authorized.status;
+  if(authorized.status!="authority") return authorized.status;
+  increment(); ticket=generation_; current=session_; source=session_->source;
+ }
+ // Same 5AE ticket -> 5AD durable commit -> CURRENT receipt/owner delivery.
+ // No direct owner/world/epoch mutation and no guessed durable receipt.
+ const auto committed=current->sender->commitSource(source,at);
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(shutdown_ || current!=session_ || ticket!=generation_ || ownerRevoked_) return "source-authorization-retired";
+ if(!committed.eligible || !committed.receipt) return "source-commit-not-eligible";
+ session_->receipt=committed.receipt; status_=CommonWorldActivationStatus::ArmedDisabled;
+ return lastSourceResult_="source-authorized-armed-disabled";
+}
+std::string CommonWorldProductionActivation::reconnectTransport(std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(shutdown_) return "shutdown";
+ if(!session_) return "not-ready";
+ const bool wasActive=status_==CommonWorldActivationStatus::Active;
+ // CURRENT authorization is checked while the sender still owns its active
+ // publisher, then retired; a fresh publisher bootstrap uses the same exact gate.
+ const auto before=session_->sender->snapshot();
+ bool authorized=false;
+ try { authorized=before.ingress.ownerApproved && before.ingress.sourceActive && before.ingress.runtime.world &&
+  before.ingress.runtime.mapping && !before.ingress.runtime.pending && !ownerRevoked_ && !emergencyRevoked_ &&
+  (!session_->armed || configurationCurrent(*session_)) && session_->receipt &&
+  session_->store->matchesCurrentCommit(*session_->receipt); } catch(...) {}
+ increment(); retirePublication();
+ if(wasActive && (!authorized || !before.enabled || !before.connected)) {
+  status_=CommonWorldActivationStatus::OwnerUnavailable; return lastReconnectResult_="reconnect-authorization-retired";
+ }
+ if(!wasActive) return lastReconnectResult_="transport-retired-disabled";
+ status_=session_->armed?CommonWorldActivationStatus::ArmedDisabled:CommonWorldActivationStatus::ReadyButInactive;
+ // Revalidate world/identity/config/receipt and publisher eligibility again; connect
+ // never directly forces StagedTransport behind the activation gate.
+ return lastReconnectResult_=activateImpl(before.ingress.runtime.world->world,at,session_->armed);
+}
+void CommonWorldProductionActivation::emergencyRevoke(std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(emergencyRevoked_) return;
+ emergencyRevoked_=true; revokeOwner(at); shutdown(at); reason_="emergency-revoked";
+}
+CommonWorldSenderSourceResult CommonWorldProductionActivation::receiveCurrent(const std::string& lease,std::uint64_t sourceGeneration,const w::Envelope& event,std::int64_t at) {
+ std::lock_guard<std::recursive_mutex> lock(mutex_);
+ if(!session_ || lease!=sourceLease_ || sourceGeneration!=session_->source.generation()) return {{"stale-source",{}},"publisher-disabled"};
+ if(session_->armed && !configurationCurrent(*session_)) { emergencyRevoke(at); return {{"configuration-changed",{}},"publisher-disabled"}; }
+ return receive(event,at);
+}
+CommonWorldControlResult CommonWorldProductionActivation::control(const CommonWorldControlRequest& request,std::int64_t at) {
+ // Recursive only to compose public production lifecycle calls, never to expose
+ // private sender/owner handles. Persistence releases the orchestration lock;
+ // generation fences reject a retired result and paired snapshots show interleaving.
+ std::unique_lock<std::recursive_mutex> lock(mutex_);
+ const auto outside=[&](auto f) { lock.unlock(); try { auto value=f(); lock.lock(); return value; } catch(...) { lock.lock(); throw; } };
+ CommonWorldControlResult out; out.operationId=request.operationId; out.operation=request.operation; out.before=snapshot();
+ const auto& op=request.operation;
+ if(request.operationId.empty() || request.operationId.size()>128) out.result="operation-id-required";
+ else if(request.runtimeInstance!=runtimeInstance_ || request.controlSession!=controlSession_) out.result="stale-control-session";
+ else try {
+  if(op=="status" || op=="snapshot") { out.result="observed"; out.accepted=true; }
+  else if(op=="shutdown") { shutdown(at); out.result="shutdown"; out.accepted=true; }
+  else if(op=="emergency-revoke") { emergencyRevoke(at); out.result="emergency-revoked"; out.accepted=true; }
+  else if(shutdown_) out.result="shutdown";
+  else if(op=="prepare" && request.config && request.envelope) out.result=outside([&] { return prepareArmed(*request.config,*request.envelope,at); });
+  else if(op=="refresh-readiness") out.result=refreshReadiness();
+  else if(op=="activate") out.result=activateReady(request.readinessToken,request.explicitEnable,at);
+  else if(op=="deactivate") { deactivate(); out.result="deactivated"; out.accepted=true; }
+  else if(op=="owner-revoke") { revokeOwner(at); out.result="owner-revoked"; out.accepted=true; }
+  else if(op=="source-reconnect") out.result=reconnectSource(at);
+  else if(op=="source-disconnect" || op=="source-eof") { disconnectSource(at); out.result=op=="source-eof"?"producer-eof":"producer-disconnected"; out.accepted=true; }
+  else if(op=="source-authorize" && request.envelope) {
+   if(!session_ || request.sourceLease!=sourceLease_ || request.sourceGeneration!=session_->source.generation()) out.result="stale-source";
+   else out.result=outside([&] { return authorizeReconnectedSource(*request.envelope,at,request.sourceLease,request.sourceGeneration); });
+  }
+  else if(op=="input" && request.envelope) out.result=receiveCurrent(request.sourceLease,request.sourceGeneration,*request.envelope,at).source.status;
+  else if(op=="transport-reconnect") out.result=reconnectTransport(at);
+  else if(op=="pump") {
+   if(session_ && session_->armed && !configurationCurrent(*session_)) { emergencyRevoke(at); out.result="configuration-changed"; }
+   else out.result=pump().status;
+  }
+  else out.result="unsupported-operation-or-missing-argument";
+  if(out.result=="armed-disabled" || out.result=="readiness-current" || out.result=="active" ||
+   out.result=="source-reconnected-awaiting-explicit-authorization" || out.result=="source-authorized-armed-disabled" ||
+   out.result=="transport-retired-disabled" || out.result=="pose" || out.result=="authority" ||
+   out.result=="unavailable" || out.result=="revoked" || out.result=="duplicate" || out.result=="local-accepted") out.accepted=true;
+ } catch(...) { out.result="control-failed"; emergencyRevoke(at); }
+ // status/snapshot are pure observations, including control metadata.
+ if(op!="status" && op!="snapshot" && out.result!="stale-control-session") { lastOperation_=out.operationId+":"+op; lastControlResult_=out.result; }
+ out.after=snapshot(); return out;
+}
+
 }

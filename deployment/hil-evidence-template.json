@@ -1,5 +1,5 @@
 {
-  "schema": "monaka-common-world-hil-evidence-1",
+  "schema": "monaka-common-world-hil-evidence-2",
   "phase": "2B-5AH-B",
   "branch": null,
   "commit": null,
@@ -27,5 +27,25 @@
   "operator_notes": [],
   "final_result": "NOT_RUN",
   "delivery_semantics": "ordered best-effort local submission",
-  "unverified": ["actual production endpoint", "HIL", "device timing/latency", "receiver/application ACK", "receiver commit", "exactly-once", "power-loss durability beyond 5AD process-crash scope"]
+  "unverified": [
+    "actual production endpoint",
+    "HIL",
+    "device timing/latency",
+    "receiver/application ACK",
+    "receiver commit",
+    "exactly-once",
+    "power-loss durability beyond 5AD process-crash scope"
+  ],
+  "runtime_instance": null,
+  "control_session": null,
+  "readiness_generation": null,
+  "readiness_token": null,
+  "source_sequence_high_water": null,
+  "source_lease": null,
+  "transport_generation": null,
+  "local_submission_record": null,
+  "control_operations": [],
+  "fault_snapshot_pairs": [],
+  "stale_session_rejections": [],
+  "revoke_deactivation_evidence": []
 }

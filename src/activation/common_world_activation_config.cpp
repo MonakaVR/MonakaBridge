@@ -39,9 +39,12 @@ void endpoint(CommonWorldActivationConfig& c) {
  c.ipv4=ip; c.port=static_cast<std::uint16_t>(n);
 }
 }
-CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::string> bytes,const std::filesystem::path& path) {
+CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::string> bytes,const std::filesystem::path& path,bool validateDisabled) {
  CommonWorldActivationConfig c; c.source=path.string();
- if(!bytes || bytes->empty()) return c;
+ if(!bytes || bytes->empty()) {
+  if(validateDisabled) { c.valid=false; c.error="complete OFF configuration required"; }
+  return c;
+ }
  try {
   require(bytes->size()<=65536,"configuration too large");
   std::vector<std::set<std::string>> keys;
@@ -56,7 +59,7 @@ CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::
   const std::set<std::string> allowed={"enabled","mode","transport","codec","endpoint","owner_id","world_space_id","source_publisher_id","revision_path","queue_capacity","retry_limit","peer_policy"};
   for(auto it=j.begin();it!=j.end();++it) require(allowed.count(it.key())!=0,"unknown configuration field");
   if(j.contains("enabled")) { require(j["enabled"].is_boolean(),"enabled must be boolean"); c.enabled=j["enabled"].get<bool>(); }
-  if(!c.enabled) return c;
+  if(!c.enabled && !validateDisabled) return c;
   const auto mode=j.at("mode").get<std::string>(); require(mode=="production" || mode=="test","explicit execution mode required");
   c.mode=mode=="production"?CommonWorldExecutionMode::Production:CommonWorldExecutionMode::Test;
   c.transport=j.at("transport").get<std::string>(); c.codec=j.at("codec").get<std::string>(); c.endpoint=j.at("endpoint").get<std::string>();
@@ -74,7 +77,7 @@ CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::
    if(name==std::string("queue_capacity")) c.queueCapacity=static_cast<std::size_t>(v); else c.retryLimit=static_cast<std::size_t>(v);
   }
   endpoint(c);
- } catch(const std::exception& e) { c.enabled=false; c.valid=false; c.error=e.what(); }
+ } catch(const std::exception& e) { c.enabled=false; c.valid=false; c.error=dynamic_cast<const nlohmann::json::exception*>(&e)?"configuration JSON validation failed":e.what(); }
  return c;
 }
 CommonWorldActivationConfig loadCommonWorldActivationConfig(const std::optional<std::filesystem::path>& path) {

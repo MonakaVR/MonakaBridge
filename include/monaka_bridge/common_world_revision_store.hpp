@@ -43,6 +43,8 @@ class CommonWorldRevisionStore {
 public:
  CommonWorldRevisionStore(std::unique_ptr<CommonWorldRevisionStorage>, CommonWorldPersistentHighWater initial);
  CommonWorldStoredState open();
+ // Observation only: busy persistence returns nullopt without waiting for its lock.
+ std::optional<CommonWorldStoredState> tryObserve();
  CommonWorldStoredState acquireAuthorization(const std::string& freshEpoch);
  CommonWorldDurableReceipt commit(const CommonWorldRevisionCandidate&, const std::atomic_bool* cancel = nullptr);
  bool matchesCurrentCommit(const CommonWorldDurableReceipt&);

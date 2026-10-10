@@ -186,6 +186,11 @@ CommonWorldStoredState CommonWorldRevisionStore::read() {
  require(s.highWater.lastMappingRevision>=initial_.lastMappingRevision,"persisted mapping below supplied floor");
  observedRecord_=true; return s;
 }
+std::optional<CommonWorldStoredState> CommonWorldRevisionStore::tryObserve() {
+ std::unique_lock<std::mutex> guard(mutex_,std::try_to_lock);
+ if(!guard.owns_lock()) return {};
+ return read();
+}
 CommonWorldStoredState CommonWorldRevisionStore::open() { std::lock_guard<std::mutex> guard(mutex_); return read(); }
 CommonWorldStoredState CommonWorldRevisionStore::acquireAuthorization(const std::string& epoch) {
  std::lock_guard<std::mutex> guard(mutex_); auto s=read();

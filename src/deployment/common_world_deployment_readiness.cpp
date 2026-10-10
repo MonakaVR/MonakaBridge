@@ -3,6 +3,7 @@
 #include "common_world_build_identity.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
+#include <chrono>
 #include <set>
 #include <stdexcept>
 #ifdef _WIN32
@@ -117,6 +118,35 @@ J senderJson(const CommonWorldSenderSnapshot& s) {
    {"generation",publication.anchor_source.source_space_generation}};
  }
  const auto& high=s.ingress.runtime.highWater;
+ const auto& runtime=s.ingress.runtime;
+ out["owner_epoch"]=runtime.ownerEpoch;
+ out["source_publisher"]=runtime.sourcePublisher; out["source_session"]=runtime.sourceSession; out["source_clock"]=runtime.sourceClock;
+ out["source_type"]="trusted-wire-2.1-local-stream";
+ out["source_sequence_high_water"]=runtime.sourceSequence?J(*runtime.sourceSequence):J(nullptr);
+ out["source_lifecycle"]=s.ingress.disposed?"Disposed":s.ingress.sourceActive?"Connected":"Disconnected";
+ out["owner_lifecycle"]=s.ingress.ownerApproved?"Authorized":runtime.pending?"Pending":"Unavailable";
+ out["publisher_state"]=s.enabled?"Enabled":"Disabled"; out["queue_high_water"]=s.queueHighWater;
+ out["last_local_accepted_sequence"]=s.lastLocalAcceptedSequence?J(*s.lastLocalAcceptedSequence):J(nullptr);
+ out["sender_lifecycle"]=s.disposed?"Disposed":s.enabled?"Publishing":"Disabled";
+ out["transport_lifecycle"]=s.connected?"Connected":"Disconnected";
+ out["last_source_observation"]=nullptr;
+ if(runtime.sourceObservation) {
+  std::string bytes; w::Error error;
+  if(w::EncodeEnvelope(runtime.sourceObservation->observation,bytes,error))
+   out["last_source_observation"]={{"envelope",J::parse(bytes)},{"received_at_monotonic_ns",runtime.sourceObservation->received_at_ns}};
+ }
+ out["current_source_authority"]=nullptr;
+ if(runtime.sourceAuthority) { std::string bytes; w::Error error;
+  if(w::EncodeEnvelope(*runtime.sourceAuthority,bytes,error)) out["current_source_authority"]=J::parse(bytes);
+ }
+ out["local_submission_record"]=nullptr;
+ if(s.lastSubmission) { const auto& r=*s.lastSubmission;
+  out["local_submission_record"]={{"owner_epoch",r.ownerEpoch},{"owner_id",r.ownerId},{"world_epoch",r.worldEpoch},
+   {"world_id",r.worldId},{"world_revision",r.worldRevision},{"mapping_revision",r.mappingRevision},
+   {"source_publisher",r.sourcePublisher},{"source_id",r.sourceId},{"transport_generation",r.transportGeneration},
+   {"publisher_generation",r.publisherGeneration},{"ordering_position",r.orderingPosition},{"sequence",r.sequence},
+   {"monotonic_ns",r.monotonicNs},{"result",r.result},{"boundary","entry/result of nonblocking local datagram API; no peer receipt"}};
+ }
  out["persistent_high_water"]={{"world_revision",high.lastWorldRevision?J(*high.lastWorldRevision):J(nullptr)},{"mapping_revision",high.lastMappingRevision}};
  return out;
 }
@@ -260,12 +290,40 @@ CommonWorldReadinessResult CommonWorldDeploymentReadiness::preflight(const Commo
  r.json=diag.dump(2); result_=r; return r;
 }
 std::string commonWorldRuntimeDiagnostics(const CommonWorldActivationSnapshot& s,const CommonWorldActivationConfig& c,const std::string& commit) {
- J j={{"commit",commit},{"observed_at_monotonic_ns",mb::monotonicNs()},{"activation_enabled",c.enabled},
+ J j={{"commit",commit},{"observed_at_monotonic_ns",s.observedAtNs},{"activation_enabled",c.enabled},
  {"gate_state",commonWorldActivationStatusName(s.status)},{"activation_generation",s.generation},{"shutdown",s.shutdown},
  {"recovery_completed",s.recoveryCompleted},{"last_reason",s.reason},{"mode",c.mode==CommonWorldExecutionMode::Production?"production":"test"},
  {"transport_class",c.transport},{"codec",c.codec},{"delivery_semantics","ordered best-effort local submission"}};
- if(s.sender) j["sender"]=senderJson(*s.sender); else j["sender"]=nullptr;
+ j["schema"]="monaka-common-world-runtime-snapshot-2"; j["phase"]="2B-5AH-A2";
+ j["observed_at_unix_ms"]=s.observedAtUnixMs;
+ j["runtime_instance"]=s.runtimeInstance; j["control_session"]=s.controlSession; j["owner_epoch"]=s.ownerEpoch;
+ j["source_lease"]=s.sourceLease; j["readiness"]={{"valid",s.readinessValid},{"generation",s.readinessGeneration},{"token",s.readinessToken}};
+ j["emergency_revoked"]=s.emergencyRevoked; j["owner_revoked"]=s.ownerRevoked;
+ j["last_control_operation"]=s.lastOperation; j["last_control_result"]=s.lastControlResult;
+ j["production_publication_enabled"]=s.status==CommonWorldActivationStatus::Active && s.sender && s.sender->enabled;
+ j["last_activation_transition"]={{"state",commonWorldActivationStatusName(s.status)},{"monotonic_ns",s.lastTransitionNs},{"reason",s.reason}};
+ j["last_accepted_source_event"]={{"result",s.lastAcceptedSourceResult},{"monotonic_ns",s.lastAcceptedSourceNs},{"sequence",s.lastAcceptedSourceSequence?J(*s.lastAcceptedSourceSequence):J(nullptr)}};
+ j["last_rejected_source_event"]={{"result",s.lastRejectedSourceResult},{"monotonic_ns",s.lastRejectedSourceNs},{"sequence",s.lastRejectedSourceSequence?J(*s.lastRejectedSourceSequence):J(nullptr)}};
+ j["last_source_result"]=s.lastSourceResult; j["last_reconnect_result"]=s.lastReconnectResult;
+ j["endpoint_fingerprint_sha256"]=sha(c.endpoint); j["store_path_fingerprint_sha256"]=sha(c.revisionPath.string());
+ j["store"]={{"status",s.storeError.empty()?(s.durableState?"Observed":"NotOpened"):(s.storeError=="store-busy"?"Busy":"Unavailable")},{"recovery_completed",s.recoveryCompleted},
+  {"current_authorization_epoch",nullptr},{"receipt_matches_current_runtime",s.durableReceiptCurrent},{"latest_durable_revision",nullptr},{"receipt_identity",nullptr}};
+ if(s.durableState) {
+  const auto& store=*s.durableState;
+  j["store"]["current_authorization_epoch"]=store.currentAuthorizationEpoch;
+  if(store.latest) {
+   const auto& receipt=*store.latest;
+   j["store"]["latest_durable_revision"]={{"world",receipt.worldRevision},{"mapping",receipt.mappingRevision}};
+   j["store"]["receipt_identity"]={{"authorization_epoch",receipt.authorizationEpoch},{"operation",static_cast<int>(receipt.operation)},
+    {"world_revision",receipt.worldRevision},{"mapping_revision",receipt.mappingRevision}};
+  }
+ }
+ if(s.sender) {
+  j["sender"]=senderJson(*s.sender);
+  j["sender"]["current_eligible_revision"]=s.status==CommonWorldActivationStatus::Active && s.durableReceiptCurrent &&
+   s.sender->enabled && s.sender->ingress.ownerApproved && s.sender->ingress.sourceActive?j["store"]["latest_durable_revision"]:J(nullptr);
+ } else j["sender"]=nullptr;
  return j.dump(2);
 }
-void emergencyRevokeCommonWorld(CommonWorldProductionActivation& r,std::int64_t at) { r.revokeOwner(at); r.shutdown(at); }
+void emergencyRevokeCommonWorld(CommonWorldProductionActivation& r,std::int64_t at) { r.revokeOwner(at); r.emergencyRevoke(at); r.shutdown(at); }
 }

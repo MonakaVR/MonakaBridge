@@ -47,6 +47,7 @@ std::string commonWorldRuntimeDiagnostics(const CommonWorldActivationSnapshot&,
  const CommonWorldActivationConfig&, const std::string& commit);
 // Local revoke first, then teardown. Terminal shutdown prevents old-session restart.
 void emergencyRevokeCommonWorld(CommonWorldProductionActivation&, std::int64_t at);
+int runCommonWorldControlHost(const std::filesystem::path& config,const std::filesystem::path& emergencyStop);
 std::string commonWorldBuildCommit();
 std::string commonWorldFileSha256(const std::filesystem::path&);
 }

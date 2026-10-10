@@ -19,12 +19,20 @@ public:
 // Explicit test-only existing mb::Udp endpoint: IPv4 loopback, caller-owned test sink,
 // nonzero non-production port; creates no socket until connect. No configurable IP.
 std::unique_ptr<CommonWorldDatagramTransport> makeCommonWorldLoopbackDatagramTransport(std::uint16_t testPort);
+struct CommonWorldLocalSubmissionRecord {
+ std::string ownerEpoch, ownerId, worldEpoch, worldId, sourcePublisher, sourceId, result;
+ std::uint32_t worldRevision, mappingRevision;
+ std::uint64_t transportGeneration, publisherGeneration, orderingPosition;
+ std::int64_t sequence, monotonicNs;
+};
 struct CommonWorldSenderSnapshot {
  bool connected, enabled, disposed, awaitingCompletion;
  std::uint64_t publisherGeneration, transportGeneration;
  std::size_t queued, capacity, headAttempts;
  std::optional<std::int64_t> lastLocalAcceptedSequence; // volatile local API cursor, never ACK/checkpoint
  CommonWorldLiveSnapshot ingress;
+ std::optional<CommonWorldLocalSubmissionRecord> lastSubmission;
+ std::size_t queueHighWater = 0;
 };
 struct CommonWorldSenderSourceResult { CommonWorldOperationResult source; std::string publication; };
 /** Explicit software-only composition. Owns source/owner mutations, bounded queue and

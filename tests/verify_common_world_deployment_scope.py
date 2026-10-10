@@ -1,4 +1,4 @@
-"""5AH-A preserves every 5AG behavioral file and every earlier assertion."""
+"""Historical 5AH-A observer constraints plus explicitly audited A2 lifecycle/observation scope."""
 from pathlib import Path
 import io, json, re, subprocess, tarfile
 root=Path(__file__).resolve().parents[1]
@@ -16,7 +16,7 @@ with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
    if entry.name.endswith('activation_scope.py'):
     current=current.replace(" current=current[:current.index('# 5AH-A adds')]+current[current.index('archive=subprocess'):]\n",'')
    assert current==old.decode(),'earlier scope assertion changed: '+entry.name
-  elif entry.name!='CMakeLists.txt':
+  elif entry.name not in allowed:
    assert (root/entry.name).read_bytes()==old,'frozen 5AG behavioral file changed: '+entry.name
 changes=set(subprocess.check_output(['git','-C',str(root),'diff','--name-only',base],text=True).splitlines())
 untracked=set(subprocess.check_output(['git','-C',str(root),'ls-files','--others','--exclude-standard'],text=True).splitlines())

@@ -121,8 +121,15 @@ def package(build, output):
         'bin/monaka_common_world_preflight.exe': identity.read_bytes(),
         'templates/production.activation.json': (ROOT / 'deployment/production.activation.json').read_bytes(),
         'templates/hil-evidence.json': (ROOT / 'deployment/hil-evidence-template.json').read_bytes(),
-        'docs/deployment-contract.md': (ROOT / 'docs/common-world-deployment-hil-readiness-v2.1.md').read_bytes(),
+        'docs/deployment-contract.md': (ROOT / 'docs/common-world-hil-control-observability-live-input-v2.1.md').read_bytes(),
         'scripts/rollback.ps1': (ROOT / 'scripts/rollback_common_world_artifact.ps1').read_bytes(),
+        'scripts/capture_common_world_fault.py': (ROOT / 'scripts/capture_common_world_fault.py').read_bytes(),
+        'docs/historical-5aha-readiness-contract.md': b"""# Historical 5AH-A contract
+
+For controlled HIL with this A2 artifact, use deployment-contract.md and --control.
+The following documents the historical observer/file runner only.
+
+""" + (ROOT / 'docs/common-world-deployment-hil-readiness-v2.1.md').read_bytes(),
         'scripts/new_hil_report.py': (ROOT / 'scripts/new_common_world_hil_report.py').read_bytes(),
         'scripts/common_world_artifact.py': Path(__file__).read_bytes(),
         'licenses/protocol-NOTICE': (ROOT / 'third_party/monaka-protocol-v2/NOTICE').read_bytes(),

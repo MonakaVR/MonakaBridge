@@ -17,11 +17,14 @@ w::Envelope decode(const std::string& line) {
 // Sentinel and config are polled before each receive/pump/activation entry. The stop
 // takes effect at local revoke serialization; an already-entered datagram is unrecalled.
 int main(int argc,char** argv) try {
+ if(argc==5 && std::string(argv[1])=="--control" && std::string(argv[3])=="--emergency-stop-file")
+  return runCommonWorldControlHost(argv[2],argv[4]);
  CommonWorldProductionActivation runtime; CommonWorldActivationConfig config;
  if(argc==1) { std::cout<<commonWorldRuntimeDiagnostics(runtime.snapshot(),config,commonWorldBuildCommit())<<'\n'; return 0; }
  if(argc==2 && std::string(argv[1])=="--build-identity") { std::cout<<commonWorldBuildCommit()<<'\n'; return 0; }
  if(argc==2 && std::string(argv[1])=="--help") {
-  std::cout<<"CONFIG AUTHORIZED_SOURCE_JSONL [--enable-production --emergency-stop-file PATH]\n"
+  std::cout<<"--control CONFIG --emergency-stop-file PATH (local stdin JSONL commands + trusted input)\n"
+   "CONFIG AUTHORIZED_SOURCE_JSONL [--enable-production --emergency-stop-file PATH]\n"
    "No arguments: OFF. Without explicit enable: prepare only. Readiness JSON is never accepted as authorization.\n"; return 0;
  }
  if(argc!=3 && argc!=6) throw std::runtime_error("use --help");

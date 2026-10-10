@@ -17,6 +17,6 @@ struct CommonWorldActivationConfig {
 };
 // No environment/property/global settings and no fallback. Missing source means OFF.
 CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::string> json,
- const std::filesystem::path& source = {});
+ const std::filesystem::path& source = {}, bool validateDisabled = false);
 CommonWorldActivationConfig loadCommonWorldActivationConfig(const std::optional<std::filesystem::path>&);
 }

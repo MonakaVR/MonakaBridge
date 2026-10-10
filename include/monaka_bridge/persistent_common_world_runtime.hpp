@@ -13,6 +13,10 @@ struct CommonWorldRuntimeSnapshot {
  std::optional<authority_wire::CommonWorldAuthorityPublication> world;
  std::optional<authority_wire::CommonWorldMappingPublication> mapping;
  bool publisherSessionActive = false, disposed = false;
+ std::string ownerEpoch, sourcePublisher, sourceSession, sourceClock;
+ std::optional<std::int64_t> sourceSequence;
+ std::optional<authority_wire::TrustedHmdSourceAuthority> sourceAuthority;
+ std::optional<TrustedHmdSourceObservationSnapshot> sourceObservation;
 };
 /** Dormant adapter: no thread, sender, live source or production wiring.
  * persist may run outside the runtime lock. All owner operations and delivery serialize here.
@@ -39,6 +43,7 @@ private:
  mutable std::mutex mutex_;
  std::shared_ptr<CommonWorldRevisionStore> store_;
  std::string epoch_;
+ std::string sourcePublisher_, sourceSession_, sourceClock_;
  std::unique_ptr<TrustedHmdCommonWorldCoordinator> coordinator_;
  std::uint64_t generation_ = 1;
  bool disposed_ = false;
