@@ -6,6 +6,10 @@ base='8abd5eb3e60e2e37592039488e72c77ecf63b6d1'
 allowed=set(json.loads((root/'deployment/phase-scope.json').read_text()))
 extension='# 5AH-A adds only the isolated deployment observer/host/tooling.\nallow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))\n'
 gates={'tests/verify_common_world_activation_scope.py','tests/verify_common_world_live_sender_scope.py','tests/verify_common_world_live_ingress_dormancy.py'}
+# BEGIN 5AI-P VERSIONED IDENTITY SCOPE
+from publisher_identity_scope import approved, historical_gate
+allowed.update(approved(root))
+# END 5AI-P VERSIONED IDENTITY SCOPE
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for entry in tree:
@@ -15,7 +19,7 @@ with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
    current=(root/entry.name).read_text().replace(extension,'')
    if entry.name.endswith('activation_scope.py'):
     current=current.replace(" current=current[:current.index('# 5AH-A adds')]+current[current.index('archive=subprocess'):]\n",'')
-   assert current==old.decode(),'earlier scope assertion changed: '+entry.name
+   assert historical_gate(current)==old.decode(),'earlier scope assertion changed: '+entry.name
   elif entry.name not in allowed:
    assert (root/entry.name).read_bytes()==old,'frozen 5AG behavioral file changed: '+entry.name
 changes=set(subprocess.check_output(['git','-C',str(root),'diff','--name-only',base],text=True).splitlines())

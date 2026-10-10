@@ -15,6 +15,7 @@ struct CommonWorldRevisionCandidate {
  CommonWorldMappingReceipt mapping;
  CommonWorldMappingReestablishmentReceipt reestablishment;
  std::uint32_t worldRevision = 0, mappingRevision = 0;
+ std::string sourcePublisher; // immutable exact schema-2 candidate identity
 };
 struct CommonWorldDurableReceipt { CommonWorldRevisionCandidate committed; };
 bool sameCommonWorldRevisionCandidate(const CommonWorldRevisionCandidate&, const CommonWorldRevisionCandidate&);

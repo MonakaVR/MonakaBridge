@@ -238,7 +238,7 @@ CommonWorldReadinessResult CommonWorldDeploymentReadiness::preflight(const Commo
   diag["commit"]=req.expectedCommit; diag["build_input_sha256"]=COMMON_WORLD_BUILD_INPUT_SHA256; diag["manifest_sha256"]=sha(manifestBytes);
   stage("dependencies",CommonWorldReadinessState::DependencyMissing);
   const auto dep=strictJson(read(artifact/"dependency-inventory.json"));
-  require(dep.at("schema")=="monaka-common-world-dependencies-1" && dep.at("codec")=="monaka-wire-2.1","dependency contract mismatch");
+  require(dep.at("schema")=="monaka-common-world-dependencies-1" && dep.at("codec")==config.codec,"dependency contract mismatch");
 #ifdef _WIN32
   for(const auto& dll:dep.at("system_dlls")) {
    const auto name=dll.get<std::string>(); require(name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.")==std::string::npos,"invalid dependency name");
@@ -254,7 +254,8 @@ CommonWorldReadinessResult CommonWorldDeploymentReadiness::preflight(const Commo
   writable(state.parent_path()); writable(logs); writable(reports);
   stage("persistent-recovery",CommonWorldReadinessState::PersistentStateNotReady);
   auto storage=dependencies_.storage(state); require(bool(storage),"persistent storage unavailable"); const auto recoveredBytes=storage->readCommitted();
-  auto dryStore=std::make_shared<CommonWorldRevisionStore>(std::make_unique<VolatileStorage>(recoveredBytes),CommonWorldPersistentHighWater{config.ownerId,config.worldSpaceId,{},0});
+  auto dryStore=std::make_shared<CommonWorldRevisionStore>(std::make_unique<VolatileStorage>(recoveredBytes),CommonWorldPersistentHighWater{config.ownerId,config.worldSpaceId,{},0,
+   config.codec=="monaka-wire-2.2"?config.sourcePublisher:std::string{}});
   const auto recovered=dryStore->open();
   require(req.expectedOwnerEpoch.empty() || recovered.currentAuthorizationEpoch==req.expectedOwnerEpoch,"stale expected owner epoch");
   diag["persistent_store"]={{"path",state.string()},{"recovered",true},{"existing_record",bool(recoveredBytes)},

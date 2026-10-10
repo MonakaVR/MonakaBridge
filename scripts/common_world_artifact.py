@@ -121,7 +121,17 @@ def package(build, output):
         'bin/monaka_common_world_preflight.exe': identity.read_bytes(),
         'templates/production.activation.json': (ROOT / 'deployment/production.activation.json').read_bytes(),
         'templates/hil-evidence.json': (ROOT / 'deployment/hil-evidence-template.json').read_bytes(),
-        'docs/deployment-contract.md': (ROOT / 'docs/common-world-hil-control-observability-live-input-v2.1.md').read_bytes(),
+        'docs/deployment-contract.md': b"""# Phase 2B-5AI-P artifact
+
+Production remains OFF. This artifact adds publisher identity / wire 2.2 only.
+Receiver runtime (5AI-R) and trusted live producer (5AI-S) are still pending.
+5AH-B remains stopped. Do not use this phase as HIL activation approval.
+See publisher-identity-contract.md and wire-C2.2.md for the current contract.
+The retained A2 host/control documentation follows as historical feature guidance.
+
+""" + (ROOT / 'docs/common-world-hil-control-observability-live-input-v2.1.md').read_bytes(),
+        'docs/publisher-identity-contract.md': (ROOT / 'docs/common-world-publisher-identity-wire-v2.2.md').read_bytes(),
+        'docs/wire-C2.2.md': (ROOT / 'third_party/monaka-protocol-v22/docs/C2.2.md').read_bytes(),
         'scripts/rollback.ps1': (ROOT / 'scripts/rollback_common_world_artifact.ps1').read_bytes(),
         'scripts/capture_common_world_fault.py': (ROOT / 'scripts/capture_common_world_fault.py').read_bytes(),
         'docs/historical-5aha-readiness-contract.md': b"""# Historical 5AH-A contract
@@ -135,12 +145,15 @@ The following documents the historical observer/file runner only.
         'licenses/protocol-NOTICE': (ROOT / 'third_party/monaka-protocol-v2/NOTICE').read_bytes(),
         'licenses/nlohmann-LICENSE.MIT': (ROOT / 'third_party/monaka-protocol-v2/cpp/third_party/nlohmann/LICENSE.MIT').read_bytes(),
     }
-    dependencies = {'schema': 'monaka-common-world-dependencies-1', 'codec': 'monaka-wire-2.1',
+    dependencies = {'schema': 'monaka-common-world-dependencies-1', 'codec': 'monaka-wire-2.2',
+                    'wire_version': {'major': 2, 'minor': 2},
+                    'sender_revision_store': {'magic': 'MCWREV02', 'version': 2, 'publisher_bound': True,
+                                              'legacy_schema_1': 'rejected by publisher-aware production'},
                     'linkage': 'static MSVC CRT; Bridge/Owner/Store/Publisher/Sender/activation/codec static libraries',
                     'system_dlls': imports,
                     'pe_imports': {p.name: sorted(pe_imports(p)) for p in (identity, runtime)},
                     'operator_tools': ['Python 3.13+ for report/integrity tooling', 'PowerShell 5.1+ for rollback'],
-                    'protocol_lock_sha256': digest(ROOT / 'third_party/monaka-protocol-v2/protocol.lock.json'),
+                    'protocol_lock_sha256': digest(ROOT / 'third_party/monaka-protocol-v22/protocol.lock.json'),
                     'source_dependencies': {str(p.relative_to(ROOT)).replace('\\', '/'): digest(p)
                                             for p in sorted((ROOT / 'dependencies').glob('*')) if p.is_file()},
                     'hardware_runtime_required_for_preflight': False}

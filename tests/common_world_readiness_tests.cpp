@@ -57,13 +57,13 @@ struct Rig {
   for(auto p:{q.logs,q.reports,dir/"state"}) fs::create_directories(p);
   const auto fixture=read(fs::path(ROOT_DIR)/"third_party/monaka-protocol-v2/fixtures/v2.1/ordered-streams/source-normal.jsonl");
   write(q.source,fixture); const auto first=J::parse(fixture.substr(0,fixture.find('\n')));
-  config={{"enabled",false},{"mode","production"},{"transport","udp-ipv4"},{"codec","monaka-wire-2.1"},{"endpoint","udp://192.0.2.10:30111"},
+  config={{"enabled",false},{"mode","production"},{"transport","udp-ipv4"},{"codec","monaka-wire-2.2"},{"endpoint","udp://192.0.2.10:30111"},
    {"owner_id","synthetic-bridge"},{"world_space_id","common-A"},{"source_publisher_id",first.at("publisher_id")},
    {"revision_path",fs::absolute(dir/"state/world.rev").string()},{"peer_policy","explicit-authority-association-no-implicit-world-replacement"}};
   save();
   write(q.artifact/"bin/monaka_common_world_runtime.exe","test-only inert bytes"); write(q.artifact/"bin/monaka_common_world_preflight.exe","test-only inert observer bytes");
   write(q.artifact/"templates/production.activation.json",read(fs::path(ROOT_DIR)/"deployment/production.activation.json"));
-  write(q.artifact/"dependency-inventory.json",J{{"schema","monaka-common-world-dependencies-1"},{"codec","monaka-wire-2.1"},{"system_dlls",{"kernel32.dll","bcrypt.dll","ws2_32.dll","ole32.dll"}}}.dump());
+  write(q.artifact/"dependency-inventory.json",J{{"schema","monaka-common-world-dependencies-1"},{"codec","monaka-wire-2.2"},{"system_dlls",{"kernel32.dll","bcrypt.dll","ws2_32.dll","ole32.dll"}}}.dump());
   manifest={{"schema","monaka-common-world-artifact-1"},{"activation_default",false},{"architecture","x64"},{"runtime","windows-local-ntfs"},
    {"commit",commonWorldBuildCommit()},{"build_input_sha256",COMMON_WORLD_BUILD_INPUT_SHA256},{"build_configuration","Release"},{"files",J::array()}};
   remanifest(); observer=CommonWorldReadinessTestRegistration::make(record,std::move(hook));
@@ -110,7 +110,7 @@ int main(int argc,char** argv) try {
  for(auto name:{"state","logs","reports"}) run(std::string("unavailable writable directory ")+name,[&] { Rig r(path()); const auto p=r.dir/name; fs::remove(p); write(p,"file blocks directory"); CHECK(r.flight().state==CommonWorldReadinessState::RuntimeNotReady); });
  run("persistent recovery read failure",[&] { Rig r(path()); r.record->readFail=true; CHECK(r.flight().state==CommonWorldReadinessState::PersistentStateNotReady); });
  run("corrupt committed record",[&] { Rig r(path()); r.record->bytes="corrupt"; CHECK(r.flight().state==CommonWorldReadinessState::PersistentStateNotReady); });
- for(auto key:{"owner_id","world_space_id"}) run(std::string("persistent identity/world mismatch ")+key,[&] { Rig r(path()); CommonWorldRevisionStore store(std::make_unique<Storage>(r.record),{"synthetic-bridge","common-A",{},0}); store.acquireAuthorization("prior-epoch"); r.config[key]="mismatch"; r.save(); CHECK(r.flight().state==CommonWorldReadinessState::PersistentStateNotReady); });
+ for(auto key:{"owner_id","world_space_id"}) run(std::string("persistent identity/world mismatch ")+key,[&] { Rig r(path()); CommonWorldRevisionStore store(std::make_unique<Storage>(r.record),{"synthetic-bridge","common-A",{},0,r.config["source_publisher_id"].get<std::string>()}); store.acquireAuthorization("prior-epoch"); r.config[key]="mismatch"; r.save(); CHECK(r.flight().state==CommonWorldReadinessState::PersistentStateNotReady); });
  run("stale owner epoch expectation",[&] { Rig r(path()); r.q.expectedOwnerEpoch="stale-epoch"; CHECK(r.flight().state==CommonWorldReadinessState::PersistentStateNotReady); });
  run("source unavailable and source identity mismatch",[&] { Rig r(path()); write(r.q.source,"{}"); CHECK(r.flight().state==CommonWorldReadinessState::RuntimeNotReady); r.config["source_publisher_id"]="foreign"; r.save(); write(r.q.source,read(fs::path(ROOT_DIR)/"third_party/monaka-protocol-v2/fixtures/v2.1/ordered-streams/source-normal.jsonl")); CHECK(r.flight().state==CommonWorldReadinessState::RuntimeNotReady); });
  run("codec selection unavailable",[&] { Rig r(path()); r.config["codec"]="unknown"; r.save(); CHECK(r.flight().state==CommonWorldReadinessState::InvalidConfiguration); });
@@ -141,7 +141,7 @@ int main(int argc,char** argv) try {
  run("ready snapshots cannot authorize; invalidation requires fresh observation",[&] { Rig r(path()); const auto stale=r.flight(); r.observer->invalidate("epoch changed"); CHECK(stale.state==CommonWorldReadinessState::ReadyForControlledActivation); CHECK(r.observer->snapshot().state==CommonWorldReadinessState::RuntimeNotReady); r.observer->emergencyRevoke(); r.observer->emergencyRevoke(); CHECK(r.observer->preflight(r.q).reason=="observer-retired"); });
  run("native NTFS preflight recovery preserves exact committed bytes",[&] {
   Rig r(path()); const auto state=fs::path(r.config["revision_path"].get<std::string>());
-  { CommonWorldRevisionStore store(makeCommonWorldFileStorage(state),{"synthetic-bridge","common-A",{},0}); store.acquireAuthorization("native-prior-epoch"); }
+  { CommonWorldRevisionStore store(makeCommonWorldFileStorage(state),{"synthetic-bridge","common-A",{},0,r.config["source_publisher_id"].get<std::string>()}); store.acquireAuthorization("native-prior-epoch"); }
   const auto before=read(state); CommonWorldDeploymentReadiness production; CHECK(production.preflight(r.q).state==CommonWorldReadinessState::ReadyForControlledActivation); CHECK(read(state)==before);
   auto owned=makeCommonWorldFileStorage(state); CHECK(production.preflight(r.q).state==CommonWorldReadinessState::PersistentStateNotReady); CHECK(read(state)==before);
  });

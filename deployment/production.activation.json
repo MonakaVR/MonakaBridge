@@ -2,7 +2,7 @@
   "enabled": false,
   "mode": "production",
   "transport": "udp-ipv4",
-  "codec": "monaka-wire-2.1",
+  "codec": "monaka-wire-2.2",
   "endpoint": "",
   "owner_id": "",
   "world_space_id": "",

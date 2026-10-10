@@ -22,6 +22,10 @@ allow.update({'include/monaka_bridge/common_world_activation_config.hpp',
  'tests/verify_common_world_activation_scope.py','docs/common-world-production-activation-gate-v2.1.md'})
 # 5AH-A adds only the isolated deployment observer/host/tooling.
 allow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))
+# BEGIN 5AI-P VERSIONED IDENTITY SCOPE
+from publisher_identity_scope import approved, historical_gate
+allow.update(approved(root))
+# END 5AI-P VERSIONED IDENTITY SCOPE
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:

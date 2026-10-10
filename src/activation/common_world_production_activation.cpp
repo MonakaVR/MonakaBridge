@@ -24,7 +24,7 @@ class ProductionDatagram final : public CommonWorldDatagramTransport {
 public:
  explicit ProductionDatagram(const CommonWorldActivationConfig& c):ip_(c.ipv4),port_(c.port) {
   if(!c.valid || c.mode!=CommonWorldExecutionMode::Production || c.transport!="udp-ipv4" ||
-   c.codec!="monaka-wire-2.1" || !ip_ || !port_) throw std::invalid_argument("production transport registration rejected");
+   c.codec!="monaka-wire-2.2" || !ip_ || !port_) throw std::invalid_argument("production transport registration rejected");
  }
  ~ProductionDatagram() override { close(); }
  bool connect() override {
@@ -176,7 +176,8 @@ std::string CommonWorldProductionActivation::prepareImpl(const std::optional<std
   if(candidate->config.mode!=dependencies_.mode) throw std::invalid_argument("test/production registration mismatch");
   stage(CommonWorldStartupStage::Recovery,CommonWorldActivationStatus::RecoveryPending);
   candidate->store=std::make_shared<CommonWorldRevisionStore>(dependencies_.storage(candidate->config.revisionPath),
-   CommonWorldPersistentHighWater{candidate->config.ownerId,candidate->config.worldSpaceId,{},0});
+   CommonWorldPersistentHighWater{candidate->config.ownerId,candidate->config.worldSpaceId,{},0,
+    candidate->config.codec=="monaka-wire-2.2"?candidate->config.sourcePublisher:std::string{}});
   candidate->store->open(); candidate->recovered=true; // corruption/identity mismatch throws, never guessed recovery
   stage(CommonWorldStartupStage::OwnerInitialization,CommonWorldActivationStatus::OwnerUnavailable);
   candidate->epoch=dependencies_.freshEpoch();

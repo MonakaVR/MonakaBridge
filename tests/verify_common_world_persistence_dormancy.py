@@ -17,9 +17,12 @@ core = [
     'tests/verify_common_world_dormancy.py',
     'tests/CommonWorldGeneratedReplay.java',
 ]
+# BEGIN 5AI-P VERSIONED IDENTITY SCOPE
+from publisher_identity_scope import approved, historical_gate
+# END 5AI-P VERSIONED IDENTITY SCOPE
 for name in core:
     expected = subprocess.check_output(['git', '-C', str(root), 'show', base + ':' + name])
-    assert (root / name).read_bytes() == expected, 'frozen 5AC file changed: ' + name
+    assert name in approved(root) or (root / name).read_bytes() == expected, 'frozen 5AC file changed: ' + name
 names = ('CommonWorldRevisionStore', 'PersistentCommonWorldRuntime', 'makeCommonWorldFileStorage')
 paths = ('tools', 'outputs', 'ui', 'config', 'src/routing', 'src/observation', 'src/calibration', 'src/mapping')
 for directory in paths:

@@ -14,6 +14,8 @@ struct CommonWorldPersistentHighWater {
  std::string ownerId, worldSpaceId;
  std::optional<std::uint32_t> lastWorldRevision;
  std::uint32_t lastMappingRevision = 0;
+ // Empty is explicitly legacy-only. A present canonical publisher selects 2.2.
+ std::string sourcePublisher;
 };
 struct CommonWorldTransitionRequest {
  std::uint64_t requestId = 0; // owner-lifetime, nonwrapping; never an epoch
@@ -31,6 +33,7 @@ struct CommonWorldMappingReceipt {
  authority_wire::CommonMappingReference mapping;
  authority_wire::RigidTransform transform;
  bool persistentCommitConfirmed = false;
+ std::string sourcePublisher;
 };
 struct CommonWorldMappingReestablishmentReceipt {
  authority_wire::CommonWorldReference world;

@@ -12,6 +12,10 @@ gates={'tests/verify_common_world_live_ingress_dormancy.py','tests/verify_common
 allow=new|gates|{'CMakeLists.txt'}
 # 5AH-A adds only the isolated deployment observer/host/tooling.
 allow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))
+# BEGIN 5AI-P VERSIONED IDENTITY SCOPE
+from publisher_identity_scope import approved, historical_gate
+allow.update(approved(root))
+# END 5AI-P VERSIONED IDENTITY SCOPE
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:
@@ -22,7 +26,7 @@ for name in gates:
  current=(root/name).read_text()
  current=current[:current.index('# 5AH-A adds')]+current[current.index('archive=subprocess'):]
  extension=current[current.index('# 5AG adds'):current.index('archive=subprocess')]
- assert current.replace(extension,'')==prior,'earlier checks changed: '+name
+ assert historical_gate(current).replace(extension,'')==prior,'earlier checks changed: '+name
  assert set(re.findall(r"'([^']+)'",extension))==new,'unexpected scope extension'
 changes=set(subprocess.check_output(['git','-C',str(root),'diff','--name-only',base],text=True).splitlines())
 untracked=set(subprocess.check_output(['git','-C',str(root),'ls-files','--others','--exclude-standard'],text=True).splitlines())

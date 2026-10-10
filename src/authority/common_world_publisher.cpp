@@ -27,7 +27,8 @@ std::vector<w::Envelope> CommonWorldPublisher::publish(const CommonWorldEvents& 
  if(needsBootstrap()) {
   const auto& world=std::get<w::CommonWorldAuthorityPublication>(events[0]);
   const auto& map=std::get<w::CommonWorldMappingPublication>(events[1]);
-  if(d::world(world.world)!=d::world(map.mapping.world) || d::source(world.anchor_source)!=d::source(map.mapping.source_space)) {
+  if(d::world(world.world)!=d::world(map.mapping.world) || d::source(world.anchor_source)!=d::source(map.mapping.source_space) ||
+     world.source_publisher_id!=map.source_publisher_id) {
    active_=false; return {};
   }
  }
@@ -35,8 +36,10 @@ std::vector<w::Envelope> CommonWorldPublisher::publish(const CommonWorldEvents& 
  // Entire transitions are atomic, including world+mapping at the last two sequence slots.
  if(events.size()>available) { active_=false; return {}; }
  auto seq=lastSequence_?*lastSequence_+1:0;
+ const auto bound=needsBootstrap()?std::get<w::CommonWorldAuthorityPublication>(events[0]).source_publisher_id:sessionSourcePublisher_;
  std::vector<w::Envelope> output;
  for(const auto& event:events) {
+  if(std::visit([](const auto& m){return m.source_publisher_id;},event)!=bound) { active_=false; return {}; }
   const auto owner=std::visit([](const auto& m)->std::string {
    using T=std::decay_t<decltype(m)>;
    if constexpr(std::is_same_v<T,w::CommonWorldAuthorityPublication> || std::is_same_v<T,w::CommonWorldRevocation>)
@@ -51,6 +54,7 @@ std::vector<w::Envelope> CommonWorldPublisher::publish(const CommonWorldEvents& 
   if(seq<limit_) ++seq; // never evaluate INT64_MAX+1
  }
  lastSequence_=std::visit([](const auto& m){return m.sequence;},output.back()); lastTime_=at;
+ sessionSourcePublisher_=bound;
  if(*lastSequence_==limit_) active_=false; // next event needs a fresh session; owner untouched
  return output;
 }

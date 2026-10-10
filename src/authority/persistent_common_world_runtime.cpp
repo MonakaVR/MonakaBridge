@@ -16,6 +16,8 @@ CommonWorldAuthorityOwner::TokenFactory tokenFactory(const std::string& epoch,co
 PersistentCommonWorldRuntime::PersistentCommonWorldRuntime(std::shared_ptr<CommonWorldRevisionStore> store,
  std::string epoch,std::string source,std::size_t capacity):store_(std::move(store)),epoch_(std::move(epoch)),sourcePublisher_(source) {
  check(bool(store_),"store required");
+ const auto restored=store_->open();
+ check(restored.highWater.sourcePublisher.empty() || restored.highWater.sourcePublisher==sourcePublisher_,"runtime source publisher differs from durable identity");
  // Reserve the fresh lifetime BEFORE constructing owner; restore never creates active authority.
  const auto s=store_->acquireAuthorization(epoch_);
  coordinator_=std::make_unique<TrustedHmdCommonWorldCoordinator>(std::move(source),s.highWater,
@@ -35,7 +37,7 @@ bool PersistentCommonWorldRuntime::guardedGate(const std::function<void()>& call
 }
 void PersistentCommonWorldRuntime::changedRequest(const std::optional<CommonWorldTransitionRequest>& before) {
  const auto& after=coordinator_->owner().pendingTransition();
- if(bool(before)!=bool(after) || (before && after && !d::exactRequest(*before,*after))) invalidate();
+ if(bool(before)!=bool(after) || (before && after && !d::exactRequest(*before,*after,!coordinator_->owner().highWater().sourcePublisher.empty()))) invalidate();
 }
 CommonWorldRuntimeSnapshot PersistentCommonWorldRuntime::snapshot() const {
  std::lock_guard<std::mutex> guard(mutex_); const auto& o=coordinator_->owner();
@@ -83,20 +85,22 @@ CommonWorldPersistenceTicket PersistentCommonWorldRuntime::prepareTransition() {
  check(s.currentAuthorizationEpoch==epoch_,"superseded owner");
  check((!s.highWater.lastWorldRevision || *s.highWater.lastWorldRevision<UINT32_MAX) && s.highWater.lastMappingRevision<UINT32_MAX,"durable revisions exhausted");
  CommonWorldRevisionCandidate c; c.authorizationEpoch=epoch_; c.transition=*pending;
+ c.sourcePublisher=s.highWater.sourcePublisher;
  c.worldRevision=std::max(pending->minimumWorldRevision,s.highWater.lastWorldRevision?*s.highWater.lastWorldRevision+1:0);
  c.mappingRevision=std::max(pending->minimumMappingRevision,s.highWater.lastMappingRevision+1);
  return {generation_,c};
 }
 CommonWorldPersistenceTicket PersistentCommonWorldRuntime::prepareMappingUpdate(std::uint32_t revision) {
  std::lock_guard<std::mutex> guard(mutex_); ready(); const auto& mapping=coordinator_->owner().currentMapping(); check(bool(mapping),"no current mapping");
- CommonWorldRevisionCandidate c; c.authorizationEpoch=epoch_; c.operation=RevisionOperation::MappingUpdate;
+ CommonWorldRevisionCandidate c; c.authorizationEpoch=epoch_; c.operation=RevisionOperation::MappingUpdate; c.sourcePublisher=coordinator_->owner().highWater().sourcePublisher;
  c.mapping={mapping->mapping,mapping->transform,false}; c.mapping.mapping.mapping_revision=revision;
+ c.mapping.sourcePublisher=c.sourcePublisher;
  c.worldRevision=mapping->mapping.world.coordinate_space.revision; c.mappingRevision=revision;
  return {generation_,c};
 }
 CommonWorldPersistenceTicket PersistentCommonWorldRuntime::prepareMappingReestablishment(std::uint32_t revision) {
  std::lock_guard<std::mutex> guard(mutex_); ready(); const auto& o=coordinator_->owner(); check(bool(o.currentWorld()) && !o.currentMapping(),"reestablishment requires world without mapping");
- CommonWorldRevisionCandidate c; c.authorizationEpoch=epoch_; c.operation=RevisionOperation::MappingReestablishment;
+ CommonWorldRevisionCandidate c; c.authorizationEpoch=epoch_; c.operation=RevisionOperation::MappingReestablishment; c.sourcePublisher=o.highWater().sourcePublisher;
  // The current source authority contains the exact locate domain, absent from world reference.
  const auto anchor=coordinator_->sourceStream().currentAuthority(); check(bool(anchor),"no current source authority");
  c.reestablishment={o.currentWorld()->world,*anchor,revision,false}; c.worldRevision=o.currentWorld()->world.coordinate_space.revision; c.mappingRevision=revision;
@@ -120,7 +124,7 @@ std::vector<w::Envelope> PersistentCommonWorldRuntime::deliver(const CommonWorld
  guardedGate([&] {
   if(c.operation==RevisionOperation::Transition) {
    const auto& pending=coordinator_->owner().pendingTransition();
-   if(!pending || !d::exactRequest(*pending,c.transition)) return;
+   if(!pending || !d::exactRequest(*pending,c.transition,!c.sourcePublisher.empty())) return;
    result=coordinator_->commitWorldTransition({c.transition,c.worldRevision,c.mappingRevision,true},at);
   } else if(c.operation==RevisionOperation::MappingUpdate) {
    const auto& map=coordinator_->owner().currentMapping();
@@ -130,7 +134,7 @@ std::vector<w::Envelope> PersistentCommonWorldRuntime::deliver(const CommonWorld
    auto r=c.mapping; r.persistentCommitConfirmed=true; result=coordinator_->updateMapping(r,at);
   } else {
    const auto& o=coordinator_->owner(); const auto anchor=coordinator_->sourceStream().currentAuthority();
-   if(!o.currentWorld() || o.currentMapping() || !anchor || d::world(o.currentWorld()->world)!=d::world(c.reestablishment.world) || d::anchor(*anchor)!=d::anchor(c.reestablishment.anchor)) return;
+   if(!o.currentWorld() || o.currentMapping() || !anchor || d::world(o.currentWorld()->world)!=d::world(c.reestablishment.world) || d::anchor(*anchor,!c.sourcePublisher.empty())!=d::anchor(c.reestablishment.anchor,!c.sourcePublisher.empty())) return;
    auto r=c.reestablishment; r.persistentCommitConfirmed=true; result=coordinator_->reestablishMapping(r,at);
   }
  },at,&receipt);

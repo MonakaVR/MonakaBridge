@@ -22,7 +22,7 @@ struct Writer {
  void number(std::uint64_t n, unsigned size) { for(unsigned i=0;i<size;++i) bytes.push_back(static_cast<char>(n>>(8*i))); }
  void str(const std::string& s) { require(s.size()<=4096,"oversize string"); number(s.size(),4); bytes+=s; }
  void source(const w::SourceSpaceAuthority& s) { str(s.source_id); str(s.source_authority_session_epoch); str(s.source_space_id); number(static_cast<std::uint64_t>(s.source_space_generation),8); }
- void anchor(const w::TrustedHmdSourceAuthority& a) { source(a.source_space); str(a.source_space_kind); str(a.source_time_domain_id); }
+ void anchor(const w::TrustedHmdSourceAuthority& a, bool bound) { if(bound) str(a.publisher_id); source(a.source_space); str(a.source_space_kind); str(a.source_time_domain_id); }
  void world(const w::CommonWorldReference& v) { str(v.owner_id); str(v.world_epoch); str(v.coordinate_space.id); str(v.coordinate_space.convention); number(v.coordinate_space.revision,4); }
  void map(const w::CommonMappingReference& m) { world(m.world); source(m.source_space); str(m.calibration_epoch); number(m.mapping_revision,4); }
  void transform(const w::RigidTransform& t) { for(auto b:d::bits(t.rotation_xyzw)) number(b,8); for(auto b:d::bits(t.translation_xyz)) number(b,8); }
@@ -32,36 +32,41 @@ struct Reader {
  std::uint64_t number(unsigned n) { require(n<=bytes.size()-offset,"truncated revision record"); std::uint64_t v=0; for(unsigned i=0;i<n;++i) v|=std::uint64_t(static_cast<unsigned char>(bytes[offset++]))<<(8*i); return v; }
  std::string str() { const auto n=number(4); require(n<=4096 && n<=bytes.size()-offset,"invalid string length"); auto s=bytes.substr(offset,static_cast<std::size_t>(n)); offset+=static_cast<std::size_t>(n); return s; }
  w::SourceSpaceAuthority source() { w::SourceSpaceAuthority s; s.source_id=str(); s.source_authority_session_epoch=str(); s.source_space_id=str(); const auto g=number(8); require(g<=INT64_MAX,"invalid source generation"); s.source_space_generation=static_cast<std::int64_t>(g); return s; }
- w::TrustedHmdSourceAuthority anchor() { w::TrustedHmdSourceAuthority a; a.source_space=source(); a.source_space_kind=str(); a.source_time_domain_id=str(); return a; }
+ w::TrustedHmdSourceAuthority anchor(bool bound) { w::TrustedHmdSourceAuthority a; if(bound) a.publisher_id=str(); a.source_space=source(); a.source_space_kind=str(); a.source_time_domain_id=str(); return a; }
  w::CommonWorldReference world() { w::CommonWorldReference v; v.owner_id=str(); v.world_epoch=str(); v.coordinate_space.id=str(); v.coordinate_space.convention=str(); v.coordinate_space.revision=static_cast<std::uint32_t>(number(4)); return v; }
  w::CommonMappingReference map() { w::CommonMappingReference m; m.world=world(); m.source_space=source(); m.calibration_epoch=str(); m.mapping_revision=static_cast<std::uint32_t>(number(4)); return m; }
  w::RigidTransform transform() { w::RigidTransform t; for(auto& v:t.rotation_xyzw) { auto b=number(8); std::memcpy(&v,&b,8); } for(auto& v:t.translation_xyz) { auto b=number(8); std::memcpy(&v,&b,8); } return t; }
 };
-void candidate(Writer& out, const CommonWorldRevisionCandidate& c) {
+void candidate(Writer& out, const CommonWorldRevisionCandidate& c, bool bound) {
+ if(bound) out.str(c.sourcePublisher);
  out.str(c.authorizationEpoch); out.number(static_cast<unsigned>(c.operation),1); out.number(c.worldRevision,4); out.number(c.mappingRevision,4);
  if(c.operation==RevisionOperation::Transition) {
-  const auto& r=c.transition; out.number(r.requestId,8); out.str(r.ownerId); out.str(r.worldSpaceId); out.anchor(r.anchor);
+  const auto& r=c.transition; out.number(r.requestId,8); out.str(r.ownerId); out.str(r.worldSpaceId); out.anchor(r.anchor,bound);
   out.number(r.minimumWorldRevision,4); out.number(r.minimumMappingRevision,4); out.str(r.reason);
- } else if(c.operation==RevisionOperation::MappingUpdate) { out.map(c.mapping.mapping); out.transform(c.mapping.transform); }
- else if(c.operation==RevisionOperation::MappingReestablishment) { out.world(c.reestablishment.world); out.anchor(c.reestablishment.anchor); out.number(c.reestablishment.mappingRevision,4); }
+ } else if(c.operation==RevisionOperation::MappingUpdate) { out.map(c.mapping.mapping); out.transform(c.mapping.transform); if(bound) out.str(c.mapping.sourcePublisher); }
+ else if(c.operation==RevisionOperation::MappingReestablishment) { out.world(c.reestablishment.world); out.anchor(c.reestablishment.anchor,bound); out.number(c.reestablishment.mappingRevision,4); }
  else throw std::runtime_error("unsupported revision operation");
 }
-CommonWorldRevisionCandidate candidate(Reader& in) {
- CommonWorldRevisionCandidate c; c.authorizationEpoch=in.str(); c.operation=static_cast<RevisionOperation>(in.number(1));
+CommonWorldRevisionCandidate candidate(Reader& in, bool bound) {
+ CommonWorldRevisionCandidate c; if(bound) c.sourcePublisher=in.str(); c.authorizationEpoch=in.str(); c.operation=static_cast<RevisionOperation>(in.number(1));
  c.worldRevision=static_cast<std::uint32_t>(in.number(4)); c.mappingRevision=static_cast<std::uint32_t>(in.number(4));
  if(c.operation==RevisionOperation::Transition) {
-  auto& r=c.transition; r.requestId=in.number(8); r.ownerId=in.str(); r.worldSpaceId=in.str(); r.anchor=in.anchor();
+  auto& r=c.transition; r.requestId=in.number(8); r.ownerId=in.str(); r.worldSpaceId=in.str(); r.anchor=in.anchor(bound);
   r.minimumWorldRevision=static_cast<std::uint32_t>(in.number(4)); r.minimumMappingRevision=static_cast<std::uint32_t>(in.number(4)); r.reason=in.str();
- } else if(c.operation==RevisionOperation::MappingUpdate) { c.mapping.mapping=in.map(); c.mapping.transform=in.transform(); }
- else if(c.operation==RevisionOperation::MappingReestablishment) { c.reestablishment.world=in.world(); c.reestablishment.anchor=in.anchor(); c.reestablishment.mappingRevision=static_cast<std::uint32_t>(in.number(4)); }
+ } else if(c.operation==RevisionOperation::MappingUpdate) { c.mapping.mapping=in.map(); c.mapping.transform=in.transform(); if(bound) c.mapping.sourcePublisher=in.str(); }
+ else if(c.operation==RevisionOperation::MappingReestablishment) { c.reestablishment.world=in.world(); c.reestablishment.anchor=in.anchor(bound); c.reestablishment.mappingRevision=static_cast<std::uint32_t>(in.number(4)); }
  else throw std::runtime_error("unsupported revision operation");
  return c;
 }
-std::string key(const CommonWorldRevisionCandidate& c) { Writer out; candidate(out,c); return out.bytes; }
+std::string key(const CommonWorldRevisionCandidate& c) { Writer out; const bool bound=!c.sourcePublisher.empty(); out.number(bound,1); candidate(out,c,bound); return out.bytes; }
 void validate(const CommonWorldRevisionCandidate& c, const CommonWorldPersistentHighWater& h) {
  require(d::validId(c.authorizationEpoch),"invalid authorization epoch");
+ require(c.sourcePublisher==h.sourcePublisher,"candidate source publisher mismatch");
+ const bool bound=!h.sourcePublisher.empty();
+ require(!bound || d::validId(h.sourcePublisher),"invalid persisted source publisher");
  if(c.operation==RevisionOperation::Transition) {
   const auto& r=c.transition;
+  require(!bound || r.anchor.publisher_id==c.sourcePublisher,"transition source publisher mismatch");
   require(r.requestId && r.ownerId==h.ownerId && r.worldSpaceId==h.worldSpaceId && d::validPayload(r.anchor),"transition identity/anchor mismatch");
   w::CommonWorldRevocation reason; reason.world={h.ownerId,"validation",{h.worldSpaceId,"rh_y_up_neg_z_forward",c.worldRevision}}; reason.reason=r.reason;
   require(d::validPayload(reason) && c.worldRevision>=r.minimumWorldRevision && c.mappingRevision>=r.minimumMappingRevision && c.mappingRevision>0,"invalid transition revisions/reason");
@@ -69,9 +74,11 @@ void validate(const CommonWorldRevisionCandidate& c, const CommonWorldPersistent
   const auto world=c.operation==RevisionOperation::MappingUpdate?c.mapping.mapping.world:c.reestablishment.world;
   require(world.owner_id==h.ownerId && world.coordinate_space.id==h.worldSpaceId && world.coordinate_space.revision==c.worldRevision,"mapping world identity mismatch");
   if(c.operation==RevisionOperation::MappingUpdate) {
+   require(c.mapping.sourcePublisher==c.sourcePublisher,"mapping receipt publisher mismatch");
    w::CommonWorldMappingPublication m; m.mapping=c.mapping.mapping; m.transform=c.mapping.transform;
    require(d::validPayload(m) && m.mapping.mapping_revision==c.mappingRevision && d::transform(m.transform)==d::transform(d::identity()),"invalid M2 mapping/transform");
   } else if(c.operation==RevisionOperation::MappingReestablishment) {
+   require(!bound || c.reestablishment.anchor.publisher_id==c.sourcePublisher,"reestablishment source publisher mismatch");
    w::CommonWorldAuthorityPublication a; a.world=world; a.anchor_source=c.reestablishment.anchor.source_space;
    require(d::validPayload(a) && d::validPayload(c.reestablishment.anchor) && c.reestablishment.mappingRevision==c.mappingRevision,"invalid reestablishment");
   } else throw std::runtime_error("unsupported operation");
@@ -92,20 +99,25 @@ std::string checksum(const std::string& bytes) {
 #endif
 }
 std::string serialize(const CommonWorldStoredState& state) {
- Writer out; out.bytes="MCWREV01"; out.number(1,4); out.str(state.highWater.ownerId); out.str(state.highWater.worldSpaceId);
+ const bool bound=!state.highWater.sourcePublisher.empty();
+ Writer out; out.bytes=bound?"MCWREV02":"MCWREV01"; out.number(bound?2:1,4); out.str(state.highWater.ownerId); out.str(state.highWater.worldSpaceId);
+ if(bound) out.str(state.highWater.sourcePublisher);
  out.number(state.highWater.lastWorldRevision.has_value(),1); out.number(state.highWater.lastWorldRevision.value_or(0),4); out.number(state.highWater.lastMappingRevision,4);
  out.str(state.currentAuthorizationEpoch); out.number(state.retiredAndCurrentAuthorizationEpochs.size(),4);
  for(const auto& e:state.retiredAndCurrentAuthorizationEpochs) out.str(e);
- out.number(state.latest.has_value(),1); if(state.latest) candidate(out,*state.latest);
+ out.number(state.latest.has_value(),1); if(state.latest) candidate(out,*state.latest,bound);
  require(out.bytes.size()+32<=maxBytes,"revision record capacity exhausted"); out.bytes+=checksum(out.bytes); return out.bytes;
 }
 CommonWorldStoredState deserialize(const std::string& bytes) {
  require(bytes.size()>=44 && bytes.size()<=maxBytes,"invalid revision record size");
  const auto payload=bytes.substr(0,bytes.size()-32);
  require(checksum(payload)==bytes.substr(bytes.size()-32),"revision SHA256 mismatch");
- require(payload.substr(0,8)=="MCWREV01","invalid revision header"); Reader in{payload,8};
- require(in.number(4)==1,"incompatible revision version"); CommonWorldStoredState s;
- s.highWater.ownerId=in.str(); s.highWater.worldSpaceId=in.str(); const auto present=in.number(1); require(present<=1,"invalid optional flag");
+ const bool bound=payload.substr(0,8)=="MCWREV02";
+ require(bound || payload.substr(0,8)=="MCWREV01","invalid revision header"); Reader in{payload,8};
+ require(in.number(4)==(bound?2:1),"incompatible revision version"); CommonWorldStoredState s;
+ s.highWater.ownerId=in.str(); s.highWater.worldSpaceId=in.str();
+ if(bound) { s.highWater.sourcePublisher=in.str(); require(d::validId(s.highWater.sourcePublisher),"invalid persisted source publisher"); }
+ const auto present=in.number(1); require(present<=1,"invalid optional flag");
  const auto wr=static_cast<std::uint32_t>(in.number(4)); if(present) s.highWater.lastWorldRevision=wr; else require(wr==0,"noncanonical absent highwater");
  s.highWater.lastMappingRevision=static_cast<std::uint32_t>(in.number(4)); s.currentAuthorizationEpoch=in.str();
  const auto count=in.number(4); require(count>0 && count<=maxEpochs,"authorization history capacity/format invalid");
@@ -113,7 +125,7 @@ CommonWorldStoredState deserialize(const std::string& bytes) {
  for(std::size_t i=0;i<count;++i) { auto e=in.str(); require(d::validId(e) && seen.insert(e).second,"invalid/reused authorization epoch"); s.retiredAndCurrentAuthorizationEpochs.push_back(e); }
  require(s.currentAuthorizationEpoch==s.retiredAndCurrentAuthorizationEpochs.back(),"current authorization mismatch");
  const auto latest=in.number(1); require(latest<=1,"invalid latest flag");
- if(latest) { s.latest=candidate(in); validate(*s.latest,s.highWater); require(seen.count(s.latest->authorizationEpoch) && s.highWater.lastWorldRevision==s.latest->worldRevision && s.highWater.lastMappingRevision==s.latest->mappingRevision,"committed highwater mismatch"); }
+ if(latest) { s.latest=candidate(in,bound); validate(*s.latest,s.highWater); require(seen.count(s.latest->authorizationEpoch) && s.highWater.lastWorldRevision==s.latest->worldRevision && s.highWater.lastMappingRevision==s.latest->mappingRevision,"committed highwater mismatch"); }
  require(in.offset==payload.size(),"trailing revision bytes"); return s;
 }
 #ifdef _WIN32
@@ -175,6 +187,7 @@ std::unique_ptr<CommonWorldRevisionStorage> makeCommonWorldFileStorage(const std
 CommonWorldRevisionStore::CommonWorldRevisionStore(std::unique_ptr<CommonWorldRevisionStorage> storage,CommonWorldPersistentHighWater initial)
  : storage_(std::move(storage)),initial_(std::move(initial)) {
  require(storage_ && d::validId(initial_.ownerId) && d::validId(initial_.worldSpaceId),"explicit valid persistent identity required");
+ require(initial_.sourcePublisher.empty() || d::validId(initial_.sourcePublisher),"invalid explicit source publisher");
  open();
 }
 bool sameCommonWorldRevisionCandidate(const CommonWorldRevisionCandidate& a,const CommonWorldRevisionCandidate& b) { return key(a)==key(b); }
@@ -182,6 +195,7 @@ CommonWorldStoredState CommonWorldRevisionStore::read() {
  require(!disposed_,"revision store disposed"); auto bytes=storage_->readCommitted();
  if(!bytes) { require(!observedRecord_,"previously committed revision disappeared"); return {initial_,{},{},{}}; }
  auto s=deserialize(*bytes); require(s.highWater.ownerId==initial_.ownerId && s.highWater.worldSpaceId==initial_.worldSpaceId,"persistent installation/world identity mismatch");
+ require(s.highWater.sourcePublisher==initial_.sourcePublisher,"persistent publisher/schema mode mismatch; explicit legacy-only or schema-2 identity required");
  require(!initial_.lastWorldRevision || (s.highWater.lastWorldRevision && *s.highWater.lastWorldRevision>=*initial_.lastWorldRevision),"persisted world below supplied floor");
  require(s.highWater.lastMappingRevision>=initial_.lastMappingRevision,"persisted mapping below supplied floor");
  observedRecord_=true; return s;

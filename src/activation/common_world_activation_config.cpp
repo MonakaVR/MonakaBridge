@@ -63,7 +63,7 @@ CommonWorldActivationConfig parseCommonWorldActivationConfig(std::optional<std::
   const auto mode=j.at("mode").get<std::string>(); require(mode=="production" || mode=="test","explicit execution mode required");
   c.mode=mode=="production"?CommonWorldExecutionMode::Production:CommonWorldExecutionMode::Test;
   c.transport=j.at("transport").get<std::string>(); c.codec=j.at("codec").get<std::string>(); c.endpoint=j.at("endpoint").get<std::string>();
-  require(c.codec=="monaka-wire-2.1","incompatible codec");
+  require(c.codec=="monaka-wire-2.2" || (c.mode==CommonWorldExecutionMode::Test && c.codec=="monaka-wire-2.1"),"publisher-aware production requires monaka-wire-2.2; 2.1 is test/legacy only");
   // Local activation never implies remote authority reset or seamless world replacement.
   require(j.at("peer_policy")=="explicit-authority-association-no-implicit-world-replacement","explicit peer authority policy required");
   c.ownerId=j.at("owner_id").get<std::string>(); c.worldSpaceId=j.at("world_space_id").get<std::string>(); c.sourcePublisher=j.at("source_publisher_id").get<std::string>();

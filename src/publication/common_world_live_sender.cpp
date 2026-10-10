@@ -28,6 +28,8 @@ bool sameContext(const CommonWorldLiveSnapshot& a,const CommonWorldLiveSnapshot&
  return a.sourceActive && b.sourceActive && a.ownerApproved && b.ownerApproved && !a.disposed && !b.disposed &&
   a.sourceGeneration==b.sourceGeneration && a.runtime.world && b.runtime.world && a.runtime.mapping && b.runtime.mapping &&
   d::world(a.runtime.world->world)==d::world(b.runtime.world->world) &&
+  a.runtime.world->source_publisher_id==b.runtime.world->source_publisher_id &&
+  a.runtime.mapping->source_publisher_id==b.runtime.mapping->source_publisher_id &&
   d::source(a.runtime.world->anchor_source)==d::source(b.runtime.world->anchor_source) &&
   d::mapping(a.runtime.mapping->mapping)==d::mapping(b.runtime.mapping->mapping) &&
   d::transform(a.runtime.mapping->transform)==d::transform(b.runtime.mapping->transform);
@@ -35,6 +37,9 @@ bool sameContext(const CommonWorldLiveSnapshot& a,const CommonWorldLiveSnapshot&
 bool receiptContext(const CommonWorldDurableReceipt& r,const CommonWorldLiveSnapshot& s) {
  if(!s.sourceActive || !s.ownerApproved || s.disposed || !s.runtime.world || !s.runtime.mapping || s.runtime.pending) return false;
  const auto& c=r.committed; const auto& world=s.runtime.world->world; const auto& map=*s.runtime.mapping;
+ const auto bound=c.sourcePublisher.empty()?std::optional<std::string>{}:std::optional<std::string>{c.sourcePublisher};
+ if(s.runtime.world->source_publisher_id!=bound || map.source_publisher_id!=bound ||
+    (!c.sourcePublisher.empty() && c.sourcePublisher!=s.runtime.sourcePublisher)) return false;
  if(c.worldRevision!=world.coordinate_space.revision || c.mappingRevision!=map.mapping.mapping_revision) return false;
  if(c.operation==RevisionOperation::Transition)
   return c.transition.ownerId==world.owner_id && c.transition.worldSpaceId==world.coordinate_space.id &&
@@ -187,6 +192,15 @@ CommonWorldLiveSender::PumpResult CommonWorldLiveSender::submit(Attempt a,const 
    // composition; store gate excludes epoch handover. Known codec + nonblocking
    // submit run in this same short critical section, no cached authorization.
    if(!s->current(a.plan_) || !sameContext(a.plan_->context,s->ingress.snapshot()) || !receiptContext(a.plan_->receipt,s->ingress.snapshot())) return;
+   const auto bound=a.plan_->receipt.committed.sourcePublisher;
+   const auto wirePublisher=std::visit([](const auto& m)->std::optional<std::string> {
+    using T=std::decay_t<decltype(m)>;
+    if constexpr(std::is_same_v<T,w::CommonWorldAuthorityPublication> || std::is_same_v<T,w::CommonWorldMappingPublication> ||
+     std::is_same_v<T,w::TrustedHmdCommonPose> || std::is_same_v<T,w::TrustedHmdCommonUnavailable> ||
+     std::is_same_v<T,w::CommonWorldMappingRevocation> || std::is_same_v<T,w::CommonWorldRevocation>) return m.source_publisher_id;
+    else return {};
+   },a.plan_->envelope);
+   if(wirePublisher!=(bound.empty()?std::optional<std::string>{}:std::optional<std::string>{bound})) return;
    if(cancel && cancel->load()) { result.status="cancelled-before-send"; return; }
    std::string bytes; w::Error error;
    if(!w::EncodeEnvelope(a.plan_->envelope,bytes,error)) { result.status="serialization-failed"; return; }

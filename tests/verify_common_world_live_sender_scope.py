@@ -15,15 +15,19 @@ allow.update({'include/monaka_bridge/common_world_activation_config.hpp',
  'tests/verify_common_world_activation_scope.py','docs/common-world-production-activation-gate-v2.1.md'})
 # 5AH-A adds only the isolated deployment observer/host/tooling.
 allow.update(__import__("json").loads((root/"deployment/phase-scope.json").read_text()))
+# BEGIN 5AI-P VERSIONED IDENTITY SCOPE
+from publisher_identity_scope import approved, historical_gate
+allow.update(approved(root))
+# END 5AI-P VERSIONED IDENTITY SCOPE
 archive=subprocess.check_output(['git','-C',str(root),'archive',base])
 with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
  for member in tree:
   if member.isfile() and member.name not in allow:
    assert (root/member.name).read_bytes()==tree.extractfile(member).read(),'frozen 5AE changed: '+member.name
 prior=subprocess.check_output(['git','-C',str(root),'show',base+':tests/verify_common_world_live_ingress_dormancy.py']).decode()
-current=(root/'tests/verify_common_world_live_ingress_dormancy.py').read_text()
+current=historical_gate((root/'tests/verify_common_world_live_ingress_dormancy.py').read_text())
 extension=current[current.index('# 5AF adds'):current.index('archive=subprocess')]
-assert current.replace(extension,'')==prior, 'prior scope checks weakened'
+assert historical_gate(current).replace(extension,'')==prior, 'prior scope checks weakened'
 assert 'allow.update' in extension and all(n in extension for n in new)
 changes=set(subprocess.check_output(['git','-C',str(root),'diff','--name-only',base],text=True).splitlines())
 untracked=set(subprocess.check_output(['git','-C',str(root),'ls-files','--others','--exclude-standard'],text=True).splitlines())

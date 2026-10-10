@@ -21,5 +21,6 @@ private:
  bool active_ = false, exhausted_ = false;
  std::set<std::string> sessions_, clocks_;
  std::optional<std::int64_t> lastSequence_, lastTime_;
+ std::optional<std::string> sessionSourcePublisher_; // null is explicit legacy
 };
 }

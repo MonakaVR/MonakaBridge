@@ -140,7 +140,7 @@ int main(int argc,char** argv) try {
   CHECK(r.runtime->prepare(r.path,r.f.authority,0)=="startup-failed" && !r.sink->connects && !r.record->bytes);
  });
  run("literal production endpoint validation has no socket fallback",[&] {
-  Rig r(root/"production-validation"); r.config["mode"]="production"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111";
+  Rig r(root/"production-validation"); r.config["mode"]="production"; r.config["codec"]="monaka-wire-2.2"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111";
   CHECK(parseCommonWorldActivationConfig(r.config.dump(),r.path).valid);
   for(const auto& endpoint:{"udp://127.0.0.1:30111","udp://localhost:30111","udp://0.0.0.0:30111","udp://224.0.0.1:30111",
    "udp://169.254.1.2:30111","udp://192.0.2.255:30111","udp://192.0.02.10:30111","udp://192.0.2.10:0","udp://192.0.2.10:65536",
@@ -151,12 +151,12 @@ int main(int argc,char** argv) try {
  run("production registry rejects test mode; test registry rejects production endpoint before recovery",[&] {
   Rig r(root/"separation"); CommonWorldProductionActivation production;
   CHECK(production.prepare(r.path,r.f.authority,0)=="startup-failed"); CHECK(production.snapshot().stages.size()==2);
-  r.config["mode"]="production"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111"; r.save();
+  r.config["mode"]="production"; r.config["codec"]="monaka-wire-2.2"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111"; r.save();
   CHECK(r.runtime->prepare(r.path,r.f.authority,0)=="startup-failed"); CHECK(!r.record->bytes && !r.sink->connects);
   r.config["transport"]="deterministic"; CHECK(!parseCommonWorldActivationConfig(r.config.dump(),r.path).valid);
  });
  run("real production registration prepares native durable state but never connects without explicit enable",[&] {
-  Rig r(root/"production-inactive"); r.config["mode"]="production"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111"; r.save();
+  Rig r(root/"production-inactive"); r.config["mode"]="production"; r.config["codec"]="monaka-wire-2.2"; r.config["transport"]="udp-ipv4"; r.config["endpoint"]="udp://192.0.2.10:30111"; r.save();
   CommonWorldProductionActivation production; const auto prepared=production.prepare(r.path,r.f.authority,1);
   if(prepared!="ready-inactive") throw std::runtime_error("production preparation: "+production.snapshot().reason);
   const auto s=production.snapshot(); CHECK(s.recoveryCompleted && s.sender && !s.sender->connected && !s.sender->enabled && !s.sender->queued);
