@@ -1,5 +1,6 @@
 #pragma once
 #include "config.hpp"
+#include "runtime_normalization.hpp"
 #include <deque>
 #include <functional>
 namespace mb {
@@ -28,14 +29,20 @@ struct Logical {
 class Bridge {
  Config config_;
  std::string session_;
+ RuntimeNormalization normalization_;
  std::map<Key,Logical> logical_;
  std::map<Key,Key> trackerOwners_;
- void publish(const c1::Envelope&,std::int64_t now);
+ c1::Envelope publish(const c1::Envelope&,std::int64_t now);
  bool approved(const Binding&,const Device&)const;
 public:
  Registry registry;
  Fanout fanout;
  Bridge(Config,std::string session);
+ Bridge(const Bridge&)=delete;
+ Bridge& operator=(const Bridge&)=delete;
+ c1::Envelope normalizeMtp(const c1::Envelope& e){return normalization_.output(e);}
+ RuntimeNormalization& normalization(){return normalization_;}
+ const RuntimeNormalization& normalization()const{return normalization_;}
  bool receive(std::string_view,std::string_view peer,std::int64_t now);
  void tick(std::int64_t now);
  void reconfigure(Config,std::int64_t now);

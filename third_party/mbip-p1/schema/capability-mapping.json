@@ -1,0 +1,17 @@
+{
+  "contract": "mbip-capabilities-p1",
+  "rows": [
+    {"source":"position","target":"position","validity":"validity.position","class":"PASS_THROUGH"},
+    {"source":"orientation","target":"orientation","validity":"validity.orientation","class":"PASS_THROUGH"},
+    {"source":"linear_velocity","target":"linear_velocity","validity":"non_null_sample_and_position_valid","class":"PASS_THROUGH"},
+    {"source":"angular_velocity","target":"angular_velocity","validity":"non_null_sample_and_orientation_valid","class":"PASS_THROUGH"},
+    {"source":"linear_acceleration","target":"linear_acceleration","validity":"non_null_gravity_free_sample_and_position_valid","class":"PASS_THROUGH"},
+    {"source":"battery_fraction","target":"battery_fraction","validity":"non_null_fraction","class":"PASS_THROUGH"},
+    {"source":"charging","target":"charging","validity":"non_null_charging","class":"PASS_THROUGH"}
+  ],
+  "non_capabilities": [
+    {"source":"raw gyro / raw accelerometer request","class":"UNSUPPORTED","reason":"no frozen semantic token"},
+    {"source":"unknown/duplicate wire token","class":"REJECTED","reason":"MVIP codec error; no output"},
+    {"source":"Common World / HMD authority message","class":"REJECTED","reason":"not a capability-bearing tracking message"}
+  ]
+}

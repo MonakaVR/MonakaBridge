@@ -7,6 +7,7 @@ gate text; their production-isolation assertions still execute on current code.
 """
 from pathlib import Path
 import io,json,subprocess,tarfile
+from p2r_runtime_scope import approved_runtime,runtime_bytes,runtime_text
 BASE='da62afb0c356bc0dae701922770a0697230f1cb7'
 GATES=['verify_common_world_activation_scope.py','verify_common_world_live_sender_scope.py','verify_common_world_live_ingress_dormancy.py','verify_common_world_deployment_scope.py','verify_common_world_control_scope.py','verify_common_world_persistence_dormancy.py','verify_common_world_dormancy.py']
 PATHS={
@@ -26,7 +27,7 @@ def approved(root):
     # BEGIN 5AI-R2 RECEIVER SCOPE
     from receiver_scope import approved_receiver
     # END 5AI-R2 RECEIVER SCOPE
-    return PATHS|approved_live_source(root)|approved_receiver(root)|{p.relative_to(root).as_posix() for p in kit.rglob('*') if p.is_file()}
+    return approved_runtime(root)|PATHS|approved_live_source(root)|approved_receiver(root)|{p.relative_to(root).as_posix() for p in kit.rglob('*') if p.is_file()}
 
 # Exact textual adaptation only for the audited minor-version exception.
 REPLACEMENTS={
@@ -37,6 +38,7 @@ REPLACEMENTS={
  'assert after==before.replace(': 'assert historical_gate(after)==before.replace(',
 }
 def historical_gate(text):
+    text=runtime_text(text)
     start='# BEGIN 5AI-P VERSIONED IDENTITY SCOPE\n';end='# END 5AI-P VERSIONED IDENTITY SCOPE\n'
     if start in text:
         a=text.index(start);b=text.index(end,a)+len(end);text=text[:a]+text[b:]
@@ -60,7 +62,7 @@ def verify(root):
             assert historical_gate((root/n).read_text())==old.decode(),'historical gate assertion changed '+n
             continue
         else:expected=old
-        assert (root/n).read_bytes()==expected,'behavioral test changed '+n
+        assert runtime_bytes(root,n,(root/n).read_bytes())==expected,'behavioral test changed '+n
     # Keep the old kit and every old vector physically byte-exact.
     for n,old in original.items():
         if not n.startswith('tests/'):assert (root/n).read_bytes()==old,'historical protocol changed '+n

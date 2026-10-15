@@ -20,10 +20,12 @@ int main()try{
  // Same source/tracker -> different device still requires an explicit restart.
  auto rebound=c;++rebound.revision;auto b=rebound.bindings.at({"pico","device"});rebound.bindings.erase({"pico","device"});b.device="new-device";rebound.bindings[{b.source,b.device}]=b;
  rejected([&]{bridge.reconfigure(rebound,12000000);});CHECK(bridge.config().bindings.count({"pico","device"})==1);
+ rebound.contracts[{"pico","new-device"}]=c.contracts.at({"pico","device"});
  mb::Bridge restarted(rebound,S2);auto newDevice=sample();newDevice.device_id="new-device";CHECK(restarted.receive(wire(newDevice),"one",10000000));CHECK(restarted.logical().at({"pico","new-device"}).pose);
  CHECK(restarted.config().bindings.size()==2);CHECK(!restarted.config().bindings.count({"pico","device"}));
  // Source change intentionally changes persistent output identity, invalidates old output.
  auto changed=c;++changed.revision;b=changed.bindings.at({"pico","device"});changed.bindings.erase({"pico","device"});b.source="new-source";changed.bindings[{b.source,b.device}]=b;
+ changed.contracts[{"new-source","device"}]=c.contracts.at({"pico","device"});
  bridge.reconfigure(changed,12000000);CHECK(bridge.receive(wire(sample("new-source")),"three",13000000));
  bridge.fanout.flush(output,14000000);
  const auto& old=feed.devices.at({mb::outputSource(c.bridgeId,"pico"),"logical-pico"});CHECK(old.absent);

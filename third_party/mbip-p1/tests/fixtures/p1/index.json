@@ -1,0 +1,195 @@
+[
+  {
+    "file": "pico-like-supported-valid.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  },
+  {
+    "file": "pico-like-position-loss.json",
+    "error": null,
+    "states": {
+      "position": "INVALID",
+      "orientation": "INVALID",
+      "linear_velocity": "ABSENT"
+    }
+  },
+  {
+    "file": "pico-like-full-loss-stale.json",
+    "error": null,
+    "states": {
+      "position": "INVALID",
+      "orientation": "INVALID",
+      "linear_velocity": "ABSENT"
+    },
+    "diagnostic": "Stale/loss encoded as NONE; actual stale-age enforcement belongs to consumer, never capability deletion"
+  },
+  {
+    "file": "supported-optional-absent.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "ABSENT"
+    }
+  },
+  {
+    "file": "unsupported-position-diagnostic.json",
+    "error": null,
+    "states": {
+      "orientation": "VALID"
+    }
+  },
+  {
+    "file": "empty-no-support.json",
+    "error": null,
+    "states": {}
+  },
+  {
+    "file": "set-order-reversed.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  },
+  {
+    "file": "loss-retained-derivative-diagnostics.json",
+    "error": null,
+    "states": {
+      "position": "INVALID",
+      "orientation": "INVALID",
+      "linear_velocity": "INVALID",
+      "angular_velocity": "INVALID",
+      "linear_acceleration": "INVALID"
+    }
+  },
+  {
+    "file": "unknown-capability.json",
+    "error": "UnsupportedValue",
+    "states": null
+  },
+  {
+    "file": "duplicate-capability.json",
+    "error": "InconsistentValidity",
+    "states": null
+  },
+  {
+    "file": "unsupported-derivative.json",
+    "error": "InconsistentValidity",
+    "states": null
+  },
+  {
+    "file": "unsupported-valid-position.json",
+    "error": "InconsistentValidity",
+    "states": null
+  },
+  {
+    "file": "synthetic-same-tracker-position-loss.json",
+    "error": null,
+    "states": {
+      "position": "INVALID",
+      "orientation": "VALID",
+      "angular_velocity": "VALID"
+    },
+    "synthetic": true,
+    "authenticity": "PICO same-tracker IMU authenticity: NOT VERIFIED / DEFERRED"
+  },
+  {
+    "file": "admission-candidate.json",
+    "error": null,
+    "states": {
+      "position": "INVALID",
+      "orientation": "INVALID",
+      "linear_velocity": "ABSENT"
+    },
+    "backend_private": {
+      "raw_valid": true,
+      "state": "CANDIDATE"
+    }
+  },
+  {
+    "file": "admission-admitted.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    },
+    "backend_private": {
+      "raw_valid": true,
+      "state": "ADMITTED"
+    }
+  },
+  {
+    "file": "session-restart.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  },
+  {
+    "file": "same-device-other-source.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  },
+  {
+    "file": "metadata-not-pose-validity.json",
+    "error": null,
+    "states": {
+      "position": "ABSENT",
+      "orientation": "ABSENT",
+      "linear_velocity": "ABSENT",
+      "angular_velocity": "ABSENT",
+      "linear_acceleration": "ABSENT",
+      "battery_fraction": "VALID",
+      "charging": "VALID"
+    }
+  },
+  {
+    "file": "legacy-bridge-first-pose.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  },
+  {
+    "file": "legacy-bridge-second-derived-pose.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID",
+      "angular_velocity": "VALID"
+    }
+  },
+  {
+    "file": "legacy-bridge-state.json",
+    "error": null,
+    "states": {
+      "position": "ABSENT",
+      "orientation": "ABSENT"
+    }
+  },
+  {
+    "file": "same-source-tracker-other-publisher.json",
+    "error": null,
+    "states": {
+      "position": "VALID",
+      "orientation": "VALID",
+      "linear_velocity": "VALID"
+    }
+  }
+]

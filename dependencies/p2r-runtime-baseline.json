@@ -1,0 +1,846 @@
+{
+  "base_commit": "5fbf2a9a39450e10d4362c440bbecf2c286a4833",
+  "authorization": "Approved Phase 2C-P2R bounded runtime integration; canonical P1 dependency, explicit declarations, receiver/output adapter, executable replay, bounded diagnostics, and tests. Historical scope checks retain original algorithm comparisons against the exact base; this exact manifest additionally detects integration drift. 5S protected inventory remains independent.",
+  "files": {
+    ".github/workflows/release-tooling.yml": {
+      "text": true,
+      "sha256": "8134bc6a0db74edc57bce8f33959914a5e91103622c2969d23d5d4b3718e3070",
+      "existed_at_base": true,
+      "base_sha256": "d05a7fab84356300a67f4996b79f5aaf0acbbc3871bcc017feed0ee508fea91b"
+    },
+    "CMakeLists.txt": {
+      "text": true,
+      "sha256": "2a81e88bb723740543e8074d96472f39deffaf62b188641bb54d65aa88874420",
+      "existed_at_base": true,
+      "base_sha256": "1b021cd28cd5b15b4344b84d452727d962fa9a8026cd4ebfa256774d067f3959"
+    },
+    "dependencies/mbip-p1-source.tar": {
+      "text": false,
+      "sha256": "6261e839ca4256f2a997edbb1f3b5fc533f0ad7b312d4805b2e3e66d556c109c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "dependencies/mbip-p1.lock.json": {
+      "text": true,
+      "sha256": "0c12f1215311819f01c101808e19f0081cc967d478ec0d87c3b7d3ca54bbf510",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "deployment/p1_runtime_identity.hpp.in": {
+      "text": true,
+      "sha256": "2ad6cc4376ca9a42f5b613e45c7eddfb62767ec8e37c6847ece8c4148578ff2d",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "docs/runtime-capabilities-p2r.md": {
+      "text": true,
+      "sha256": "45ed32b7bcc768c42b48a5c4c417ddf71b4127473e83994f1bf3fe8a800d333a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/bridge.hpp": {
+      "text": true,
+      "sha256": "beccecefa262a29faeb1e90450f795ab7e2c0d44b6e4b470c542baa24b0d551e",
+      "existed_at_base": true,
+      "base_sha256": "c32471de0463327f618eaadd5c51ec36335db1d3359e236f510a88dca20c82a0"
+    },
+    "include/monaka_bridge/config.hpp": {
+      "text": true,
+      "sha256": "0875b8dfbf2bd97be249893f478255df0e6f2477d0f63138ec35615bddfbe7c9",
+      "existed_at_base": true,
+      "base_sha256": "0ccf56c4dd9b8da90b72ee6b5e5aabceacd08ce7d4dd3296daffd20fdac31bb0"
+    },
+    "include/monaka_bridge/registry.hpp": {
+      "text": true,
+      "sha256": "78314d2fba4d749c4e495fb9adbbe9a2578c68819af9c9e627a6bb556d26e7ba",
+      "existed_at_base": true,
+      "base_sha256": "fccee21014a44dce85adcb64693f3bf533505f14b3e614a5e5b998db1254bbf4"
+    },
+    "include/monaka_bridge/runtime_normalization.hpp": {
+      "text": true,
+      "sha256": "79eae64bbca2d98ef4169c7792eb6ca1152f321343d9394159a78e3a74105bc8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/runtime_replay.hpp": {
+      "text": true,
+      "sha256": "eab4ebd24d52ccba654292c73567bcd77e80f16c37e04cf60551bd4f71c7bd01",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "scripts/verify_p1_runtime.py": {
+      "text": true,
+      "sha256": "19d3e27a70db88fd04f5b930b5566ff7b2fc8d2477f02b5f8a44888746bcfbdf",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "src/mapping/config.cpp": {
+      "text": true,
+      "sha256": "6e8d5b3a7d4e0c45577f15a473f47887100b458bafbaa69c5e4c4aecf328586f",
+      "existed_at_base": true,
+      "base_sha256": "a991aa306c7d1ee7cdfff6d38526494ec7de22533268da367c0e3b3658203476"
+    },
+    "src/observation/registry.cpp": {
+      "text": true,
+      "sha256": "31ebfde6b03ad87f24c37949c5ef60f4b0de76a1a9a986f94c678808f353087c",
+      "existed_at_base": true,
+      "base_sha256": "f59fddd562af17df9790c68fad5dd1b3dcbc087248b7cc35429194e397533859"
+    },
+    "src/routing/bridge.cpp": {
+      "text": true,
+      "sha256": "7a523087b09d35e00010e8d78406b25ee73ff14a9ca9b193661c58c0dfe34c7f",
+      "existed_at_base": true,
+      "base_sha256": "977373717af728a752b5bb1e90dc4eb59d5d7894d738e7c18bdc21a3aca0e530"
+    },
+    "src/routing/health.cpp": {
+      "text": true,
+      "sha256": "66b5575ceb7e1d154d247e0bbe1285ebf13f624eaced9fd85bf26da63ec159b7",
+      "existed_at_base": true,
+      "base_sha256": "d748659305468b38f9aba76e60b228dec27ad354721cf7f19d7e767f464d6d0e"
+    },
+    "src/routing/runtime_normalization.cpp": {
+      "text": true,
+      "sha256": "f80569ba516c1570b7ad8678e8ab245b62866483ba2cb4764581060a5b5c9dea",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/coordinate_profile_tests.cpp": {
+      "text": true,
+      "sha256": "d8dc22fe56e33fe5552cf58286ee4c9abb549b12a32d7cd6b78c9587d32a1236",
+      "existed_at_base": true,
+      "base_sha256": "9d0daa0fa91b929d49808704fa9e04194f08ed1c8f5ba3fab41262130e104dbc"
+    },
+    "tests/helpers.hpp": {
+      "text": true,
+      "sha256": "7321f0931b595e643f23a1897b0aafef604733001f721ab1f9b6afc641a43184",
+      "existed_at_base": true,
+      "base_sha256": "3e7b4e99009b92d0c59334a7b4b06b2f7d4291f841eb731ecf3cf0106e76bf1b"
+    },
+    "tests/mapping_contract_tests.cpp": {
+      "text": true,
+      "sha256": "6664dd52858f15ad4228684c64c1376605fae5caf993f46222265b0ca4e2c478",
+      "existed_at_base": true,
+      "base_sha256": "afc2427af88e893987e7e76f287d3a6a08ad270bbbe6c632f9233ee6fea5f15b"
+    },
+    "tests/p2r_runtime_scope.py": {
+      "text": true,
+      "sha256": "d8f7f8fcbc9dd0d961cb47119a7412331dbb90e7e6896f662fcf6184152302a5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/publisher_identity_scope.py": {
+      "text": true,
+      "sha256": "1a530b3c3afe83a52652ca568de30ad7542d162481be7e322447180d10293092",
+      "existed_at_base": true,
+      "base_sha256": "efabb68ea8621da397f971eacf645677b325c7102fad272bf259f2ea40f2bcc9"
+    },
+    "tests/receiver_scope.py": {
+      "text": true,
+      "sha256": "e9d544a9e626c32721ae4e37459c6852fab4a54a7078a1a8feeb05593f972b64",
+      "existed_at_base": true,
+      "base_sha256": "f557764106c9a4fb6200b2608db16c1233f83ba489459e9d1eec7a46f535e380"
+    },
+    "tests/rotation_only_downstream_tests.cpp": {
+      "text": true,
+      "sha256": "64c8f137993d7a6f3332e6ea48c53cdcbabae2a6643f4e517f6fb45cd3117694",
+      "existed_at_base": true,
+      "base_sha256": "1629cc5cb3a237b7620ced5d7dbe4e97bedcb0d152c26ddace77c1bab2865d35"
+    },
+    "tests/runtime_contract_tests.cpp": {
+      "text": true,
+      "sha256": "bcb0ea6f50ab730021d05ff2df314bbc6942cb635fe753be5c1f524fb408e9ed",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/runtime_normalization_process.py": {
+      "text": true,
+      "sha256": "7fe77540141e5dca717caba6718fab43a108c7bf2a8f5486fa934053039a255b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/trusted_live_source_scope.py": {
+      "text": true,
+      "sha256": "0908b4ef0de7b0ae8dbd6c36697367f4562fb05a3ff0f24a0a28824e5917252b",
+      "existed_at_base": true,
+      "base_sha256": "b92eec96edf2ebc3c6e0c543b1458dca061e21b7905b1f2b746624b0a98e8d6f"
+    },
+    "tests/udp_regression.py": {
+      "text": true,
+      "sha256": "57fd8b985854c3fb9e36b13fdea17af08dd1a69d6af7085c60624e5514992b7f",
+      "existed_at_base": true,
+      "base_sha256": "26812458c5192ca1ab18cc6326ffaed5234148de31f073b1659c09efd194d902"
+    },
+    "third_party/mbip-p1/.editorconfig": {
+      "text": true,
+      "sha256": "fbb87bedc2547f38f12c655e34a4b44f568aa0e5e40d77b14d75bb5a1079a347",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/.gitattributes": {
+      "text": true,
+      "sha256": "c6fec97904e236a43b6f16562d189633a70e40b180ea3f492f12f05edb22193b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/.gitignore": {
+      "text": true,
+      "sha256": "2341648cdb05ae9940d1109433b2e2be7818ad6e4193f901882bb991fb393ec7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/AGENTS.md": {
+      "text": true,
+      "sha256": "fe16290184067a54e9c689149049ba88ca08ce6d787f3af4522f92dd0a94d56e",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/README.md": {
+      "text": true,
+      "sha256": "99976d0985c1d5512cf2e4af1b8d58b8011a4e2dbdb6a779b30c5bab19d10ff4",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/cpp/CMakeLists.txt": {
+      "text": true,
+      "sha256": "e19fd1920a28d3c01b8ecea385b59bb6a6a20e16ea3ce60faaed618e7653c425",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/cpp/include/monaka/bridge_input/mapping.hpp": {
+      "text": true,
+      "sha256": "b7c070c22b064eaf12b758202d18cc213a7fdfa3a770b142e05180dcddaf4952",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/cpp/include/monaka/bridge_input/normalizer.hpp": {
+      "text": true,
+      "sha256": "a50a66df44651d4aca288d6bc41f585fdc571f3adf6ef265f0ddb738ccecd051",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/cpp/src/normalizer.cpp": {
+      "text": true,
+      "sha256": "4f4f12a03deaf762631f7e4bfa140c3b8ee09107398260093fdc67100e1a2934",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/cpp/tests/normalizer_runner.cpp": {
+      "text": true,
+      "sha256": "957f687d485a08ce9a4bc15d9ed038b0bbb613d65de39a30d6717b4a4c079068",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/dependencies/mvip-capabilities-p1.zip": {
+      "text": false,
+      "sha256": "1eea7defe82f39f06f45723444d83bfcce652c3ea519e1dbe29664b7fa21f26b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/dependencies/mvip.lock.json": {
+      "text": true,
+      "sha256": "5d8ef07720f2c586d145fde94a659e2e74f723b2466c82dcb1d08c6908c7ccc8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/docs/capability-mapping.md": {
+      "text": true,
+      "sha256": "98a537f0261e181afea1a016999b27f7cbcc3c132a33ca7e01529fb224240855",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/docs/p1/report.md": {
+      "text": true,
+      "sha256": "7dc0211f9178ba14206e66b51061c6c8a2e2177725998a676e42bf1f38043f30",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/docs/p1/validation.json": {
+      "text": true,
+      "sha256": "acdef63c52d2193dbd6ffb094d7e3d64b7a5222ea1c8eda79d273e524c807317",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/build.gradle.kts": {
+      "text": true,
+      "sha256": "ff0e34ca0d656e0993b0aaa07bf2517bf76d28ca692c4d8400cabd3e1c3ba3b9",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/settings.gradle.kts": {
+      "text": true,
+      "sha256": "3b12570937bd4a27ce204cb312b647ed4853fd4cb4294f44a318078fb37dddca",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/main/kotlin/dev/monaka/bridgeinput/Mapping.kt": {
+      "text": true,
+      "sha256": "0ddfb2f3fab13a4c98ceded002f5272c0caeb9e6c7168b91dd0a02659cadff3c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/main/kotlin/dev/monaka/bridgeinput/Normalizer.kt": {
+      "text": true,
+      "sha256": "77c9e0115c5e327fbdb38aa6ca034d746fd69142f423c25e6938bee22daf45f6",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/test/kotlin/dev/monaka/bridgeinput/NormalizerRunner.kt": {
+      "text": true,
+      "sha256": "4b9b67933a51d9f685a139f0d68deb48e65d50757a7fe415147aab0e1a2828f1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/test/kotlin/dev/monaka/protocol/v2/Runner.kt": {
+      "text": true,
+      "sha256": "54b31b067a70731c3b7def45c82d18485884478f22e300cb487ed2503fee2907",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/test/kotlin/dev/monaka/tracking/FrozenCoreProbe.kt": {
+      "text": true,
+      "sha256": "f2ecb70619a353592ece8a5bd81da7bb22d6881c1383a4dd210269a0f53cfbe9",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/jvm/src/test/kotlin/dev/monaka/tracking/FrozenDeclaration.kt": {
+      "text": true,
+      "sha256": "445bcf3df142d41fa2d224cd9374f6ae45e110c6affa1bf81aec951176d4aed3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/schema/capability-mapping.json": {
+      "text": true,
+      "sha256": "f1a318a9edbfab9571001613b2c23154486c1243007f86cd5be695bc8380e1e1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/evidence.lock.json": {
+      "text": true,
+      "sha256": "433dacbe6231abf862a5192bd713f3ef2cfa3dedb653bb7c4e7ce12e3f116203",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/admission-admitted.json": {
+      "text": true,
+      "sha256": "db7eaf755d1231f2d7c94b2cd8c3aa5da7c22ec1f83f12764bd8de4a25e579e3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/admission-candidate.json": {
+      "text": true,
+      "sha256": "5ba2a0be3138a8a3d2811ce215ebb99f840464b287b98a8c0b6f0e96452c6df3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/duplicate-capability.json": {
+      "text": true,
+      "sha256": "5fbcc390c64e0337c8309f311881597a700e999e408ddfbc8057e42e06123c12",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/empty-no-support.json": {
+      "text": true,
+      "sha256": "db7c997dc9784f69453c74c0de63700faeb30d81bcc105b5771f5a018822f30d",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/index.json": {
+      "text": true,
+      "sha256": "0808033aacc8a6a1356becc59549ff7fd34ce5aa4aa5365303c880834d82883f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/legacy-bridge-contract.binding.json": {
+      "text": true,
+      "sha256": "3279ebc08b1beb99673f20943d786564143fd0a7e92236f1697e356676f4fd48",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/legacy-bridge-first-pose.json": {
+      "text": true,
+      "sha256": "9beeeb13017bd6a08672e2ad2ff7267f03c332685e19f8617797cf8783bf3208",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/legacy-bridge-second-derived-pose.json": {
+      "text": true,
+      "sha256": "ae710eecf0420d4dcf9a7c4a602263b58cc813db5af787132aa9bec972cefb30",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/legacy-bridge-state.json": {
+      "text": true,
+      "sha256": "4ef200387a8c6379648e3497054f5f2af93266991d5840842f4c377aa6c63521",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/loss-retained-derivative-diagnostics.json": {
+      "text": true,
+      "sha256": "715e2c26cfab2d9a51f988dff9ca8a1d73997ddd3cda4de43b9b18cde44af98c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/metadata-not-pose-validity.json": {
+      "text": true,
+      "sha256": "d81211a2396a6f3acc6da0c919ed378ffdc23d2d6171289188bdf2051a615fb2",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/observation-contract.binding.json": {
+      "text": true,
+      "sha256": "550a8d0b4e01c7954f197adb83a0a6c4452b1503a3353e1f3a3efea498610e41",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/pico-like-full-loss-stale.json": {
+      "text": true,
+      "sha256": "5ba2a0be3138a8a3d2811ce215ebb99f840464b287b98a8c0b6f0e96452c6df3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/pico-like-position-loss.json": {
+      "text": true,
+      "sha256": "5ba2a0be3138a8a3d2811ce215ebb99f840464b287b98a8c0b6f0e96452c6df3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/pico-like-supported-valid.json": {
+      "text": true,
+      "sha256": "7f96d6be26d4bb8c1e58c890157c0e3b024ca58512ca9a553cb1cae9bcaa58e3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/same-device-other-source.json": {
+      "text": true,
+      "sha256": "c4fbea6bbe02361f0503d7870c21820f1cc3a138ff6145200f43120bb7f0464a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/same-source-tracker-other-publisher.json": {
+      "text": true,
+      "sha256": "307c50b4125fcc28376920525bc6fc497b545ea3ff808d796fe7bcaa760f3ae8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/session-restart.json": {
+      "text": true,
+      "sha256": "a196f972007a45513b3f7f5983767df7679bf9bb91243e04176547d29fa7fd47",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/set-order-reversed.json": {
+      "text": true,
+      "sha256": "9b7b8982c18351e7e50aeb54aeeed3ebda9f1db7dd1d34da2cd86a13d3e445e7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/supported-optional-absent.json": {
+      "text": true,
+      "sha256": "e1ac6c392c80f0652fac81e521176da64c5aa9cc9b5b91773a5b28f6707a8533",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/synthetic-same-tracker-position-loss.json": {
+      "text": true,
+      "sha256": "a79c59685c35a9d72ee638f03669739f868368a4ce7b29e9ae69bd5279784719",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/unknown-capability.json": {
+      "text": true,
+      "sha256": "ab0d484dcd86eecd76fac69bfafc16484f413d6b00db524aa5d6efd6ee5d59f0",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/unsupported-derivative.json": {
+      "text": true,
+      "sha256": "aa2868ac654c7030a7e5a7703f98dfd1e689e6495657fe9f785453ce84005e5a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/unsupported-position-diagnostic.json": {
+      "text": true,
+      "sha256": "98b6354432099fddc817334a9762176124937b514050ac5d356d9345df47ba87",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/p1/unsupported-valid-position.json": {
+      "text": true,
+      "sha256": "a864044845c1cc53e930400754726dee4317ed202d430d24a881a3bd7fd0dcc7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/index.json": {
+      "text": true,
+      "sha256": "cfff7a54b92baf7f80a798dd68e093f8fde2f24b5608c545910629e4031769ed",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/blank.json": {
+      "text": true,
+      "sha256": "8f9c228bfacba250fa99f284937bb975b5fde607d2c037bf81a9d81c99cc158f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/control.json": {
+      "text": true,
+      "sha256": "5877e6d52aafb4ebe79e077e4ca7f265d4c1ce049cab790d2aacbdce1f714033",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/empty.json": {
+      "text": true,
+      "sha256": "6f2e2eea56a6aee856edada4169083dca1db1a85ff18f9843a6906681ef6eedc",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/invalid-utf8.json": {
+      "text": false,
+      "sha256": "0247cb61e2b69c8ec12b296d3d0865382ca47f6855e61caed9f7282a6f34107f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/malformed-escape.json": {
+      "text": true,
+      "sha256": "2411aaa0402780b72a73b8fe60b92a6c4319f2f6a799112a9ffc6f55f4f34117",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/minor-0.json": {
+      "text": true,
+      "sha256": "e97750991629e4d25571b994f2265cdb32dfb2663f9367f9ff2775245b3623b5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/minor-1.json": {
+      "text": true,
+      "sha256": "dd1a3c95d27847e7016ed7caf6e778ce62f5642d8797ba9bc0963e3b2eec5499",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/minor-3.json": {
+      "text": true,
+      "sha256": "75632d2e48ccd48ae01f5b0177fb3a36b8c3f1978bd5f34971fef2b6d8f55288",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/minor-65535.json": {
+      "text": true,
+      "sha256": "029b181e2cc0a4c5e9509bf3c9056b5979221e515cbd3aa31263fb2a48e5bf19",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/missing.json": {
+      "text": true,
+      "sha256": "cfc8bad0c039ec2116eb7d8580338492bfa5adb54027ecb9bc01c6a707ed63b5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/null.json": {
+      "text": true,
+      "sha256": "9eba283f03469fe220a262bf86e2f4a0041553a81047fe2ca40601bd7e9289ce",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/oversize.json": {
+      "text": true,
+      "sha256": "0571f61f493860fa1ceb0f6a919a0ac6f5612da8434c18abd002a50a79481285",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/truncated.json": {
+      "text": true,
+      "sha256": "caa8e41337848c1da525c2ec79215e67d3c9d3f298c774ea63bfc461c6a0724b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/invalid/wrong-type.json": {
+      "text": true,
+      "sha256": "0efc768eeabbfb17f1bc51c57bb2c94347e998dd79323bdd09266154048ffb46",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/common-hmd-pose.json": {
+      "text": true,
+      "sha256": "3cccf9ad6ea5935e442de54d087116e4801e37e0e13427588ace4fb991d310b5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/common-hmd-unavailable.json": {
+      "text": true,
+      "sha256": "51166fc6a6c8e5017be9d74c17e7185c3ac62912714ae2107517ebee8fc7e37e",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/mapping-revocation.json": {
+      "text": true,
+      "sha256": "4923ee042ae92a79f99fed20a364216d18db59c7cd76ca63fdd3b09948e61c8a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/publisher-B.json": {
+      "text": true,
+      "sha256": "28029465fdaa186f38218f4a74ea09d654d1c6d12088a8dc77952125ebca700b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/world-authority.json": {
+      "text": true,
+      "sha256": "db6a013bef553175dbb1abad3c8771b1c08abea46832a2fcdbe19ba77ec76f42",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/world-mapping.json": {
+      "text": true,
+      "sha256": "a5dbcc72c0a3b86891e9922e3daea4f09539d747a0c7009820810d24b8f60fc1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/fixtures/v2.2/valid/world-revocation.json": {
+      "text": true,
+      "sha256": "07f1fcf7f8fef050c5430264a8d9a712decc06b9a1de00f8055bf395fce04a20",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/reference/core/MtpObservationBackend.kt": {
+      "text": true,
+      "sha256": "ba2bf6d5cc470b5e20d09a1bb1763ce1c14d6c2818ba31dc814320555470c3a7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tests/reference/core/TrackerInputCapabilities.kt": {
+      "text": true,
+      "sha256": "cd3e8608ea8d6c1d0679cd57edff58fe9f79443fe7a0095e2dfb1b896c6aa9f0",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/NOTICE": {
+      "text": true,
+      "sha256": "e7fe3b5af4f328fee363e1b559bb94b7f3ea97b5db5544c036a9c136cbe448ca",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/CMakeLists.txt": {
+      "text": true,
+      "sha256": "dc24ff554ecea59d0fe968b787a7ed2497dca6a7d2f253d6e490b760fb81c4e7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/include/monaka/input/capabilities.hpp": {
+      "text": true,
+      "sha256": "86142a99bc9554407e48fd1a916d72eb26b45c3d5310461288736f9236292f4a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/include/monaka/input/vocabulary.hpp": {
+      "text": true,
+      "sha256": "0d102332edb7f937d94da4388a9f335ecd7da1464103e0e76fc909de791c5fb4",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/include/monaka/protocol/v2/codec.hpp": {
+      "text": true,
+      "sha256": "b0f417c69bc77306b6636b2052795b9ea18f84d3ddeba54c42e19c24e0c6ffc6",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/include/monaka/protocol/v2/models.hpp": {
+      "text": true,
+      "sha256": "8a8160a29070bec54f55ab1297135fa1cb85e0b8b0e5e3026b08ad9b016de710",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/src/capabilities.cpp": {
+      "text": true,
+      "sha256": "f97673cb8ad542042b0b6460c27c618c291a4438751b85dd0b9fb9b3cd0cb5a2",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/src/v2/codec.cpp": {
+      "text": true,
+      "sha256": "c2f835ccf098d687c8b162e9f20671bbb09e00978a32137af911fddb029383ad",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/src/v2/models_json.inc": {
+      "text": true,
+      "sha256": "827419a22088de0a8de1dd5a94f2439c0852dadd519e101604dd81f596bfdaf8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/src/v2/schema.inc": {
+      "text": true,
+      "sha256": "498bb621037db526c7e38bf11b34820739f8ce14c5e8c8499919c84b3a9c0165",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/tests/capabilities_runner.cpp": {
+      "text": true,
+      "sha256": "3432e52e211d2b0e815e2d7a83cfcf1efef1987e8fa52bc24494b14399466825",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/tests/runner_v2.cpp": {
+      "text": true,
+      "sha256": "d74a8ce6a60de1b74376bc99df9bc3a5391869121f2933ecd4e2c782e3c79091",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/cpp/third_party/nlohmann/json.hpp": {
+      "text": true,
+      "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/docs/C1.md": {
+      "text": true,
+      "sha256": "3a76435c8b25b3975028f9a83c4dc3d1e3848806c9608d885f5bba74a1198ed3",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/docs/C2.1.md": {
+      "text": true,
+      "sha256": "be42d149b939c49ebde4be6ed7f0307bbfbaebcc2ae823ac7680a7cbc18522cc",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/docs/C2.2.md": {
+      "text": true,
+      "sha256": "2b288c086da7e410cdcabcadcc843e6d1f17ce7a4e0cfbdd8f612cd64fd78e73",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/docs/C2.md": {
+      "text": true,
+      "sha256": "2ffb1fa3ae11d9a15e4f01249ce20dc451a96e18f599868489418d868396d09c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/docs/capabilities-contract.md": {
+      "text": true,
+      "sha256": "58c161f00d23a566186b3be862b5f08bbdb51f7c91ba6219ded699c63efb90ef",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/jvm/libs/gson-2.11.0.jar": {
+      "text": false,
+      "sha256": "57928d6e5a6edeb2abd3770a8f95ba44dce45f3b23b7a9dc2b309c581552a78b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/jvm/libs/kotlin-stdlib-2.3.10.jar": {
+      "text": false,
+      "sha256": "f61662c6d3a2f8ef5bd34362a02d877772c39f393cd394feb259dfaf7f4d8437",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/jvm/libs/monaka-input-protocol.jar": {
+      "text": false,
+      "sha256": "0dee6799e3cafb279eb5a94963eaf4b8195346df4fb378d4fc9eb646250f5af8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/kit.lock.json": {
+      "text": true,
+      "sha256": "943e27d274b819fb343c00541c2efc5ae3abd7d919fcc714d457c8d98773dbbc",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/licenses/gson-LICENSE": {
+      "text": true,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/licenses/kotlin-LICENSE.txt": {
+      "text": true,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/licenses/kotlin-NOTICE.txt": {
+      "text": true,
+      "sha256": "0b09a83d3ef7795c7dec65e815866597c066c53898f2852a76599b8f5552941a",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/schema/capabilities.json": {
+      "text": true,
+      "sha256": "c0c8770a3ba99e85ef71de8ac7afe976d0856467860baf72e59ba0948861c9a9",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/schema/v2/common-world-publisher-identity.schema.json": {
+      "text": true,
+      "sha256": "cac1a0c2ac8fd381b581e187bd6cc4ff3e6a1eabf6407db509f9238143fe802f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/schema/v2/monaka-tracking.schema.json": {
+      "text": true,
+      "sha256": "a99f42ca7f6b511feeb87a3061f968fa31e6420ca3abd65a8f8608d509b6e440",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/schema/v2/tracker-observation.schema.json": {
+      "text": true,
+      "sha256": "678673008c3fac15a84336c2da9102f2a66b9738168abe5908746102ef91cbb4",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/third_party/mvip/schema/v2/trusted-hmd-authority.schema.json": {
+      "text": true,
+      "sha256": "fd756740a2bc15ad242c055edb8c356aca9a48d85dbfa75cffc9664992f9a620",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/generate_core_probe.py": {
+      "text": true,
+      "sha256": "a88aee0b29ffdb798156ae1658dfbfd947531593c6e4f6bda05ef4aac254b12f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/generate_mapping.py": {
+      "text": true,
+      "sha256": "e76d44cb1ea555cc6fb9f0baf0604bd1d541ddb91c3f1ecb145317e46e907bc7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/import_mvip.py": {
+      "text": true,
+      "sha256": "d3d165fda71a642858fdd8c8690f2a0b3e53238eb49a99ddaf57398521b2b6cf",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/import_test_evidence.py": {
+      "text": true,
+      "sha256": "d1443b02a55fc261681dd0249a96e5d516885410df09a4863582c426f1476aab",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/test_boundary.py": {
+      "text": true,
+      "sha256": "7fec3d714899e3ae06cd4872fcba66d84b642a96f7312504fb6c57b40b0c7ea1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "third_party/mbip-p1/tools/verify_mvip.py": {
+      "text": true,
+      "sha256": "46ccf25a71059e8862084725b72743e265cfc63105442030a87f582444615507",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tools/bridge_service.cpp": {
+      "text": true,
+      "sha256": "107e0322056a556cf4e274921834a3198e9db1885a280d529b659f7c3f1793d7",
+      "existed_at_base": true,
+      "base_sha256": "1cde99d99fb5df61df27767718d6221050b5ca71548e01cad2ce602ee8b3fa06"
+    },
+    "tools/runtime_replay.cpp": {
+      "text": true,
+      "sha256": "3884998665172f5dd01641940417fb7792d1e11f1640854a51b289779fddd739",
+      "existed_at_base": false,
+      "base_sha256": null
+    }
+  }
+}

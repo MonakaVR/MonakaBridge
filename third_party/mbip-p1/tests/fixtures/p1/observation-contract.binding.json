@@ -1,0 +1,15 @@
+{
+  "identity": {
+    "family": "monaka.observation",
+    "publisher": "",
+    "source": "backend-A",
+    "entity": "device-01"
+  },
+  "session": "11111111-1111-1111-1111-111111111111",
+  "declaration": [
+    "position",
+    "orientation",
+    "linear_velocity"
+  ],
+  "provenance": "P1 explicit fixture source contract"
+}

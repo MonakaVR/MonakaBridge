@@ -35,7 +35,7 @@ int main()try{
   }
  }
  // Actual config-selected profile goes through the Bridge approval and MTP pipeline.
- c.bindings[{b.source,b.device}]=b;c.policy=mb::Policy::Both;
+ c.bindings[{b.source,b.device}]=b;c.contracts[{b.source,b.device}]=config().contracts.at({"pico","device"});c.policy=mb::Policy::Both;
  mb::Bridge bridge(c,SB);p.position=mb::Vec{1,2,3};p.orientation=mb::Quat{0,0,0,1};
  CHECK(bridge.receive(wire(p),"source",10000000));
  auto out=bridge.logical().at({b.source,b.device}).pose;CHECK(out);close(*out->position,{3,2,-1});

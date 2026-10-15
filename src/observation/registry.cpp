@@ -1,4 +1,5 @@
 #include "monaka_bridge/registry.hpp"
+#include <stdexcept>
 namespace mb {
 namespace {
 bool sameSample(c1::TrackerObservation a,c1::TrackerObservation b){a.sent_at_ns=a.timestamp_ns;b.sent_at_ns=b.timestamp_ns;std::string x,y;c1::Error e;return c1::EncodeEnvelope(a,x,e)&&c1::EncodeEnvelope(b,y,e)&&x==y;}
@@ -8,6 +9,7 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  if(now<0||!c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(bytes.data()),bytes.size(),e,error)){++malformed;return false;}
  auto* p=std::get_if<c1::TrackerObservation>(&e);auto* s=std::get_if<c1::ObservationDeviceState>(&e);
  if(!p&&!s){++rejected;return false;}
+ if(sourceAuthorized&&!sourceAuthorized(e)){++rejected;return false;}
  const auto& id=p?p->source_id:s->source_id;const auto& session=p?p->session_id:s->session_id;
  const auto& clock=p?p->clock_id:s->clock_id;const auto& device=p?p->device_id:s->device_id;
  if(!sources.count(id)&&sources.size()>=64){++rejected;return false;}
@@ -26,7 +28,7 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  const auto& space=p?p->coordinate_space:s->coordinate_space;
  const auto seq=p?p->sequence:s->sequence;
  if((p&&seq<=d.poseSequence)||(s&&seq<=d.stateSequence)){
-  if(p&&seq==d.poseSequence&&d.pose&&!sameSample(*p,*d.pose)){d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;}
+  if(p&&seq==d.poseSequence&&d.pose&&!sameSample(*p,d.rawPose?*d.rawPose:*d.pose)){d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;}
   return reject();
  }
  if(d.hasSpace && space.revision<d.revision)return reject();
@@ -36,11 +38,16 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
   d.pose.reset();d.state.reset();d.fixedTime=-1;d.absent=false;
   d.space=space.id;d.convention=space.convention;d.revision=space.revision;d.hasSpace=true;
  }
+ const auto raw=p?std::optional<c1::TrackerObservation>(*p):std::nullopt;
+ if(normalize){
+  try{e=normalize(e);}catch(const std::invalid_argument&){d.collision=true;d.pose.reset();d.fixedTime=-1;return reject();}
+  p=std::get_if<c1::TrackerObservation>(&e);s=std::get_if<c1::ObservationDeviceState>(&e);
+ }
  if(p){
   d.poseSequence=seq;
   if(p->timestamp_ns<=d.absentAt)return reject();
   d.absent=false;
-  d.pose=*p;const auto age=p->sent_at_ns-p->timestamp_ns;d.fixedTime=age<=now?now-age:-1;
+  d.rawPose=raw;d.pose=*p;const auto age=p->sent_at_ns-p->timestamp_ns;d.fixedTime=age<=now?now-age:-1;
  }else{
   d.stateSequence=seq;d.state=*s;d.stateAt=now;
   if(s->presence=="absent"||s->tracking_state=="lost"||s->tracking_state=="disconnected"){

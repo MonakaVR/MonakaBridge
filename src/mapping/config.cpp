@@ -7,12 +7,17 @@
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
+#undef STRICT // Windows handle macro must not shadow the pinned P1 Mode::STRICT.
 #endif
 namespace mb {
 using J=nlohmann::json;
 Policy parsePolicy(const std::string& s){if(s=="steamvr")return Policy::Steamvr;if(s=="monaka")return Policy::Monaka;if(s=="both")return Policy::Both;if(s=="disabled")return Policy::Disabled;throw std::invalid_argument("unknown output policy");}
 std::string policyName(Policy p){switch(p){case Policy::Steamvr:return "steamvr";case Policy::Monaka:return "monaka";case Policy::Both:return "both";default:return "disabled";}}
 namespace {
+monaka::bridge_input::Mode capabilityMode(const std::string& value){if(value=="STRICT")return monaka::bridge_input::Mode::STRICT;if(value=="LEGACY_DYNAMIC")return monaka::bridge_input::Mode::LEGACY_DYNAMIC;throw std::invalid_argument("unknown normalization policy");}
+std::string capabilityModeName(monaka::bridge_input::Mode m){return m==monaka::bridge_input::Mode::STRICT?"STRICT":"LEGACY_DYNAMIC";}
+CapabilityProfile capabilityProfile(const J& j){CapabilityProfile p;p.id=j.at("id");p.provenance=j.at("provenance");p.inputDeclaration=j.at("input_declaration").get<std::vector<std::string>>();p.outputDeclaration=j.at("output_declaration").get<std::vector<std::string>>();p.inputMode=capabilityMode(j.value("input_policy","STRICT"));p.outputMode=capabilityMode(j.value("output_policy","STRICT"));return p;}
+J capabilityJson(const CapabilityProfile& p){return J{{"id",p.id},{"provenance",p.provenance},{"input_declaration",p.inputDeclaration},{"output_declaration",p.outputDeclaration},{"input_policy",capabilityModeName(p.inputMode)},{"output_policy",capabilityModeName(p.outputMode)}};}
 J read(const std::filesystem::path& p){std::ifstream f(p);if(!f)throw std::runtime_error("cannot read configuration");J j;f>>j;return j;}
 std::uint32_t u32(const J& j){if(!j.is_number_integer()||j<0||j>UINT32_MAX)throw std::invalid_argument("revision out of range");return j.get<std::uint32_t>();}
 Rigid rigid(const J& j){Rigid r;r.rotation=j.at("rotation").get<Quat>();r.translation=j.at("translation").get<Vec>();return r;}
@@ -27,6 +32,11 @@ void validateConfig(const Config& c){
  std::set<Key> trackers;
  for(auto& [name,p]:c.profiles){id(name);id(p.convention);axes(p.positionAxes);axes(p.quaternionAxes);if(p.approved&&p.evidence.empty())throw std::invalid_argument("approved profile needs evidence");}
  for(auto& [key,b]:c.bindings){
+  auto contract=c.contracts.find(key);
+  if(contract!=c.contracts.end()){
+   if(contract->second.id.empty()||contract->second.provenance.empty())throw std::invalid_argument("MissingDeclaration: profile ID/provenance required");
+   monaka::input::CapabilitySet input(contract->second.inputDeclaration),output(contract->second.outputDeclaration);
+  } // Unprovisioned mappings remain subject to all ordinary configuration checks.
   if(key!=Key{b.source,b.device})throw std::invalid_argument("mapping key mismatch");
   for(const auto& v:{b.source,b.device,b.tracker,b.profile,b.inputSpace,b.worldSpace})id(v);
   if(!trackers.insert(Key{b.source,b.tracker}).second)throw std::invalid_argument("logical tracker collision");transform(b.world);transform(b.mount);
@@ -36,13 +46,13 @@ Config loadConfig(const std::filesystem::path& path){
  auto j=read(path);if(j.at("namespace")!="monaka.bridge"||j.at("version")!=2)throw std::invalid_argument("unsupported config namespace/version");
  Config c;c.bridgeId=j.at("bridge_id");c.revision=u32(j.at("mapping_revision"));c.policy=parsePolicy(j.at("policy"));auto timeout=j.value("pose_timeout_ms",J(500));if(!timeout.is_number_integer()||timeout<1||timeout>10000)throw std::invalid_argument("timeout out of range");c.timeoutNs=timeout.get<std::int64_t>()*1000000;
  for(auto it=j.at("profiles").begin();it!=j.at("profiles").end();++it){const auto& v=it.value();Profile p;p.convention=v.at("convention");p.positionAxes=v.at("position_axes").get<std::array<int,3>>();p.quaternionAxes=v.at("quaternion_axes").get<std::array<int,4>>();p.approved=v.at("approved");p.evidence=v.value("evidence","");p.angularSpaceVerified=v.value("angular_space_verified",false);c.profiles.emplace(it.key(),p);}
- for(const auto& v:j.at("mappings")){Binding b;b.source=v.at("source_id");b.device=v.at("device_id");b.tracker=v.at("tracker_id");b.profile=v.at("profile");b.inputSpace=v.at("input_space");b.inputRevision=u32(v.at("input_revision"));b.worldSpace=v.at("world_space");b.worldRevision=u32(v.at("world_revision"));b.spaceApproved=v.at("space_approved");b.world=rigid(v.at("world"));b.mount=rigid(v.at("mount"));if(!c.bindings.emplace(Key{b.source,b.device},b).second)throw std::invalid_argument("source/device collision");}
+ for(const auto& v:j.at("mappings")){Binding b;b.source=v.at("source_id");b.device=v.at("device_id");b.tracker=v.at("tracker_id");b.profile=v.at("profile");b.inputSpace=v.at("input_space");b.inputRevision=u32(v.at("input_revision"));b.worldSpace=v.at("world_space");b.worldRevision=u32(v.at("world_revision"));b.spaceApproved=v.at("space_approved");b.world=rigid(v.at("world"));b.mount=rigid(v.at("mount"));if(v.contains("runtime_contract"))c.contracts.emplace(Key{b.source,b.device},capabilityProfile(v.at("runtime_contract")));if(!c.bindings.emplace(Key{b.source,b.device},b).second)throw std::invalid_argument("source/device collision");}
  validateConfig(c);return c;
 }
 void saveConfig(const std::filesystem::path& path,const Config& c){
  validateConfig(c);J j={{"namespace","monaka.bridge"},{"version",2},{"bridge_id",c.bridgeId},{"mapping_revision",c.revision},{"policy",policyName(c.policy)},{"pose_timeout_ms",c.timeoutNs/1000000},{"profiles",J::object()},{"mappings",J::array()}};
  for(auto& [n,p]:c.profiles)j["profiles"][n]={{"convention",p.convention},{"position_axes",p.positionAxes},{"quaternion_axes",p.quaternionAxes},{"approved",p.approved},{"evidence",p.evidence},{"angular_space_verified",p.angularSpaceVerified}};
- for(auto& [k,b]:c.bindings)j["mappings"].push_back({{"source_id",b.source},{"device_id",b.device},{"tracker_id",b.tracker},{"profile",b.profile},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"world_space",b.worldSpace},{"world_revision",b.worldRevision},{"space_approved",b.spaceApproved},{"world",toJson(b.world)},{"mount",toJson(b.mount)}});
+ for(auto& [k,b]:c.bindings){j["mappings"].push_back({{"source_id",b.source},{"device_id",b.device},{"tracker_id",b.tracker},{"profile",b.profile},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"world_space",b.worldSpace},{"world_revision",b.worldRevision},{"space_approved",b.spaceApproved},{"world",toJson(b.world)},{"mount",toJson(b.mount)}});if(c.contracts.count(k))j["mappings"].back()["runtime_contract"]=capabilityJson(c.contracts.at(k));}
  backup(path);auto pending=path;pending+=".pending-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
  {std::ofstream out(pending,std::ios::binary|std::ios::trunc);out<<j.dump(2)<<'\n';out.flush();if(!out)throw std::runtime_error("config write failed");}
  // Atomic file replacement prevents the running service from admitting a partial edit.

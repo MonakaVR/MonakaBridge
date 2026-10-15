@@ -1,0 +1,10 @@
+{
+  "contract": "mvip-capabilities-p1",
+  "wire_version_change": false,
+  "tokens": ["position", "orientation", "linear_velocity", "angular_velocity", "linear_acceleration", "battery_fraction", "charging"],
+  "unknown": "UnsupportedValue",
+  "duplicate": "InconsistentValidity",
+  "ordering": "set semantics; legacy wire array order preserved",
+  "lifetime": "protocol family + publisher if present + source + device/tracker + admitted session",
+  "transient_invalidity_changes_declaration": false
+}

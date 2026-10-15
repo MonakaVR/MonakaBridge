@@ -1,0 +1,86 @@
+[
+  {
+    "file": "valid/world-authority.json",
+    "error": null
+  },
+  {
+    "file": "valid/world-mapping.json",
+    "error": null
+  },
+  {
+    "file": "valid/common-hmd-pose.json",
+    "error": null
+  },
+  {
+    "file": "valid/common-hmd-unavailable.json",
+    "error": null
+  },
+  {
+    "file": "valid/mapping-revocation.json",
+    "error": null
+  },
+  {
+    "file": "valid/world-revocation.json",
+    "error": null
+  },
+  {
+    "file": "valid/publisher-B.json",
+    "error": null
+  },
+  {
+    "file": "invalid/empty.json",
+    "error": "OutOfRange"
+  },
+  {
+    "file": "invalid/blank.json",
+    "error": "OutOfRange"
+  },
+  {
+    "file": "invalid/control.json",
+    "error": "OutOfRange"
+  },
+  {
+    "file": "invalid/oversize.json",
+    "error": "OutOfRange"
+  },
+  {
+    "file": "invalid/wrong-type.json",
+    "error": "InvalidType"
+  },
+  {
+    "file": "invalid/null.json",
+    "error": "InvalidType"
+  },
+  {
+    "file": "invalid/missing.json",
+    "error": "MissingField"
+  },
+  {
+    "file": "invalid/minor-0.json",
+    "error": "UnsupportedVersion"
+  },
+  {
+    "file": "invalid/minor-1.json",
+    "error": "UnsupportedVersion"
+  },
+  {
+    "file": "invalid/minor-3.json",
+    "error": "UnsupportedVersion"
+  },
+  {
+    "file": "invalid/minor-65535.json",
+    "error": "UnsupportedVersion"
+  },
+  {
+    "file": "invalid/truncated.json",
+    "error": "MalformedJson"
+  },
+  {
+    "file": "invalid/invalid-utf8.json",
+    "error": "InvalidUtf8"
+  },
+  {
+    "file": "invalid/malformed-escape.json",
+    "error": "MalformedJson"
+  }
+]

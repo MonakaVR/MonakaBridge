@@ -15,5 +15,7 @@ jobs:
         run: python scripts/test_release_v2.py
       - name: Optimized Python release gate regressions
         run: python -O scripts/test_release_v2.py
+      - name: Verify pinned canonical P1 runtime source
+        run: python scripts/verify_p1_runtime.py
       # Unit tests only. Release artifacts require the documented clean-tree
       # scripts/release_v2.py build on a configured Windows x64 release host.

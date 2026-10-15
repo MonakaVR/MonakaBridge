@@ -11,6 +11,7 @@ J healthSnapshot(const Bridge& bridge,std::int64_t now,std::int64_t unixMs){
   {"mapping_revision",bridge.config().revision},{"pose_timeout_ms",bridge.config().timeoutNs/1000000},{"malformed",bridge.registry.malformed},
   {"rejected",bridge.registry.rejected},{"collisions",bridge.registry.collisions},
   {"send_errors",bridge.fanout.errors},{"devices",J::array()}};
+ status["capability_normalization"]=J::parse(bridge.normalization().diagnostics());
  for(const auto& [source,s]:bridge.registry.sources)for(const auto& [device,d]:s.devices){
   const auto binding=bridge.config().bindings.find({source,device});
   const bool fixedValid=d.fixedTime>=0, fixedFuture=fixedValid&&d.fixedTime>now;

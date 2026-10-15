@@ -32,12 +32,13 @@ void Fanout::flush(const Send& send,std::int64_t now,std::size_t budget){
   }catch(...){++errors;}
  }}
 }
-Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std::move(session)){validateConfig(config_);registry.timeoutNs=config_.timeoutNs;for(auto& [key,b]:config_.bindings)trackerOwners_.emplace(Key{b.source,b.tracker},key);}
+Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std::move(session)),normalization_(config_,session_){registry.sourceAuthorized=[this](const c1::Envelope& e){return normalization_.provisioned(e);};registry.normalize=[this](const c1::Envelope& e){return normalization_.input(e);};validateConfig(config_);registry.timeoutNs=config_.timeoutNs;for(auto& [key,b]:config_.bindings)trackerOwners_.emplace(Key{b.source,b.tracker},key);}
 bool Bridge::approved(const Binding& b,const Device& d)const{auto p=config_.profiles.find(b.profile);return p!=config_.profiles.end()&&p->second.approved&&!p->second.evidence.empty()&&b.spaceApproved&&p->second.convention==d.convention&&b.inputSpace==d.space&&b.inputRevision==d.revision;}
-void Bridge::publish(const c1::Envelope& e,std::int64_t now){if(config_.policy==Policy::Monaka||config_.policy==Policy::Both)fanout.put(Channel::Monaka,e,now);if(config_.policy==Policy::Steamvr||config_.policy==Policy::Both)fanout.put(Channel::Steamvr,e,now);}
+c1::Envelope Bridge::publish(const c1::Envelope& input,std::int64_t now){const auto e=normalization_.output(input);if(config_.policy==Policy::Monaka||config_.policy==Policy::Both)fanout.put(Channel::Monaka,e,now);if(config_.policy==Policy::Steamvr||config_.policy==Policy::Both)fanout.put(Channel::Steamvr,e,now);return e;}
 bool Bridge::receive(std::string_view bytes,std::string_view peer,std::int64_t now){c1::Envelope e;bool ok=registry.receive(bytes,peer,now,&e);if(ok)fanout.put(Channel::Mirror,std::move(e),now);tick(now);return ok;}
 void Bridge::tick(std::int64_t now){
  for(const auto& [key,b]:config_.bindings){
+  if(!config_.contracts.count(key))continue; // Fail closed; configuration tools never infer support.
   auto& l=logical_[key];auto d=registry.find(key);bool active=d&&approved(b,*d);bool fresh=active&&registry.fresh(key,now);
   const auto src=registry.sources.find(key.first);const std::string inputSession=src==registry.sources.end()?"":src->second.session;
   if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();}
@@ -52,7 +53,7 @@ void Bridge::tick(std::int64_t now){
    out.capabilities={"position","orientation"};if(v.velocity)out.capabilities.push_back("linear_velocity");if(v.omega)out.capabilities.push_back("angular_velocity");if(v.acceleration)out.capabilities.push_back("linear_acceleration");
    out.modality=out.validity.position&&out.validity.orientation?"full":out.validity.orientation?"rotation_only":"none";
    if(out.modality=="none"){out.position.reset();out.validity.position=false;out.confidence.position=0;out.tracking_state="lost";}
-   out.input={in.source_id,in.device_id,in.session_id,in.sequence,in.orientation_evidence};l.inputSequence=d->poseSequence;l.pose=out;publish(out,now);
+   out.input={in.source_id,in.device_id,in.session_id,in.sequence,in.orientation_evidence};l.inputSequence=d->poseSequence;l.pose=std::get<c1::MtpPose>(publish(out,now));
   }
   if(!fresh){l.history=History{};l.pose.reset();}
   // Metadata is independent of pose sequence/freshness. Publish transitions, not pose heartbeats.
@@ -70,7 +71,7 @@ void Bridge::tick(std::int64_t now){
  }
 }
 void Bridge::reconfigure(Config c,std::int64_t now){
- validateConfig(c);if(c.bridgeId!=config_.bridgeId)throw std::invalid_argument("bridge ID change requires restart");
+ validateConfig(c);normalization_.validateReconfigure(c);if(c.bridgeId!=config_.bridgeId)throw std::invalid_argument("bridge ID change requires restart");
  if(c.revision<=config_.revision)throw std::invalid_argument("config update must increase mapping_revision");
  auto owners=trackerOwners_;std::set<Key> lifetimeKeys;for(auto& [key,l]:logical_)lifetimeKeys.insert(key);
  for(auto& [key,b]:c.bindings){auto old=owners.find(Key{b.source,b.tracker});if(old!=owners.end()&&old->second!=key)throw std::invalid_argument("tracker reassignment requires Bridge restart");owners.emplace(Key{b.source,b.tracker},key);lifetimeKeys.insert(key);}
@@ -79,7 +80,7 @@ void Bridge::reconfigure(Config c,std::int64_t now){
  fanout.clear(Channel::Steamvr);fanout.clear(Channel::Monaka);
  // Invalidate old logical IDs before replacement; no stale transform is emitted afterward.
  for(auto& [key,l]:logical_){const auto old=config_.bindings.find(key);if(old!=config_.bindings.end()&&(!c.bindings.count(key)||c.bindings.at(key).tracker!=old->second.tracker)){c1::MtpTrackerState s;header(s,config_,session_,old->second,l.stateSequence++,now,now);s.presence="absent";s.tracking_state="disconnected";publish(s,now);}l.history=History{};l.pose.reset();l.stateSignature.clear();}
- config_=std::move(c);registry.timeoutNs=config_.timeoutNs;
+ normalization_.reconfigure(c);config_=std::move(c);registry.timeoutNs=config_.timeoutNs;
  tick(now);
 }
 }

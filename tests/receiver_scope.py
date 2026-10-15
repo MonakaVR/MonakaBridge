@@ -1,6 +1,7 @@
 """5AI-R2 adds a standalone receiver only; every sender/codec baseline byte is frozen."""
 from pathlib import Path
 import hashlib,io,json,re,subprocess,tarfile
+from p2r_runtime_scope import approved_runtime,runtime_bytes
 BASE='f2f0a46199af711f91c7e575c6f9229bdff51614'
 FILES={'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py','tests/receiver_ctest.py',
  'scripts/import_receiver_core.py','scripts/receiver_build.py','scripts/receiver_artifact.py',
@@ -12,7 +13,7 @@ FILES={'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scop
  'receiver/upstream/io/github/axisangles/ktmath/LICENSE-MIT','receiver/upstream/io/github/axisangles/ktmath/LICENSE-APACHE'}
 FILES|={'receiver/upstream/dev/monaka/tracking/'+n+'.kt' for n in ['CommonWorldAuthority','TrustedHmdCommonWorldStream']}
 FILES|={'receiver/upstream/io/github/axisangles/ktmath/'+n+'.kt' for n in ['Vector3','Quaternion','Matrix3','EulerAngles','Transform']}
-def approved_receiver(root):return FILES
+def approved_receiver(root):return FILES|approved_runtime(root)
 def strip(text,start,end):
     a=text.index(start);b=text.index(end,a)+len(end);return text[:a]+text[b:]
 def digest(b):return hashlib.sha256(b).hexdigest()
@@ -25,12 +26,12 @@ def verify(root):
     verify_live_allow=approved_live_source(root)
     changes-=verify_live_allow-FILES
     # END 5AI-S LIVE SOURCE SCOPE
-    assert changes<=FILES,('receiver scope',changes-FILES)
+    assert changes<=FILES|approved_runtime(root),('receiver scope',changes-FILES)
     assert all((root/n).is_file() for n in FILES)
     with tarfile.open(fileobj=io.BytesIO(git('archive',BASE))) as tree:
         for member in tree:
             if not member.isfile():continue
-            old=tree.extractfile(member).read();current=(root/member.name).read_bytes()
+            old=tree.extractfile(member).read();current=runtime_bytes(root,member.name,(root/member.name).read_bytes())
             # BEGIN 5AI-S LIVE SOURCE SCOPE
             if member.name in {'CMakeLists.txt','tests/publisher_identity_scope.py'}:
                 current=historical_source(current.decode().replace('\r\n','\n')).encode()

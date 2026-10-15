@@ -2,7 +2,14 @@
 #include "calibration.hpp"
 #include "registry.hpp"
 #include <filesystem>
+#include "monaka/bridge_input/normalizer.hpp"
 namespace mb {
+struct CapabilityProfile {
+ std::string id,provenance;
+ std::vector<std::string> inputDeclaration,outputDeclaration;
+ monaka::bridge_input::Mode inputMode=monaka::bridge_input::Mode::STRICT;
+ monaka::bridge_input::Mode outputMode=monaka::bridge_input::Mode::STRICT;
+};
 enum class Policy { Steamvr,Monaka,Both,Disabled };
 Policy parsePolicy(const std::string&);std::string policyName(Policy);
 struct Config {
@@ -12,6 +19,7 @@ struct Config {
  Policy policy=Policy::Steamvr;
  std::map<std::string,Profile> profiles;
  std::map<Key,Binding> bindings;
+ std::map<Key,CapabilityProfile> contracts;
 };
 Config loadConfig(const std::filesystem::path&);
 void saveConfig(const std::filesystem::path&,const Config&);

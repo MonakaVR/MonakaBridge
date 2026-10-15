@@ -1,0 +1,121 @@
+{
+  "phase": "2C-P1",
+  "tested_at_jst": "2026-10-15T13:03:53.271907+09:00",
+  "fixture_version": "p1 + frozen monaka wire 2.0/2.1/2.2",
+  "mvip_implementation_sha": "eb66935481f677293d648241d723258613f3c513",
+  "mbip_implementation_sha": "67f63d4dd39b4e5b6161bdbd7a288bd5b5373988",
+  "mvip_kit_sha256": "1eea7defe82f39f06f45723444d83bfcce652c3ea519e1dbe29664b7fa21f26b",
+  "commands": [
+    {
+      "repository": "MVIP",
+      "command": "cmake -S cpp -B build/native -G \"Visual Studio 18 2026\" -A x64 -DMVIP_BUILD_TESTS=ON; cmake --build build/native --config Release",
+      "result": "PASS",
+      "kind": "MSVC C++17 build"
+    },
+    {
+      "repository": "MVIP",
+      "command": "gradle -p jvm --offline --no-daemon build",
+      "result": "PASS",
+      "kind": "JDK17 / Kotlin2.3.10 / Gradle8.14.4 build; explicit runner counts below"
+    },
+    {
+      "repository": "MVIP",
+      "command": "ctest --test-dir build/native -C Release --output-on-failure",
+      "result": "PASS",
+      "tests": 2
+    },
+    {
+      "repository": "MVIP",
+      "command": "python tools/test_contract.py",
+      "result": {
+        "status": "PASS",
+        "frozen_fixtures": 135,
+        "codec_probes": 270,
+        "cross_language_directions": 106,
+        "semantic_probes": 44,
+        "api_self_tests": 4,
+        "source_commit": "eb66935481f677293d648241d723258613f3c513"
+      }
+    },
+    {
+      "repository": "MVIP",
+      "command": "python tools/verify_frozen.py; python tools/generate_capabilities.py --check",
+      "result": "PASS; 193 immutable reference hashes + generated vocabulary drift"
+    },
+    {
+      "repository": "MBIP",
+      "command": "cmake -S cpp -B build/native -G \"Visual Studio 18 2026\" -A x64; cmake --build build/native --config Release",
+      "result": "PASS",
+      "kind": "native normalizer / encoder build"
+    },
+    {
+      "repository": "MBIP",
+      "command": "gradle -p jvm --offline --no-daemon build",
+      "result": "PASS"
+    },
+    {
+      "repository": "MBIP",
+      "command": "python tools/verify_mvip.py; python tools/generate_mapping.py --check; python tools/generate_core_probe.py --check",
+      "result": "PASS; pinned ZIP/JAR/member inventory, mapping and exact Core block drift"
+    },
+    {
+      "repository": "MBIP",
+      "command": "python tools/test_boundary.py",
+      "result": {
+        "status": "PASS",
+        "native_jvm_boundary_probes": 84,
+        "cross_repo_serialized_directions": 76,
+        "negative_mutants_detected": 2,
+        "p0_before": {
+          "conflict": true,
+          "conflicts": 2
+        },
+        "p1_after": [
+          {
+            "conflict": false,
+            "conflicts": 0
+          },
+          {
+            "conflict": false,
+            "conflicts": 0
+          }
+        ],
+        "original_capability_mismatch": "RESOLVED",
+        "scope": "explicit P1 adapter + actual frozen Core capability block; no production receiver/HIL migration",
+        "mvip_source_commit": "eb66935481f677293d648241d723258613f3c513",
+        "mbip_source_commit": "67f63d4dd39b4e5b6161bdbd7a288bd5b5373988"
+      }
+    }
+  ],
+  "binary_sha256": {
+    "MVIP/mvip_codec_runner.exe": "13050bc6c38bb067d820f7f86192a1f5161ee300c29f42f52e1aaafbf0066ee4",
+    "MVIP/mvip_capabilities_runner.exe": "f27cc483aebc8c49e8e163a4113620b9ea6cc1db4b936756f6dd30449cc850b2",
+    "MVIP/monaka-input-protocol.jar": "0dee6799e3cafb279eb5a94963eaf4b8195346df4fb378d4fc9eb646250f5af8",
+    "MBIP/mbip_capabilities_runner.exe": "1972dac0ab63808b186ec18be731b488f266a80e122584a099b3c4853223e224",
+    "MBIP/monaka-bridge-capabilities.jar": "af44ecaa9c89bd5439940aaee9ed794ea5541ee8c2f480b52bcf5653c8863843"
+  },
+  "audit_clones": [
+    {
+      "path": "C:\\Users\\nynyp\\Downloads\\6Dof\\MonakaVRInputProtocol",
+      "branch": "feature/common-world-publisher-identity-wire-v2.2",
+      "sha": "0b4a27c2e2de88705c92fb6dbf5a8d9ca752bf39",
+      "clean": true,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\nynyp\\Downloads\\6Dof\\MonakaBridgeInputProtocol",
+      "branch": "dev",
+      "sha": "e334bfeceb7f922b3cacfc0d17eace82c0fabf33",
+      "clean": true,
+      "unchanged": true
+    }
+  ],
+  "p0_source_hashes": {
+    "report": "5ed80d135a9e3a76c835d2312f7ce9d58b749e397e465190b2fc6b0c561f200c",
+    "targets": "3b4c9cdc1aced71ca5892f67bd08992456a36faf5e5b5ab002998e17231d2542"
+  },
+  "dev_main_merges": 0,
+  "backend_core_production_edits": 0,
+  "issue_changes": 0,
+  "hardware": "NOT RUN"
+}

@@ -1,0 +1,25 @@
+# IDE / editor
+.vs/
+.idea/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+build/
+out/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# P1 generated build/tool outputs
+.gradle/
+__pycache__/
+*.pyc

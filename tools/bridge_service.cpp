@@ -1,6 +1,8 @@
 #include "monaka_bridge/bridge.hpp"
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/health.hpp"
+#include "monaka_bridge/runtime_replay.hpp"
+#include "p1_runtime_identity.hpp"
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <chrono>
@@ -16,7 +18,9 @@ std::atomic_bool running{true};
 void stop(int){running=false;}
 }
 int main(int argc,char** argv)try{
- if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"monaka_bridge_service CONFIG [INGRESS MONAKA DIRECT MIRROR] [--duration-ms N]\nmonaka_bridge_service --stop\n";return 0;}
+ if(argc>=2&&std::string(argv[1])=="--replay")return mb::runtimeReplay(argc,argv);
+ if(argc==2&&std::string(argv[1])=="--version"){std::cout<<nlohmann::json{{"bridge_source",P1_BRIDGE_SOURCE},{"source_input_hash",P1_BRIDGE_INPUT_HASH},{"mbip",P1_MBIP_COMMIT},{"mvip",P1_MVIP_DELIVERY},{"mvip_implementation",P1_MVIP_IMPLEMENTATION},{"mvip_kit_sha256",P1_MVIP_KIT_SHA256},{"default_policy","STRICT"}}.dump()<<'\n';return 0;}
+ if(argc==2&&std::string(argv[1])=="--help"){std::cout<<"monaka_bridge_service CONFIG [INGRESS MONAKA DIRECT MIRROR] [--duration-ms N]\nmonaka_bridge_service --stop\nmonaka_bridge_service --version\nmonaka_bridge_service --replay CONFIG INPUT_JSONL OUTPUT_JSONL SESSION [--mtp]\n";return 0;}
 #ifdef _WIN32
  if(argc==2&&std::string(argv[1])=="--stop"){HANDLE e=OpenEventW(EVENT_MODIFY_STATE,FALSE,L"Local\\MonakaBridge_Stop");if(!e)return 1;SetEvent(e);CloseHandle(e);return 0;}
 #endif
@@ -29,7 +33,8 @@ int main(int argc,char** argv)try{
  try{auto health=path;health+=L".status.json";healthWriter=std::make_unique<mb::HealthWriter>(health);}catch(...){/* Diagnostic failure cannot disable tracking. */}
  std::signal(SIGINT,stop);std::signal(SIGTERM,stop);
 #ifdef _WIN32
- HANDLE stopEvent=CreateEventW(nullptr,TRUE,FALSE,L"Local\\MonakaBridge_Stop");if(!stopEvent)throw std::runtime_error("stop event unavailable");ResetEvent(stopEvent);
+ const auto stopName=ports[0]==29810?std::wstring(L"Local\\MonakaBridge_Stop"):std::wstring(L"Local\\MonakaBridge_Stop_")+std::to_wstring(ports[0]);
+ HANDLE stopEvent=CreateEventW(nullptr,TRUE,FALSE,stopName.c_str());if(!stopEvent)throw std::runtime_error("stop event unavailable");ResetEvent(stopEvent);
 #endif
  auto modified=std::filesystem::last_write_time(path);std::int64_t lastStatus=-1000000000;
  while(running){auto now=mb::monotonicNs()-epoch;if(duration>0&&now>=duration)break;

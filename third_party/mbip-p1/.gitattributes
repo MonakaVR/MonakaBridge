@@ -1,0 +1,11 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Preserve exact pinned dependency members.
+/third_party/mvip/** -text
+/dependencies/*.zip -text
+
+/tests/fixtures/** -text
+/tests/reference/** -text

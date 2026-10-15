@@ -4,6 +4,7 @@ import io
 import subprocess
 import tarfile
 import re
+from p2r_runtime_scope import approved_runtime,runtime_bytes,runtime_text
 BASE='a2a5df9640ffff5dcfac67faf845cc880286142f'
 FILES={
  'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py',
@@ -12,18 +13,19 @@ FILES={
  'tests/trusted_live_source_host_tests.py','tests/trusted_live_receiver_identity.py',
  'scripts/trusted_live_source_adapter.py','scripts/trusted_live_source_artifact.py',
  'deployment/trusted-live-source.inactive.json','docs/trusted-live-source-a2-adapter-v2.1.md'}
-def approved_live_source(root):return FILES
+def approved_live_source(root):return FILES|approved_runtime(root)
 def historical_source(text):
+    text=runtime_text(text)
     text=re.sub(r'(?ms)^[ \t]*# BEGIN 5AI-S LIVE SOURCE SCOPE\n.*?^[ \t]*# END 5AI-S LIVE SOURCE SCOPE\n','',text)
     return text.replace('PATHS|approved_live_source(root)|','PATHS|')
 def verify(root):
     def git(*args):return subprocess.check_output(['git','-C',str(root),*args])
     changed=set(git('diff','--name-only',BASE).decode().splitlines())|set(git('ls-files','--others','--exclude-standard').decode().splitlines())
-    assert changed<=FILES,('5AI-S scope',changed-FILES)
+    assert changed<=FILES|approved_runtime(root),('5AI-S scope',changed-FILES)
     with tarfile.open(fileobj=io.BytesIO(git('archive',BASE))) as tree:
         for member in tree:
             if not member.isfile():continue
-            old=tree.extractfile(member).read();current=(root/member.name).read_bytes()
+            old=tree.extractfile(member).read();current=runtime_bytes(root,member.name,(root/member.name).read_bytes())
             if member.name in {'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py'}:
                 current=historical_source(current.decode().replace('\r\n','\n')).encode()
                 old=old.replace(b'\r\n',b'\n')

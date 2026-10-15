@@ -30,6 +30,7 @@ def binding(source,device,tracker,profile,space,revision):
  return dict(source_id=source,device_id=device,tracker_id=tracker,profile=profile,input_space=space,input_revision=revision,world_space='test-world',world_revision=0,space_approved=True,world=dict(rotation=[0,0,0,1],translation=[10,20,30]),mount=dict(rotation=[0,0,0,1],translation=[0,0,0]))
 config['mappings']=[binding(s,'same-device','logical-'+s,'pico-compat-v1','native',1) for s in ['pico','other']]
 config['mappings'].append(binding('vive-installation-a','23:32:42:b7:82:d3','logical-vive','vive-unverified','map-a',1))
+for mapping in config["mappings"]: mapping["runtime_contract"]={'id': 'synthetic-service-conformance', 'provenance': 'Explicit generic synthetic regression declaration, not vendor inference', 'input_policy': 'LEGACY_DYNAMIC', 'output_policy': 'LEGACY_DYNAMIC', 'input_declaration': ['position', 'orientation', 'linear_velocity', 'angular_velocity', 'linear_acceleration', 'battery_fraction', 'charging'], 'output_declaration': ['position', 'orientation', 'linear_velocity', 'angular_velocity', 'linear_acceleration', 'battery_fraction', 'charging']}
 path=run/'bridge.json'
 def save():
  pending=run/('config-'+uuid.uuid4().hex+'.json');pending.write_text(json.dumps(config));os.replace(pending,path)
