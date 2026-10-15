@@ -9,7 +9,7 @@
       "base_sha256": "2a81e88bb723740543e8074d96472f39deffaf62b188641bb54d65aa88874420"
     },
     "include/monaka_bridge/config.hpp": {
-      "sha256": "a6c4ba2d42530a015a1a37086f38ccf28385ab30319c3638c3ee32f7c00b44f4",
+      "sha256": "76358b3d14d3d5f7ea579b9d03ea778c362d5aa2ea6ff88756f82071d61a385a",
       "existed_at_base": true,
       "base_sha256": "0875b8dfbf2bd97be249893f478255df0e6f2477d0f63138ec35615bddfbe7c9"
     },
@@ -19,7 +19,7 @@
       "base_sha256": null
     },
     "src/mapping/config.cpp": {
-      "sha256": "066b67effbbd691a1fabad6313001ea5a0de5d4839380a84bcd6c1d019d8f829",
+      "sha256": "f2e6273b6196c9821839b42cae97b3d24d3fb7e19ce513344b55b960f4f6dddc",
       "existed_at_base": true,
       "base_sha256": "6e8d5b3a7d4e0c45577f15a473f47887100b458bafbaa69c5e4c4aecf328586f"
     },
@@ -44,12 +44,12 @@
       "base_sha256": "d5fce2dafff41d1ed95dfa11eb893e59858a0ecf706292079fb20eed43b73e3e"
     },
     "tests/config_transaction_probe.cpp": {
-      "sha256": "42f88f70a1ac7c2162bea9d6f29c62c53f4a72a8a0e5950a4402eff1c38aa0f7",
+      "sha256": "3bd84a82dddd0905710174712d0a85457007668d5059f0bb8c360ebbf4a898dd",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/config_transaction_process.py": {
-      "sha256": "c7ade1c5f5c5dcec32223a0581f71f716921320a8bc4652409fadb3c005563c1",
+      "sha256": "8c2b3a6a2d7a5d90a3a8a9edabc263e30ce56fbc59fbb7cc0200e05f419b8f5e",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -59,7 +59,7 @@
       "base_sha256": null
     },
     "docs/config-write-transaction.md": {
-      "sha256": "671e786cbcb371f5aba351d3d3642408e7fa78dc0d75f62f077d6dd1d76ede6f",
+      "sha256": "e86783c75034c12c3632e34e0e24bf99297b301b6b350f3c42474860cac36932",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -74,9 +74,14 @@
       "base_sha256": null
     },
     "tests/config_write_scope_tests.py": {
-      "sha256": "97d7b97a740e06cd6e3f330554d40416d020011d813939eb0cce0c17465d62b7",
+      "sha256": "6235a2e03ce27c01084eae17134f3783413a78a09b6deac1fec1a0549634b0e1",
       "existed_at_base": false,
       "base_sha256": null
+    },
+    "docs/dev-integration/phase2cp2r-20261015.md": {
+      "sha256": "bbe0816e3b53a2f8a4d9da7ee17748c6c63f44cf7cacb868218d8cc94f20ae81",
+      "existed_at_base": true,
+      "base_sha256": "bbe0816e3b53a2f8a4d9da7ee17748c6c63f44cf7cacb868218d8cc94f20ae81"
     }
   }
 }

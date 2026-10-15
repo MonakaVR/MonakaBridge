@@ -59,3 +59,8 @@ all P2R algorithm bytes through the original P2R manifest. A new guard layer
 validates current config-write files before projecting their predecessor bytes
 for those historical comparisons. No broad path exception or 5S guard removal.
 A mutated config source or historical manifest must fail the guard.
+
+Loaded native Config snapshots remain immutable, including across threads; reload
+before another edit. The exact prior dev-integration report at5278 is also pinned
+unchanged because it postdates the historical P2R inventory. This does not permit
+new or edited reports by directory wildcard. Four drift mutants cover it too.

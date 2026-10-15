@@ -66,7 +66,7 @@ void saveConfig(const std::filesystem::path& path,const Config& c){
  const auto bytes=j.dump(2)+'\n';const auto canonical=std::filesystem::weakly_canonical(path);
  const bool same=!c.sourcePath.empty()&&canonical==c.sourcePath;
  commitConfigDocument(path,same?std::optional<std::string>(c.sourceDocument):std::nullopt,bytes);
- c.sourceDocument=bytes;c.sourcePath=canonical;
+ // The loaded snapshot stays immutable; a subsequent edit must reload.
 }
 void migrateLegacy(const std::filesystem::path& route,const std::filesystem::path& alignment,const std::filesystem::path& destination,Config c){
  if(std::filesystem::exists(destination))throw std::invalid_argument("migration destination already exists");

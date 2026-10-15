@@ -14,8 +14,8 @@ enum class Policy { Steamvr,Monaka,Both,Disabled };
 Policy parsePolicy(const std::string&);std::string policyName(Policy);
 struct Config {
  // Loaded raw snapshot is local config I/O metadata; never emitted on wire.
- mutable std::string sourceDocument;
- mutable std::filesystem::path sourcePath;
+ std::string sourceDocument;
+ std::filesystem::path sourcePath;
  std::string bridgeId="monaka-bridge";
  std::uint32_t revision=1;
  std::int64_t timeoutNs=500000000;
