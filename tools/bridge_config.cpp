@@ -1,9 +1,13 @@
 #include "monaka_bridge/config.hpp"
+#include "monaka_bridge/config_transaction.hpp"
 #include "monaka_bridge/mapping_selection.hpp"
 #include <iostream>
 int main(int argc,char** argv)try{
  if(argc<3)throw std::invalid_argument("usage: monaka_bridge_config CONFIG validate|policy VALUE|align TRACKER X Y Z|rename TRACKER NEW_ID|migrate ROUTE ALIGNMENT DEST");
- auto c=mb::loadConfig(argv[1]);std::string command=argv[2];
+ std::string command=argv[2];
+ if(command=="transaction-version"&&argc==3){std::cout<<"monaka-config-transaction-v1\n";return 0;}
+ if(command=="commit"&&argc==5){mb::commitConfigDocument(argv[1],mb::readConfigBytes(argv[3]),mb::readConfigBytes(argv[4]));std::cout<<"committed\n";return 0;}
+ auto c=mb::loadConfig(argv[1]);
  if(command=="validate"){std::cout<<"valid\n";return 0;}
  if(command=="migrate"&&argc==6){mb::migrateLegacy(argv[3],argv[4],argv[5],c);return 0;}
  if(command=="policy"&&argc==4)c.policy=mb::parsePolicy(argv[3]);

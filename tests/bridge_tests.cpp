@@ -45,7 +45,7 @@ int main()try{
  c.policy=mb::Policy::Disabled;mb::Bridge disabled(c,SB);disabled.receive(wire(sample()),"a",10000000);CHECK(disabled.fanout.pending(mb::Channel::Mirror)==1);CHECK(disabled.fanout.pending(mb::Channel::Monaka)==0);
  mb::Fanout q;q.capacity=1;q.put(mb::Channel::Mirror,sample(),10);q.put(mb::Channel::Mirror,sample("other"),10);CHECK(q.dropped==1);q.flush([](auto,auto){return false;},20);CHECK(q.errors==1&&q.pending(mb::Channel::Mirror)==0);
  mb::Udp owner(0);bool bindRejected=false;try{mb::Udp duplicateBind(owner.port());}catch(...){bindRejected=true;}CHECK(bindRejected);
- auto path=std::filesystem::path(ROOT_DIR)/"build/test-config.json";mb::saveConfig(path,c);CHECK(mb::loadConfig(path).bindings.size()==2);
+ auto path=std::filesystem::path(ROOT_DIR)/("build/test-config-"+std::to_string(mb::monotonicNs())+".json");mb::saveConfig(path,c);CHECK(mb::loadConfig(path).bindings.size()==2);
  auto conflict=c;conflict.bindings.at({"other","device"}).tracker="logical-pico";bool rejected=false;try{mb::validateConfig(conflict);}catch(...){rejected=true;}CHECK(!rejected);
  CHECK(mb::runtimeSerial("ab","c")!=mb::runtimeSerial("a","bc"));
  std::ifstream vive(std::string(ROOT_DIR)+"/tests/fixtures/vive-v2-synthetic-status-samples.jsonl");std::string line;int count=0;

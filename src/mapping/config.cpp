@@ -1,4 +1,5 @@
 #include "monaka_bridge/config.hpp"
+#include "monaka_bridge/config_transaction.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <set>
@@ -42,25 +43,30 @@ void validateConfig(const Config& c){
   if(!trackers.insert(Key{b.source,b.tracker}).second)throw std::invalid_argument("logical tracker collision");transform(b.world);transform(b.mount);
  }
 }
-Config loadConfig(const std::filesystem::path& path){
- auto j=read(path);if(j.at("namespace")!="monaka.bridge"||j.at("version")!=2)throw std::invalid_argument("unsupported config namespace/version");
+Config parseConfigDocument(const std::string& bytes){
+ auto j=J::parse(bytes);if(j.at("namespace")!="monaka.bridge"||j.at("version")!=2)throw std::invalid_argument("unsupported config namespace/version");
  Config c;c.bridgeId=j.at("bridge_id");c.revision=u32(j.at("mapping_revision"));c.policy=parsePolicy(j.at("policy"));auto timeout=j.value("pose_timeout_ms",J(500));if(!timeout.is_number_integer()||timeout<1||timeout>10000)throw std::invalid_argument("timeout out of range");c.timeoutNs=timeout.get<std::int64_t>()*1000000;
  for(auto it=j.at("profiles").begin();it!=j.at("profiles").end();++it){const auto& v=it.value();Profile p;p.convention=v.at("convention");p.positionAxes=v.at("position_axes").get<std::array<int,3>>();p.quaternionAxes=v.at("quaternion_axes").get<std::array<int,4>>();p.approved=v.at("approved");p.evidence=v.value("evidence","");p.angularSpaceVerified=v.value("angular_space_verified",false);c.profiles.emplace(it.key(),p);}
  for(const auto& v:j.at("mappings")){Binding b;b.source=v.at("source_id");b.device=v.at("device_id");b.tracker=v.at("tracker_id");b.profile=v.at("profile");b.inputSpace=v.at("input_space");b.inputRevision=u32(v.at("input_revision"));b.worldSpace=v.at("world_space");b.worldRevision=u32(v.at("world_revision"));b.spaceApproved=v.at("space_approved");b.world=rigid(v.at("world"));b.mount=rigid(v.at("mount"));if(v.contains("runtime_contract"))c.contracts.emplace(Key{b.source,b.device},capabilityProfile(v.at("runtime_contract")));if(!c.bindings.emplace(Key{b.source,b.device},b).second)throw std::invalid_argument("source/device collision");}
- validateConfig(c);return c;
+ validateConfig(c);c.sourceDocument=bytes;return c;
 }
+Config loadConfig(const std::filesystem::path& path){auto c=parseConfigDocument(readConfigBytes(path));c.sourcePath=std::filesystem::weakly_canonical(path);return c;}
 void saveConfig(const std::filesystem::path& path,const Config& c){
  validateConfig(c);J j={{"namespace","monaka.bridge"},{"version",2},{"bridge_id",c.bridgeId},{"mapping_revision",c.revision},{"policy",policyName(c.policy)},{"pose_timeout_ms",c.timeoutNs/1000000},{"profiles",J::object()},{"mappings",J::array()}};
  for(auto& [n,p]:c.profiles)j["profiles"][n]={{"convention",p.convention},{"position_axes",p.positionAxes},{"quaternion_axes",p.quaternionAxes},{"approved",p.approved},{"evidence",p.evidence},{"angular_space_verified",p.angularSpaceVerified}};
  for(auto& [k,b]:c.bindings){j["mappings"].push_back({{"source_id",b.source},{"device_id",b.device},{"tracker_id",b.tracker},{"profile",b.profile},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"world_space",b.worldSpace},{"world_revision",b.worldRevision},{"space_approved",b.spaceApproved},{"world",toJson(b.world)},{"mount",toJson(b.mount)}});if(c.contracts.count(k))j["mappings"].back()["runtime_contract"]=capabilityJson(c.contracts.at(k));}
- backup(path);auto pending=path;pending+=".pending-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
- {std::ofstream out(pending,std::ios::binary|std::ios::trunc);out<<j.dump(2)<<'\n';out.flush();if(!out)throw std::runtime_error("config write failed");}
- // Atomic file replacement prevents the running service from admitting a partial edit.
-#ifdef _WIN32
- if(!MoveFileExW(pending.c_str(),path.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))throw std::runtime_error("config replacement failed; pending file retained");
-#else
- std::filesystem::rename(pending,path);
-#endif
+ // Preserve unknown document members while updating known typed fields.
+ if(!c.sourceDocument.empty()){
+  auto original=J::parse(c.sourceDocument);auto known=j;
+  const auto merge=[](auto&& self,J& base,const J& delta)->void{if(base.is_object()&&delta.is_object()){for(auto it=delta.begin();it!=delta.end();++it)self(self,base[it.key()],it.value());}else base=delta;};
+  for(auto it=known["profiles"].begin();it!=known["profiles"].end();++it){J row=original.value("profiles",J::object()).value(it.key(),J::object());merge(merge,row,it.value());j["profiles"][it.key()]=row;}
+  for(std::size_t i=0;i<known["mappings"].size();++i){const auto& delta=known["mappings"][i];for(const auto& old:original.value("mappings",J::array()))if(old.value("source_id","")==delta.at("source_id")&&old.value("device_id","")==delta.at("device_id")){J row=old;merge(merge,row,delta);if(!delta.contains("runtime_contract"))row.erase("runtime_contract");j["mappings"][i]=row;break;}}
+  for(auto it=original.begin();it!=original.end();++it)if(!j.contains(it.key()))j[it.key()]=it.value();
+ }
+ const auto bytes=j.dump(2)+'\n';const auto canonical=std::filesystem::weakly_canonical(path);
+ const bool same=!c.sourcePath.empty()&&canonical==c.sourcePath;
+ commitConfigDocument(path,same?std::optional<std::string>(c.sourceDocument):std::nullopt,bytes);
+ c.sourceDocument=bytes;c.sourcePath=canonical;
 }
 void migrateLegacy(const std::filesystem::path& route,const std::filesystem::path& alignment,const std::filesystem::path& destination,Config c){
  if(std::filesystem::exists(destination))throw std::invalid_argument("migration destination already exists");

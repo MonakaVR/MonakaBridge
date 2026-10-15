@@ -19,6 +19,16 @@ namespace MonakaBridge {
    var start=new ProcessStartInfo(Native(root,"monaka_bridge_config"),Quote(ConfigPath(root))+" "+args){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true};
    using(var p=Process.Start(start)){string error=p.StandardError.ReadToEnd();p.WaitForExit();if(p.ExitCode!=0)throw new InvalidOperationException(error);}
   }
+  internal static void CommitFile(string root,byte[] expected,string candidate){
+   string snapshot=ConfigPath(root)+".expected-"+Guid.NewGuid().ToString("N");
+   try {File.WriteAllBytes(snapshot,expected);Command(root,"commit "+Quote(snapshot)+" "+Quote(candidate));}
+   finally {if(File.Exists(snapshot))File.Delete(snapshot);}
+  }
+  internal static void Commit(string root,byte[] expected,Dictionary<string,object> candidate){
+   string file=ConfigPath(root)+".candidate-"+Guid.NewGuid().ToString("N");
+   try {File.WriteAllText(file,new JavaScriptSerializer().Serialize(candidate),new UTF8Encoding(false));CommitFile(root,expected,file);}
+   finally {if(File.Exists(file))File.Delete(file);}
+  }
   internal static Dictionary<string,object> Read(string path){return new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(path,Encoding.UTF8));}
   private sealed class ControlWindow:Window {
    readonly string root;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
@@ -31,7 +41,7 @@ namespace MonakaBridge {
    readonly ComboBox profile=new ComboBox{IsEditable=false};
    readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="This input space/revision has been approved"};
    readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","both","disabled"}};
-   Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
+   byte[] configBytes;Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
    public ControlWindow(string root){this.root=root;Title="Monaka Bridge";Width=900;Height=820;
     var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
     panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(healthStatus);panel.Children.Add(devices);panel.Children.Add(livePose);
@@ -58,8 +68,8 @@ namespace MonakaBridge {
    static void Field(Panel p,string label,Control field){var row=new DockPanel();var text=new TextBlock{Text=label,Width=140};row.Children.Add(text);field.Margin=new Thickness(2);row.Children.Add(field);p.Children.Add(row);}
    void Reload(){Reload(editor.SelectedKey);}
    void Reload(Tuple<string,string> restoreKey){
-    var persisted=Read(ConfigPath(root));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
-    config=persisted;map=nextMap;
+    var loadedBytes=File.ReadAllBytes(ConfigPath(root));var persisted=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(Encoding.UTF8.GetString(loadedBytes).TrimStart('\uFEFF'));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
+    configBytes=loadedBytes;config=persisted;map=nextMap;
     status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";
     editor.Programmatic(delegate{
      mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);
@@ -105,7 +115,7 @@ namespace MonakaBridge {
     var alignment=new Microsoft.Win32.OpenFileDialog{Title="Select the legacy alignment JSON"};if(alignment.ShowDialog(this)!=true)return;
     string target=ConfigPath(root),candidate=target+".migration-"+Guid.NewGuid().ToString("N");
     Command(root,"migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName)+" "+Quote(candidate));
-    File.Replace(candidate,target,target+".backup-"+Guid.NewGuid().ToString("N"));Reload();status.Text="Legacy settings imported with backups; review each space before enabling output.";
+    try{CommitFile(root,configBytes,candidate);}finally{if(File.Exists(candidate))File.Delete(candidate);}Reload();status.Text="Legacy settings imported with backups; review each space before enabling output.";
    }
    void SelectObservation(){if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);editor.Approved=false;approved.IsChecked=false;status.Text=(editor.SelectedIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
    void SelectMapping(){editor.Select(map,mappings.SelectedIndex,RenderMapping);}
@@ -122,9 +132,7 @@ namespace MonakaBridge {
     MappingEditor.RequireProfile(config,profile.SelectedItem as string);
     var edit=new Dictionary<string,object>{{"source_id",source.Text},{"device_id",device.Text},{"tracker_id",tracker.Text},{"profile",profile.SelectedItem as string},{"input_space",space.Text},{"input_revision",UInt32.Parse(revision.Text)},{"world_space",world.Text},{"space_approved",approved.IsChecked==true}};
     var updated=MappingEditor.Candidate(config,editor.SelectedIndex,edit);
-    string target=ConfigPath(root),candidate=target+".candidate-"+Guid.NewGuid().ToString("N");File.WriteAllText(candidate,new JavaScriptSerializer().Serialize(updated),new UTF8Encoding(false));
-    using(var p=Process.Start(new ProcessStartInfo(Native(root,"monaka_bridge_config"),Quote(candidate)+" validate"){UseShellExecute=false,CreateNoWindow=true})){p.WaitForExit();if(p.ExitCode!=0)throw new InvalidOperationException("Invalid mapping; candidate retained for review.");}
-    File.Replace(candidate,target,target+".backup-"+Guid.NewGuid().ToString("N"));Reload(MappingEditorState.Key(edit));
+    Commit(root,configBytes,updated);Reload(MappingEditorState.Key(edit));
     status.Text="Mapping saved. Identity is (publisher, source, logical tracker); changing source changes identity. Rebinding a logical tracker to another device in the same source requires Bridge restart. Confirm the applied revision in health.";
    }
   }
