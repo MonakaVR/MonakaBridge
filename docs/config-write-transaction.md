@@ -23,9 +23,9 @@ Under ownership: compare snapshot, validate, stage complete bytes, back up the r
 preimage, recheck, atomic replace. Only one same-snapshot writer succeeds. Failure
 before replacement preserves target; backup/staging artifacts are not authoritative.
 Orphan staging files are never promoted. Cancellation before native commit prevents
-it; interruption racing replacement requires readback. Desktop reports an observed
-completed candidate as saved, otherwise reports interrupted/unknown and requires
-reload. No automatic rollback/retry overwrites a later valid writer. The caller's
+it; interruption racing replacement requires readback. A successful native result is reported saved. An interrupted command
+reports unknown even if readback matches the proposed bytes, since identical
+bytes alone cannot prove which writer committed them. Reload is required. No automatic rollback/retry overwrites a later valid writer. The caller's
 15-second timeout bounds a stuck child; only its owned child is terminated.
 
 ## Upgrade and guarantee boundary
@@ -49,3 +49,13 @@ Regression includes the preserved old2/8 negative control, actual Desktop/CLI/tr
 WPF scheduling, typed native/calibrator snapshot path, simultaneous writers,
 unknown-field preservation, stale snapshots, injected failures and native/GUI hard
 exit recovery. Hardware, manual OS UI and full signed installer remain NOT RUN.
+
+## Protected surface evolution
+
+The existing P2R baseline JSON stays byte-identical. The reviewed config-write
+baseline pins only the enumerated configuration implementation/build/test/doc
+paths and their exact predecessor/current hashes. Historical checks still compare
+all P2R algorithm bytes through the original P2R manifest. A new guard layer
+validates current config-write files before projecting their predecessor bytes
+for those historical comparisons. No broad path exception or 5S guard removal.
+A mutated config source or historical manifest must fail the guard.

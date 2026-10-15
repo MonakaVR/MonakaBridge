@@ -1,0 +1,82 @@
+{
+  "base_commit": "5278c839893b0716ba72ffd11117b6f90eb77bc2",
+  "authorization": "User-approved shared configuration transaction/CAS across Desktop, CLI/tray/WPF/calibrator; no tracking protocol, math, Core tuning or hardware changes",
+  "unchanged_p2r_manifest_sha256": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "6aa341321dad497b240186cda5f2d065a7925cfa3982c9098793792333657da3",
+      "existed_at_base": true,
+      "base_sha256": "2a81e88bb723740543e8074d96472f39deffaf62b188641bb54d65aa88874420"
+    },
+    "include/monaka_bridge/config.hpp": {
+      "sha256": "a6c4ba2d42530a015a1a37086f38ccf28385ab30319c3638c3ee32f7c00b44f4",
+      "existed_at_base": true,
+      "base_sha256": "0875b8dfbf2bd97be249893f478255df0e6f2477d0f63138ec35615bddfbe7c9"
+    },
+    "include/monaka_bridge/config_transaction.hpp": {
+      "sha256": "a9fab3c1a18773d83e9d55f5f33b7e1926b29fed27c8cba188d164580160d79c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "src/mapping/config.cpp": {
+      "sha256": "066b67effbbd691a1fabad6313001ea5a0de5d4839380a84bcd6c1d019d8f829",
+      "existed_at_base": true,
+      "base_sha256": "6e8d5b3a7d4e0c45577f15a473f47887100b458bafbaa69c5e4c4aecf328586f"
+    },
+    "src/mapping/config_transaction.cpp": {
+      "sha256": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tools/bridge_config.cpp": {
+      "sha256": "a65e1207efca279cd4fb43e42fc94e8bf038be38fc9cf3f9189802aabcae3432",
+      "existed_at_base": true,
+      "base_sha256": "183984d2ed492e6059a8673cf48bb06571c360e72093d07788212a70c3a711f6"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "8f6f96809efd973678eea3b108a9588acf4ccae5a676dda3b53047f06e7b5ad3",
+      "existed_at_base": true,
+      "base_sha256": "174e2b71b37087a3b9820506edb701d88e15472b481b7cf85b40f1b464d2e36b"
+    },
+    "tests/bridge_tests.cpp": {
+      "sha256": "d6a43286149d390bc73f7e45c0c53d904bc5e74de0eecccf9467c626b041a0e7",
+      "existed_at_base": true,
+      "base_sha256": "d5fce2dafff41d1ed95dfa11eb893e59858a0ecf706292079fb20eed43b73e3e"
+    },
+    "tests/config_transaction_probe.cpp": {
+      "sha256": "42f88f70a1ac7c2162bea9d6f29c62c53f4a72a8a0e5950a4402eff1c38aa0f7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/config_transaction_process.py": {
+      "sha256": "c7ade1c5f5c5dcec32223a0581f71f716921320a8bc4652409fadb3c005563c1",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/SharedWriterHarness.cs": {
+      "sha256": "e2605c04e028edaf357aac0c800ac327521a0a0093f47a55034e2555c0583182",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "docs/config-write-transaction.md": {
+      "sha256": "671e786cbcb371f5aba351d3d3642408e7fa78dc0d75f62f077d6dd1d76ede6f",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/p2r_runtime_scope.py": {
+      "sha256": "dab754b68d39877abde525d0bea3fc121eb2aa832ebb9c74af2599b11a73f1d0",
+      "existed_at_base": true,
+      "base_sha256": "d8f7f8fcbc9dd0d961cb47119a7412331dbb90e7e6896f662fcf6184152302a5"
+    },
+    "tests/config_write_scope.py": {
+      "sha256": "9726f5ed999da97cc372b98b8f624206d34d5746f93074c8a7e4a1516fbe3fc5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/config_write_scope_tests.py": {
+      "sha256": "97d7b97a740e06cd6e3f330554d40416d020011d813939eb0cce0c17465d62b7",
+      "existed_at_base": false,
+      "base_sha256": null
+    }
+  }
+}
