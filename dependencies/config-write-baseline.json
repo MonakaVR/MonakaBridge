@@ -4,7 +4,7 @@
   "unchanged_p2r_manifest_sha256": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "6aa341321dad497b240186cda5f2d065a7925cfa3982c9098793792333657da3",
+      "sha256": "b1be554ff4a828c734c1aebbc8dc7e783da1cc4f49f91a05d2ffe724c8e59924",
       "existed_at_base": true,
       "base_sha256": "2a81e88bb723740543e8074d96472f39deffaf62b188641bb54d65aa88874420"
     },
@@ -59,22 +59,22 @@
       "base_sha256": null
     },
     "docs/config-write-transaction.md": {
-      "sha256": "e86783c75034c12c3632e34e0e24bf99297b301b6b350f3c42474860cac36932",
+      "sha256": "d587ee61dee43e37baa93fd263e4a8bf5c1ac0c972149fa91afc651125ea722f",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/p2r_runtime_scope.py": {
-      "sha256": "dab754b68d39877abde525d0bea3fc121eb2aa832ebb9c74af2599b11a73f1d0",
+      "sha256": "3a3b59104a9202ecc101c09c7b85e693054af88af86d4fa42afec6b70a96c60d",
       "existed_at_base": true,
       "base_sha256": "d8f7f8fcbc9dd0d961cb47119a7412331dbb90e7e6896f662fcf6184152302a5"
     },
     "tests/config_write_scope.py": {
-      "sha256": "9726f5ed999da97cc372b98b8f624206d34d5746f93074c8a7e4a1516fbe3fc5",
+      "sha256": "5162f8df79f1a571af3598dfc8f4da9ca5402ad33580fe1389546976887ffcd0",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/config_write_scope_tests.py": {
-      "sha256": "6235a2e03ce27c01084eae17134f3783413a78a09b6deac1fec1a0549634b0e1",
+      "sha256": "f27c791bcf0f0245b7bcfd99830f089b2d2d49098c8d4e51ecdf077646b3b322",
       "existed_at_base": false,
       "base_sha256": null
     },

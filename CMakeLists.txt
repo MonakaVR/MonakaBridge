@@ -291,7 +291,7 @@ endif()
 
 if(BUILD_TESTING)
  add_executable(config_transaction_probe tests/config_transaction_probe.cpp)
- target_link_libraries(config_transaction_probe PRIVATE monaka_bridge_core)
+ target_link_libraries(config_transaction_probe PRIVATE monaka_bridge_core Threads::Threads)
  add_test(NAME config_transaction_process COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/config_transaction_process.py" "$<TARGET_FILE:monaka_bridge_config>" "$<TARGET_FILE:config_transaction_probe>" "${CMAKE_CURRENT_BINARY_DIR}/config-transaction-tests")
 endif()
 

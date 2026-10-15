@@ -21,6 +21,7 @@ def approved_config_write(root,git_root=None):
 def predecessor_bytes(root,name,raw):
  e=pin(root)['files'].get(name)
  if not e:return raw
+ if e['existed_at_base'] and digest(raw)==e['base_sha256']:return raw
  if digest(raw)!=e['sha256']:raise RuntimeError('unreviewed config write drift: '+name)
  if not e['existed_at_base']:return raw
  old=historical(str(root),name)

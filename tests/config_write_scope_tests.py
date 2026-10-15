@@ -1,6 +1,6 @@
 from pathlib import Path
 import json,shutil,uuid
-from config_write_scope import approved_config_write
+from config_write_scope import approved_config_write,historical
 root=Path(__file__).resolve().parents[1]
 approved_config_write(root)
 scratch=root/'build/config-scope-drift'/str(uuid.uuid4());scratch.mkdir(parents=True)
@@ -15,5 +15,10 @@ for name in ['CMakeLists.txt','src/mapping/config.cpp','dependencies/p2r-runtime
  except RuntimeError:count+=1
  else:raise RuntimeError('Guard accepted mutant: '+name)
  p.write_bytes(old)
-if count!=4:raise RuntimeError('Missing drift negative control')
-print('PASS exact config-write scope;4 deliberate source/historical-manifest mutants rejected')
+p=scratch/'src/mapping/config.cpp';current=p.read_bytes();p.write_bytes(historical(str(root),'src/mapping/config.cpp'))
+try:approved_config_write(scratch,root)
+except RuntimeError:count+=1
+else:raise RuntimeError('Restoring predecessor bypassed current-source pin')
+p.write_bytes(current)
+if count!=5:raise RuntimeError('Missing drift negative control')
+print('PASS exact config-write scope;5 deliberate source/historical-manifest mutants rejected')

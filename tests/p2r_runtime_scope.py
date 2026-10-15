@@ -18,7 +18,7 @@ def approved_runtime(root):
   if actual!=entry['sha256']:raise RuntimeError('Unreviewed P2R runtime baseline drift: '+name)
  return set(pin['files'])|{'dependencies/p2r-runtime-baseline.json'}|extra
 def runtime_bytes(root,name,raw):
- root=Path(root);pin=json.loads((root/'dependencies/p2r-runtime-baseline.json').read_text())
+ root=Path(root);approved_runtime(root);raw=predecessor_bytes(root,name,raw);pin=json.loads((root/'dependencies/p2r-runtime-baseline.json').read_text())
  if name not in pin['files']:return raw
  approved_runtime(root)
  entry=pin['files'][name]
