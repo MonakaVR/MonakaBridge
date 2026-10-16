@@ -31,7 +31,7 @@ Metadata arrival never changes mapping/world/config revision. Retired source
 sessions remain rejected by the existing Registry lifecycle.
 
 The previous config transaction and P2R baselines stay byte-exact. The additional
-capabilities-runtime baseline enumerates and pins only fourteen reviewed paths.
+capabilities-runtime baseline enumerates and pins only eighteen reviewed paths.
 Historical projection is used for historical byte comparisons; current-source
 pins and every existing authority/math/5S assertion still execute. Drift and
 predecessor-rollback controls must fail.
