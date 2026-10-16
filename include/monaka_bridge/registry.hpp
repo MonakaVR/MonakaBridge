@@ -4,6 +4,7 @@
 #include <set>
 #include <string_view>
 #include <functional>
+#include <vector>
 namespace mb {
 namespace c1=monaka::protocol::v2;
 using Key=std::pair<std::string,std::string>;
@@ -11,10 +12,13 @@ struct Device {
  std::optional<c1::TrackerObservation> pose;
  std::optional<c1::TrackerObservation> rawPose; // Duplicate identity is checked before normalization.
  std::optional<c1::ObservationDeviceState> state;
+ // Static backend declaration copied from the original MBIP message before
+ // any compatibility normalization can replace the advertised token list.
+ std::vector<std::string> capabilities;
  std::int64_t poseSequence=-1,stateSequence=-1,fixedTime=-1,stateAt=-1,absentAt=-1;
  std::string space,convention;
  std::uint32_t revision=0;
- bool hasSpace=false,absent=false,collision=false;
+ bool hasSpace=false,hasCapabilities=false,absent=false,collision=false;
 };
 struct Source {
  std::string session,clock,peer;

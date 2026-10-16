@@ -16,7 +16,7 @@ public:
  RuntimeNormalization(Config config,std::string session):config_(std::move(config)),lifetimeContracts_(config_.contracts),session_(std::move(session)){}
  bool provisioned(const c1::Envelope&);
  c1::Envelope input(const c1::Envelope&);
- c1::Envelope output(const c1::Envelope&);
+ c1::Envelope output(const c1::Envelope&,bool preserveSupportedSubset=false);
  void validateReconfigure(const Config&)const;
  void reconfigure(Config config){validateReconfigure(config);for(const auto& [key,value]:config.contracts)lifetimeContracts_.emplace(key,value);config_=std::move(config);}
  std::string diagnostics()const;

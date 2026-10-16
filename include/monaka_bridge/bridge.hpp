@@ -22,6 +22,7 @@ public:
 struct Logical {
  History history;
  std::optional<c1::MtpPose> pose;
+ std::vector<std::string> capabilities;
  std::string inputSession,stateSignature;
  std::int64_t inputSequence=-1,poseSequence=0,stateSequence=0;
  bool wasFresh=false;

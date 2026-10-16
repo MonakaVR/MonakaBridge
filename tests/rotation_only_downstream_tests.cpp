@@ -42,7 +42,7 @@ int main() try {
    previous=out.orientation;
   }
   // Inspect the actual fixed-codec serialized fanout, not just the logical cache.
-  int monaka=0,direct=0;
+  int monaka=0,direct=0,monakaState=0,directState=0;
   bridge.fanout.flush([&](auto channel,std::string_view bytes){
    mb::c1::Envelope e;mb::c1::Error error;
    CHECK(mb::c1::DecodeEnvelope(reinterpret_cast<const uint8_t*>(bytes.data()),bytes.size(),e,error));
@@ -50,9 +50,14 @@ int main() try {
     CHECK(wire(*pose)==wire(out));
     if(channel==mb::Channel::Monaka)++monaka;if(channel==mb::Channel::Steamvr)++direct;
    }
+   if(auto state=std::get_if<mb::c1::MtpTrackerState>(&e)){
+    CHECK(state->capabilities==out.capabilities);
+    if(channel==mb::Channel::Monaka)++monakaState;if(channel==mb::Channel::Steamvr)++directState;
+   }
    return true;
   },now);
-  CHECK(monaka==1&&direct==1);
+  if(input.modality=="none")CHECK(monaka==0&&direct==0&&monakaState==1&&directState==1);
+  else CHECK(monaka==1&&direct==1);
   return out;
  };
  auto advance=[&]{++input.sequence;input.timestamp_ns+=10000000;input.sent_at_ns+=10000000;now+=10000000;};

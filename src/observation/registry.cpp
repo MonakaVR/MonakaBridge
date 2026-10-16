@@ -1,4 +1,5 @@
 #include "monaka_bridge/registry.hpp"
+#include <algorithm>
 #include <stdexcept>
 namespace mb {
 namespace {
@@ -9,7 +10,7 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
  if(now<0||!c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(bytes.data()),bytes.size(),e,error)){++malformed;return false;}
  auto* p=std::get_if<c1::TrackerObservation>(&e);auto* s=std::get_if<c1::ObservationDeviceState>(&e);
  if(!p&&!s){++rejected;return false;}
- if(sourceAuthorized&&!sourceAuthorized(e)){++rejected;return false;}
+ if(sourceAuthorized){try{if(!sourceAuthorized(e)){++rejected;return false;}}catch(const std::invalid_argument&){++rejected;return false;}}
  const auto& id=p?p->source_id:s->source_id;const auto& session=p?p->session_id:s->session_id;
  const auto& clock=p?p->clock_id:s->clock_id;const auto& device=p?p->device_id:s->device_id;
  if(!sources.count(id)&&sources.size()>=64){++rejected;return false;}
@@ -39,10 +40,19 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
   d.space=space.id;d.convention=space.convention;d.revision=space.revision;d.hasSpace=true;
  }
  const auto raw=p?std::optional<c1::TrackerObservation>(*p):std::nullopt;
+ // Capabilities describe permanent source support. Keep the backend's
+ // declaration, not a per-sample compatibility projection (LEGACY_DYNAMIC
+ // may normalize the latter to its configured upper bound).
+ auto capabilities=p?p->capabilities:s->capabilities;
+ std::sort(capabilities.begin(),capabilities.end());
  if(normalize){
   try{e=normalize(e);}catch(const std::invalid_argument&){d.collision=true;d.pose.reset();d.fixedTime=-1;return reject();}
   p=std::get_if<c1::TrackerObservation>(&e);s=std::get_if<c1::ObservationDeviceState>(&e);
  }
+ if(d.hasCapabilities&&d.capabilities!=capabilities){
+  d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;return reject();
+ }
+ d.capabilities=std::move(capabilities);d.hasCapabilities=true;
  if(p){
   d.poseSequence=seq;
   if(p->timestamp_ns<=d.absentAt)return reject();

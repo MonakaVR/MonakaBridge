@@ -29,13 +29,16 @@ c1::Envelope RuntimeNormalization::input(const c1::Envelope& message){
  bp::Binding binding{{"monaka.observation","",key.first,key.second},facts.session,mi::CapabilitySet(profile.inputDeclaration),profile.provenance};
  return apply(message,profile,binding,profile.inputMode,"input_after_authorization");
 }
-c1::Envelope RuntimeNormalization::output(const c1::Envelope& message){
+c1::Envelope RuntimeNormalization::output(const c1::Envelope& message,bool preserveSupportedSubset){
  const auto facts=mi::ProjectCapabilities(message);
  for(const auto& [key,mapping]:config_.bindings)if(mapping.source==facts.identity.source&&mapping.tracker==facts.identity.entity){
   const auto found=config_.contracts.find(key);if(found==config_.contracts.end())break;
   const auto& profile=found->second;
   if(const auto* pose=std::get_if<c1::MtpPose>(&message);pose&&(pose->input.source_id!=mapping.source||pose->input.device_id!=mapping.device))throw mi::ContractError("IdentityMismatch");
-  bp::Binding binding{{"monaka.tracking",config_.bridgeId,mapping.source,mapping.tracker},session_,mi::CapabilitySet(profile.outputDeclaration),profile.provenance};
+  const mi::CapabilitySet allowed(profile.outputDeclaration);
+  const auto declaration=preserveSupportedSubset?facts.capabilities:allowed;
+  if(preserveSupportedSubset&&!declaration.subsetOf(allowed))throw mi::ContractError("UndeclaredCapability");
+  bp::Binding binding{{"monaka.tracking",config_.bridgeId,mapping.source,mapping.tracker},session_,declaration,profile.provenance};
   return apply(message,profile,binding,profile.outputMode,"output_before_publication");
  }
  ++rejected_;recent_.push_back(J{{"stage","output_before_publication"},{"policy","STRICT"},{"result","rejected"},{"reason","MissingDeclaration"},{"source",facts.identity.source},{"publisher",facts.identity.publisher},{"entity",facts.identity.entity},{"session",facts.session},{"advertised",facts.capabilities.tokens()}}.dump());if(recent_.size()>64)recent_.pop_front();throw mi::ContractError("MissingDeclaration");
