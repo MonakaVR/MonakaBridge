@@ -291,6 +291,7 @@ if(BUILD_TESTING)
  target_link_libraries(capability_propagation_tests PRIVATE monaka_bridge_core)
  target_compile_definitions(capability_propagation_tests PRIVATE ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
  add_test(NAME static_capability_propagation COMMAND capability_propagation_tests)
+ add_test(NAME capability_runtime_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/capability_runtime_scope_tests.py")
 endif()
 
 if(BUILD_TESTING)

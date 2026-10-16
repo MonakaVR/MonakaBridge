@@ -62,9 +62,11 @@ void Bridge::tick(std::int64_t now){
   if(!config_.contracts.count(key))continue; // Fail closed; configuration tools never infer support.
   auto& l=logical_[key];auto d=registry.find(key);bool active=d&&approved(b,*d);bool fresh=active&&registry.fresh(key,now);
   const auto src=registry.sources.find(key.first);const std::string inputSession=src==registry.sources.end()?"":src->second.session;
-  if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.capabilities.clear();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();}
+  if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();}
   const auto& contract=config_.contracts.at(key);
-  if(d&&d->hasCapabilities)l.capabilities=outputCapabilities(d,contract,b);else l.capabilities.clear();
+  // Support belongs to the logical output lifetime, not pose freshness or the
+  // backend session. Keep the last verified declaration while invalidating data.
+  if(d&&d->hasCapabilities)l.capabilities=outputCapabilities(d,contract,b);
   if(fresh && d->pose && (l.inputSequence!=d->poseSequence || !l.pose)){
    const auto& in=*d->pose;
    if(l.poseSequence==std::numeric_limits<std::int64_t>::max())throw std::runtime_error("MTP sequence exhausted: restart Bridge");
@@ -87,7 +89,9 @@ void Bridge::tick(std::int64_t now){
   const std::string capabilitySignature=[&]{std::string value;for(const auto& token:l.capabilities)value+=std::to_string(token.size())+":"+token;return value;}();
   const std::string poseState=l.pose?":"+l.pose->modality+":"+l.pose->tracking_state+":"+(l.pose->validity.position?"p1":"p0")+":"+(l.pose->validity.orientation?"q1":"q0"): ":no-pose";
   const std::string signature=(fresh?"fresh":"stale")+std::string(active?":approved:":":blocked:")+(d?std::to_string(d->stateSequence):"none")+":"+inputSession+":"+capabilitySignature+poseState;
-  if(signature!=l.stateSignature){
+  // No backend declaration has been verified yet. Do not freeze an empty
+  // declaration into the Core lifetime and then change it on the first packet.
+  if(signature!=l.stateSignature&&!l.capabilities.empty()){
    if(l.stateSequence==std::numeric_limits<std::int64_t>::max())throw std::runtime_error("MTP state sequence exhausted");
    c1::MtpTrackerState out;header(out,config_,session_,b,l.stateSequence++,now,now);
    out.presence=fresh?"present":d&&d->absent?"absent":"unknown";out.tracking_state=fresh&&l.pose?l.pose->tracking_state:"disconnected";
@@ -102,13 +106,19 @@ void Bridge::tick(std::int64_t now){
 void Bridge::reconfigure(Config c,std::int64_t now){
  validateConfig(c);normalization_.validateReconfigure(c);if(c.bridgeId!=config_.bridgeId)throw std::invalid_argument("bridge ID change requires restart");
  if(c.revision<=config_.revision)throw std::invalid_argument("config update must increase mapping_revision");
+ for(const auto& [key,l]:logical_){
+  const auto old=config_.bindings.find(key),next=c.bindings.find(key);const auto* device=registry.find(key);
+  if(old!=config_.bindings.end()&&next!=c.bindings.end()&&old->second.tracker==next->second.tracker&&device&&device->hasCapabilities&&!l.capabilities.empty()&&
+     c.contracts.count(key)&&outputCapabilities(device,c.contracts.at(key),next->second)!=l.capabilities)
+   throw std::invalid_argument("output capability transform change requires coordinated new session/restart");
+ }
  auto owners=trackerOwners_;std::set<Key> lifetimeKeys;for(auto& [key,l]:logical_)lifetimeKeys.insert(key);
  for(auto& [key,b]:c.bindings){auto old=owners.find(Key{b.source,b.tracker});if(old!=owners.end()&&old->second!=key)throw std::invalid_argument("tracker reassignment requires Bridge restart");owners.emplace(Key{b.source,b.tracker},key);lifetimeKeys.insert(key);}
  if(owners.size()>256||lifetimeKeys.size()>256)throw std::invalid_argument("lifetime identity bound reached; coordinate Bridge and SteamVR restart");
  trackerOwners_=std::move(owners);
  fanout.clear(Channel::Steamvr);fanout.clear(Channel::Monaka);
  // Invalidate old logical IDs before replacement; no stale transform is emitted afterward.
- for(auto& [key,l]:logical_){const auto old=config_.bindings.find(key);if(old!=config_.bindings.end()&&(!c.bindings.count(key)||c.bindings.at(key).tracker!=old->second.tracker)){c1::MtpTrackerState s;header(s,config_,session_,old->second,l.stateSequence++,now,now);s.presence="absent";s.tracking_state="disconnected";s.capabilities=l.capabilities;publish(s,now);}l.history=History{};l.pose.reset();l.stateSignature.clear();}
+ for(auto& [key,l]:logical_){const auto old=config_.bindings.find(key);if(old!=config_.bindings.end()&&!l.capabilities.empty()&&(!c.bindings.count(key)||c.bindings.at(key).tracker!=old->second.tracker)){c1::MtpTrackerState s;header(s,config_,session_,old->second,l.stateSequence++,now,now);s.presence="absent";s.tracking_state="disconnected";s.capabilities=l.capabilities;publish(s,now);}l.history=History{};l.pose.reset();l.stateSignature.clear();}
  normalization_.reconfigure(c);config_=std::move(c);registry.timeoutNs=config_.timeoutNs;
  tick(now);
 }

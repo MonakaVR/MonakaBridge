@@ -40,15 +40,15 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
   d.space=space.id;d.convention=space.convention;d.revision=space.revision;d.hasSpace=true;
  }
  const auto raw=p?std::optional<c1::TrackerObservation>(*p):std::nullopt;
- // Capabilities describe permanent source support. Keep the backend's
- // declaration, not a per-sample compatibility projection (LEGACY_DYNAMIC
- // may normalize the latter to its configured upper bound).
- auto capabilities=p?p->capabilities:s->capabilities;
- std::sort(capabilities.begin(),capabilities.end());
  if(normalize){
   try{e=normalize(e);}catch(const std::invalid_argument&){d.collision=true;d.pose.reset();d.fixedTime=-1;return reject();}
   p=std::get_if<c1::TrackerObservation>(&e);s=std::get_if<c1::ObservationDeviceState>(&e);
  }
+ // STRICT verifies the producer's explicit fixed declaration; LEGACY_DYNAMIC
+ // obtains it only from the provisioned P1 declaration. A raw advertised subset
+ // is never a second source of support or a substitute normalization policy.
+ auto capabilities=p?p->capabilities:s->capabilities;
+ std::sort(capabilities.begin(),capabilities.end());
  if(d.hasCapabilities&&d.capabilities!=capabilities){
   d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;return reject();
  }

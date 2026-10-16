@@ -23,21 +23,42 @@ mb::c1::MtpTrackerState lastPicoState(const Captured& captured){
  throw std::runtime_error("missing logical-pico state");
 }
 bool has(const std::vector<std::string>& values,const std::string& value){return std::find(values.begin(),values.end(),value)!=values.end();}
-mb::Config capabilityConfig(){
+mb::Config capabilityConfig(bool qOnly=false){
  auto c=config();
  for(auto& [key,contract]:c.contracts){
   contract.inputDeclaration={"position","orientation","linear_velocity","angular_velocity","linear_acceleration","battery_fraction","charging"};
   contract.outputDeclaration=contract.inputDeclaration;
   contract.inputMode=contract.outputMode=monaka::bridge_input::Mode::LEGACY_DYNAMIC;
+  if(qOnly){contract.inputDeclaration={"orientation"};contract.outputDeclaration={"orientation","angular_velocity"};contract.inputMode=monaka::bridge_input::Mode::STRICT;}
  }
  return c;
 }
 int main()try{
  const mb::Key key{"pico","device"};
- // DeviceState may be the first message. Its static Q-only declaration must
- // be cached and used even though the legacy contract allows a wider set.
  {
-  auto c=capabilityConfig();mb::Bridge bridge(c,SB);auto p=sample();p.capabilities={"orientation"};p.modality="rotation_only";p.position.reset();p.validity={false,true};p.tracking_state="degraded";
+  mb::Bridge bridge(capabilityConfig(),SB);bridge.tick(1);
+  auto unknown=flushMonaka(bridge,2);CHECK(unknown.poses.empty()&&unknown.states.empty());
+ }
+ // Accepted P1 LEGACY_DYNAMIC packets may advertise a changing subset.
+ // The provisioned declaration, not that raw subset, is the stable support.
+ {
+  auto c=capabilityConfig();mb::Bridge bridge(c,SB);auto p=sample();
+  CHECK(bridge.receive(wire(p),"peer",10000000));flushMonaka(bridge,10000001);
+  p.sequence=1;p.capabilities={"orientation"};p.modality="rotation_only";
+  p.position.reset();p.validity={false,true};p.tracking_state="degraded";
+  CHECK(bridge.receive(wire(p),"peer",12000000));flushMonaka(bridge,12000001);
+  p=sample();p.sequence=2;
+  CHECK(bridge.receive(wire(p),"peer",14000000));flushMonaka(bridge,14000001);
+  const auto declarations=bridge.logical().at(key).capabilities;
+  CHECK(has(declarations,"position")&&has(declarations,"orientation"));
+  auto transformed=c;transformed.revision++;transformed.bindings.at(key).mount.translation={1,0,0};
+  bool refused=false;try{bridge.reconfigure(transformed,15000000);}catch(const std::invalid_argument&){refused=true;}
+  CHECK(refused&&bridge.config().revision==c.revision);
+ }
+ // DeviceState may be the first message. Its static Q-only declaration must
+ // be cached from its explicit Q-only declaration, without a Pos+Q legacy policy.
+ {
+  auto c=capabilityConfig(true);mb::Bridge bridge(c,SB);auto p=sample();p.capabilities={"orientation"};p.modality="rotation_only";p.position.reset();p.validity={false,true};p.tracking_state="degraded";
   auto s=state(p);s.capabilities=p.capabilities;
   CHECK(bridge.receive(wire(s),"peer",10000000));
   auto first=flushMonaka(bridge,10000001);CHECK(!first.states.empty());
@@ -80,20 +101,20 @@ int main()try{
   CHECK(lastPicoState(stale).modality=="none"&&lastPicoState(stale).tracking_state=="disconnected");
   auto reconnect=state(sample(),0);reconnect.session_id=reconnect.clock_id=S2;reconnect.capabilities={"orientation"};
   CHECK(bridge.receive(wire(reconnect),"peer",900000000));auto newSession=flushMonaka(bridge,900000001);
-  CHECK(!has(lastPicoState(newSession).capabilities,"position")&&has(lastPicoState(newSession).capabilities,"orientation"));
+  CHECK(has(lastPicoState(newSession).capabilities,"position")&&has(lastPicoState(newSession).capabilities,"orientation"));
   auto q=sample();q.session_id=q.clock_id=S2;q.sequence=0;q.capabilities={"orientation"};q.modality="rotation_only";q.position.reset();q.validity={false,true};q.tracking_state="degraded";
   CHECK(bridge.receive(wire(q),"peer",901000000));flushMonaka(bridge,901000001);
-  CHECK(!has(bridge.logical().at(key).pose->capabilities,"position")&&has(bridge.logical().at(key).pose->capabilities,"orientation"));
+  CHECK(has(bridge.logical().at(key).pose->capabilities,"position")&&has(bridge.logical().at(key).pose->capabilities,"orientation"));
  }
  // Pose and DeviceState declarations share one static contract. A changed
  // declaration within a session quarantines the identity instead of widening it.
  {
-  auto c=capabilityConfig();mb::Bridge bridge(c,SB);auto q=sample();q.capabilities={"orientation"};q.modality="rotation_only";q.position.reset();q.validity={false,true};q.tracking_state="degraded";
+  auto c=capabilityConfig(true);mb::Bridge bridge(c,SB);auto q=sample();q.capabilities={"orientation"};q.modality="rotation_only";q.position.reset();q.validity={false,true};q.tracking_state="degraded";
   auto s=state(q);s.capabilities=q.capabilities;
   CHECK(bridge.receive(wire(s),"peer",10000000));flushMonaka(bridge,10000001);
   auto changed=sample();changed.sequence=0;
   CHECK(!bridge.receive(wire(changed),"peer",11000000));
-  CHECK(!bridge.logical().at(key).pose&&bridge.logical().at(key).capabilities.empty());
+  CHECK(!bridge.logical().at(key).pose&&has(bridge.logical().at(key).capabilities,"orientation"));
  }
  // Unknown capabilities are rejected without widening the output declaration.
  {

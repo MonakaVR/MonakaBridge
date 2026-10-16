@@ -1,0 +1,77 @@
+{
+  "base_commit": "e08b95f8e147d75a9d48c4eb9e747a1db9194c1a",
+  "reused_commit": "0d582284ea732f22f322a0558b9b9739374bd889",
+  "authorization": "User-approved fixed Backend capabilities through Registry/routing plus exact regression baseline; preserve canonical P1, calibration, existing config transaction and all protected surfaces",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "1674121e3bc02522225d98b9dbb7db53b822d23299c07db47ff2fd730e3e32e1",
+      "existed_at_base": true,
+      "base_sha256": "b1be554ff4a828c734c1aebbc8dc7e783da1cc4f49f91a05d2ffe724c8e59924"
+    },
+    "docs/capabilities-runtime-integration.md": {
+      "sha256": "1d3d085413bacc118a7fed9b801ab207b9e7fade58f2094e7294f5cf3a9c6f27",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/bridge.hpp": {
+      "sha256": "d8769afc2127a0c3d42f367b359b42dce7453bce6e04a42c8a7af4fbc0240032",
+      "existed_at_base": true,
+      "base_sha256": "beccecefa262a29faeb1e90450f795ab7e2c0d44b6e4b470c542baa24b0d551e"
+    },
+    "include/monaka_bridge/registry.hpp": {
+      "sha256": "6575ace1c0e26867b30804dfc38cf4c5ac071e917309735dbed2f8a510a9d781",
+      "existed_at_base": true,
+      "base_sha256": "78314d2fba4d749c4e495fb9adbbe9a2578c68819af9c9e627a6bb556d26e7ba"
+    },
+    "include/monaka_bridge/runtime_normalization.hpp": {
+      "sha256": "3116adbe963e5c6ccf583ef996e1fd28b6b89f7e745c9e3af51432538b46562a",
+      "existed_at_base": true,
+      "base_sha256": "79eae64bbca2d98ef4169c7792eb6ca1152f321343d9394159a78e3a74105bc8"
+    },
+    "src/observation/registry.cpp": {
+      "sha256": "be5ed0e40a2e0c221a128d4e13da0345e1b7fc7b997510f9b26d9ee1c272b826",
+      "existed_at_base": true,
+      "base_sha256": "31ebfde6b03ad87f24c37949c5ef60f4b0de76a1a9a986f94c678808f353087c"
+    },
+    "src/routing/bridge.cpp": {
+      "sha256": "0f955cc0c4d753b965ded235fa985182a55513fab137a0ca80ca18257a26a3e8",
+      "existed_at_base": true,
+      "base_sha256": "7a523087b09d35e00010e8d78406b25ee73ff14a9ca9b193661c58c0dfe34c7f"
+    },
+    "src/routing/runtime_normalization.cpp": {
+      "sha256": "3eecc7e2a2ebb6160e2804d1cce2edfd40a4d3fb906d0309c50fdd44cb5d95bf",
+      "existed_at_base": true,
+      "base_sha256": "f80569ba516c1570b7ad8678e8ab245b62866483ba2cb4764581060a5b5c9dea"
+    },
+    "tests/capability_propagation_tests.cpp": {
+      "sha256": "cda75c34d7a6ed0fe665c8621f8e48d125e7349465e1e08f206b22f6b225518d",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/capability_runtime_scope.py": {
+      "sha256": "a5837156a9fda7c282e9c2f2d76394f8a9a439d3ad2e7d82af3fb1a3b5da2e10",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/capability_runtime_scope_tests.py": {
+      "sha256": "30a067aa26c89666ec85468cc4825b33cf41606b8ce88c5e896cf4937d260d9c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/config_write_scope.py": {
+      "sha256": "fcf4912b9370490b06e9e238b53d761299261cdf06c19cc27cf0bc20d8d1baf8",
+      "existed_at_base": true,
+      "base_sha256": "5162f8df79f1a571af3598dfc8f4da9ca5402ad33580fe1389546976887ffcd0"
+    },
+    "tests/config_write_scope_tests.py": {
+      "sha256": "0bd565618e5f69d71f8878a002b0e807a109d0888237a09c1a9f718ab661e4e6",
+      "existed_at_base": true,
+      "base_sha256": "f27c791bcf0f0245b7bcfd99830f089b2d2d49098c8d4e51ecdf077646b3b322"
+    },
+    "tests/rotation_only_downstream_tests.cpp": {
+      "sha256": "84bc097c0136b94d4bc0ce9d8fd79503c3467ee1adca8ba0b4defb6ae0c6f6ab",
+      "existed_at_base": true,
+      "base_sha256": "64c8f137993d7a6f3332e6ea48c53cdcbabae2a6643f4e517f6fb45cd3117694"
+    }
+  }
+}

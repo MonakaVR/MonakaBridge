@@ -12,8 +12,8 @@ struct Device {
  std::optional<c1::TrackerObservation> pose;
  std::optional<c1::TrackerObservation> rawPose; // Duplicate identity is checked before normalization.
  std::optional<c1::ObservationDeviceState> state;
- // Static backend declaration copied from the original MBIP message before
- // any compatibility normalization can replace the advertised token list.
+ // Canonical fixed declaration after P1 policy selection/normalization.
+ // Independent of latest pose, validity and raw legacy advertised subsets.
  std::vector<std::string> capabilities;
  std::int64_t poseSequence=-1,stateSequence=-1,fixedTime=-1,stateAt=-1,absentAt=-1;
  std::string space,convention;
