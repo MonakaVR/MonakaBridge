@@ -82,6 +82,8 @@ int main() try {
     auto configValue = config();
     auto& binding = configValue.bindings.at({"pico","device"});
     binding.mount.translation={.01,.02,.03};
+    // Existing offset mount cannot provide acceleration terms; explicit fixture contract.
+    configValue.contracts.at({"pico","device"}).outputDeclaration={"position","orientation","linear_velocity","angular_velocity","battery_fraction","charging"};
     auto shared=binding;shared.device="device-shared";shared.tracker="logical-shared";
     configValue.bindings[{shared.source,shared.device}]=shared;
     const auto target = mb::selectWorldCalibrationTarget(

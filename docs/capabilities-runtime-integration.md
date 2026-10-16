@@ -35,7 +35,14 @@ capabilities-runtime baseline enumerates and pins only fourteen reviewed paths.
 Historical projection is used for historical byte comparisons; current-source
 pins and every existing authority/math/5S assertion still execute. Drift and
 predecessor-rollback controls must fail.
+Current source is checked afresh at each approval boundary. Historical projection
+checks its supplied bytes without recursively repeating the whole approval;
+there is no cache of current-source hashes.
 
 Software-only work. No device/SteamVR operation or production cutover.
 Admission Gate remains default OFF; CANDIDATE effective validity stays false.
 PICO same-tracker IMU authenticity: NOT VERIFIED / DEFERRED.
+
+Generated output uses canonical STRICT against the configured output declaration, including when a separately selected legacy replay entrypoint uses LEGACY_DYNAMIC. Startup rejects output channels unsupported by the explicit backend declaration and the existing mount transform. No packet-derived replacement binding is allowed.
+
+Offset-mount calibration fixtures explicitly omit linear_acceleration in their output declaration; all existing calibration numeric/identity assertions remain.

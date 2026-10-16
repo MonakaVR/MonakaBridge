@@ -14,6 +14,7 @@ int main() try {
  binding.world.rotation={0,0,root,root};binding.world.translation={10,20,30};
  binding.mount.rotation={root,0,0,root};binding.mount.translation={.2,0,0};
  const mb::Key key{binding.source,binding.device};c.bindings[key]=binding;c.contracts[key]=config().contracts.at({"pico","device"});
+ c.contracts.at(key).outputDeclaration={"position","orientation","linear_velocity","angular_velocity","battery_fraction","charging"};
  mb::Bridge bridge(c,SB);
  auto input=sample(binding.source);input.device_id=binding.device;
  input.coordinate_space.convention=profile.convention;

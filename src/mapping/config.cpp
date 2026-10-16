@@ -5,6 +5,7 @@
 #include <set>
 #include <limits>
 #include <chrono>
+#include <algorithm>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -28,6 +29,21 @@ template<std::size_t N>void axes(const std::array<int,N>& a){std::set<int>s;for(
 void transform(const Rigid& r){for(double v:r.translation)if(!std::isfinite(v))throw std::invalid_argument("nonfinite translation");auto q=normalized(r.rotation);double n=0;for(auto x:r.rotation)n+=x*x;if(std::abs(n-1)>1e-5)throw std::invalid_argument("configuration rotations must be unit quaternions");}
 void backup(const std::filesystem::path& p){if(!std::filesystem::exists(p))return;auto b=p;b+=".pre-monaka-bridge.bak";if(!std::filesystem::exists(b))std::filesystem::copy_file(p,b);}
 }
+std::vector<std::string> projectOutputCapabilities(const std::vector<std::string>& source,const CapabilityProfile& contract,const Binding& binding){
+ const auto contains=[&](const std::string& value){return std::find(source.begin(),source.end(),value)!=source.end();};
+ const bool orientation=contains("orientation"),offset=norm(binding.mount.translation)>0;
+ std::vector<std::string> result;
+ for(const auto& capability:contract.outputDeclaration){
+  bool supported=false;
+  if(capability=="position"||capability=="orientation")supported=contains(capability);
+  else if(capability=="linear_velocity")supported=contains("position")&&contains(capability)&&(!offset||orientation);
+  else if(capability=="angular_velocity")supported=orientation; // Existing orientation derivative path.
+  else if(capability=="linear_acceleration")supported=contains("position")&&contains(capability)&&!offset;
+  else if(capability=="battery_fraction"||capability=="charging")supported=contains(capability);
+  if(supported)result.push_back(capability);
+ }
+ return result;
+}
 void validateConfig(const Config& c){
  id(c.bridgeId);if(c.bindings.size()>256||c.profiles.size()>64||c.timeoutNs<1000000||c.timeoutNs>10000000000LL)throw std::invalid_argument("config bounds");
  std::set<Key> trackers;
@@ -37,6 +53,8 @@ void validateConfig(const Config& c){
   if(contract!=c.contracts.end()){
    if(contract->second.id.empty()||contract->second.provenance.empty())throw std::invalid_argument("MissingDeclaration: profile ID/provenance required");
    monaka::input::CapabilitySet input(contract->second.inputDeclaration),output(contract->second.outputDeclaration);
+   if(monaka::input::CapabilitySet(projectOutputCapabilities(input.tokens(),contract->second,b))!=output)
+    throw std::invalid_argument("output declaration exceeds verified backend/transform support");
   } // Unprovisioned mappings remain subject to all ordinary configuration checks.
   if(key!=Key{b.source,b.device})throw std::invalid_argument("mapping key mismatch");
   for(const auto& v:{b.source,b.device,b.tracker,b.profile,b.inputSpace,b.worldSpace})id(v);

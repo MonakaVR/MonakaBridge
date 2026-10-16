@@ -4,7 +4,7 @@ import hashlib,json,subprocess
 from functools import lru_cache
 BASE='e08b95f8e147d75a9d48c4eb9e747a1db9194c1a'
 PIN='dependencies/capabilities-runtime-baseline.json'
-FILES={'CMakeLists.txt','include/monaka_bridge/bridge.hpp','include/monaka_bridge/registry.hpp',
+FILES={'tests/world_calibration_tests.cpp','tests/trajectory_calibration_tests.cpp','include/monaka_bridge/config.hpp','src/mapping/config.cpp','CMakeLists.txt','include/monaka_bridge/bridge.hpp','include/monaka_bridge/registry.hpp',
  'include/monaka_bridge/runtime_normalization.hpp','src/observation/registry.cpp','src/routing/bridge.cpp',
  'src/routing/runtime_normalization.cpp','tests/rotation_only_downstream_tests.cpp','tests/capability_propagation_tests.cpp',
  'tests/config_write_scope.py','tests/config_write_scope_tests.py','tests/capability_runtime_scope.py',
@@ -22,7 +22,10 @@ def approved_capabilities(root,git_root=None):
   if e['existed_at_base'] and digest(historical(repo,name))!=e['base_sha256']:raise RuntimeError('capability predecessor drift: '+name)
  return FILES|{PIN}
 def predecessor(root,name,raw,git_root=None):
- root=Path(root);approved_capabilities(root,git_root);p=json.loads((root/PIN).read_text());e=p['files'].get(name)
+ # Approval boundaries validate every current source without caching. Projection
+ # checks just the supplied bytes; repeating the whole approval for every entry
+ # in every historical archive otherwise makes the guard quadratic.
+ root=Path(root);p=json.loads((root/PIN).read_text());e=p['files'].get(name)
  if not e:return raw
  if e['existed_at_base'] and digest(raw)==e['base_sha256']:return raw
  if digest(raw)!=e['sha256']:raise RuntimeError('unreviewed capability drift: '+name)

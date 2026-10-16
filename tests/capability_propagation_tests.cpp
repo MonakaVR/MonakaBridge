@@ -116,6 +116,26 @@ int main()try{
   CHECK(!bridge.receive(wire(changed),"peer",11000000));
   CHECK(!bridge.logical().at(key).pose&&has(bridge.logical().at(key).capabilities,"orientation"));
  }
+ // Startup refuses declarations unsupported by the explicit backend/transform.
+ {
+  auto c=capabilityConfig(true);c.contracts.at(key).outputDeclaration.push_back("position");
+  bool refused=false;try{mb::Bridge bridge(c,SB);}catch(const std::invalid_argument&){refused=true;}CHECK(refused);
+  c=capabilityConfig();c.bindings.at(key).mount.translation={1,0,0};
+  refused=false;try{mb::Bridge bridge(c,SB);}catch(const std::invalid_argument&){refused=true;}CHECK(refused);
+  auto& out=c.contracts.at(key).outputDeclaration;out.erase(std::find(out.begin(),out.end(),"linear_acceleration"));
+  mb::Bridge bridge(c,SB);CHECK(bridge.receive(wire(sample()),"peer",10000000));
+  CHECK(!has(bridge.logical().at(key).pose->capabilities,"linear_acceleration"));
+ }
+ // Canonical STRICT checks generated messages against the configured binding,
+ // even when the compatibility entrypoint explicitly uses LEGACY_DYNAMIC.
+ {
+  auto c=capabilityConfig();mb::RuntimeNormalization runtime(c,SB);
+  mb::Bridge bridge(c,SB);CHECK(bridge.receive(wire(sample()),"peer",10000000));
+  auto state=lastPicoState(flushMonaka(bridge,10000001));state.capabilities={"orientation"};
+  bool refused=false;try{runtime.output(state,true);}catch(const monaka::input::ContractError&){refused=true;}CHECK(refused);
+  auto accepted=std::get<mb::c1::MtpTrackerState>(runtime.output(state,false));
+  CHECK(has(accepted.capabilities,"position"));
+ }
  // Unknown capabilities are rejected without widening the output declaration.
  {
   auto c=capabilityConfig();mb::Bridge bridge(c,SB);auto bytes=wire(sample());

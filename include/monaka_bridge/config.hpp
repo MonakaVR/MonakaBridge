@@ -28,6 +28,10 @@ Config parseConfigDocument(const std::string&);
 Config loadConfig(const std::filesystem::path&);
 void saveConfig(const std::filesystem::path&,const Config&);
 void validateConfig(const Config&);
+// Supported output channels from an explicit backend declaration and existing
+// transform contract. Never inspect pose values or current validity here.
+std::vector<std::string> projectOutputCapabilities(const std::vector<std::string>&,
+                                                  const CapabilityProfile&,const Binding&);
 // Explicit migration requires a destination mapping/space; retains originals and backup.
 void migrateLegacy(const std::filesystem::path& route,const std::filesystem::path& alignment,
                    const std::filesystem::path& destination,Config);

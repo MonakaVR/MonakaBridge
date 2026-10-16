@@ -9,7 +9,7 @@
       "base_sha256": "b1be554ff4a828c734c1aebbc8dc7e783da1cc4f49f91a05d2ffe724c8e59924"
     },
     "docs/capabilities-runtime-integration.md": {
-      "sha256": "1d3d085413bacc118a7fed9b801ab207b9e7fade58f2094e7294f5cf3a9c6f27",
+      "sha256": "4a9e48f1a718574bffce136091ec766bd567f4882e01c18389a8fabb685ed21e",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -18,15 +18,25 @@
       "existed_at_base": true,
       "base_sha256": "beccecefa262a29faeb1e90450f795ab7e2c0d44b6e4b470c542baa24b0d551e"
     },
+    "include/monaka_bridge/config.hpp": {
+      "sha256": "f887a1a1af6a511242d6399d01769380d3bb32ca5446dfa977a5c502de1e19e2",
+      "existed_at_base": true,
+      "base_sha256": "76358b3d14d3d5f7ea579b9d03ea778c362d5aa2ea6ff88756f82071d61a385a"
+    },
     "include/monaka_bridge/registry.hpp": {
       "sha256": "6575ace1c0e26867b30804dfc38cf4c5ac071e917309735dbed2f8a510a9d781",
       "existed_at_base": true,
       "base_sha256": "78314d2fba4d749c4e495fb9adbbe9a2578c68819af9c9e627a6bb556d26e7ba"
     },
     "include/monaka_bridge/runtime_normalization.hpp": {
-      "sha256": "3116adbe963e5c6ccf583ef996e1fd28b6b89f7e745c9e3af51432538b46562a",
+      "sha256": "a36c99eb5cb380f0dff1f4554f376fc723d304faa364c03673c5e55959794ec8",
       "existed_at_base": true,
       "base_sha256": "79eae64bbca2d98ef4169c7792eb6ca1152f321343d9394159a78e3a74105bc8"
+    },
+    "src/mapping/config.cpp": {
+      "sha256": "1e4225341b809899ab3b156959671aed7d9918f57dcc8aba2c23411641e01814",
+      "existed_at_base": true,
+      "base_sha256": "f2e6273b6196c9821839b42cae97b3d24d3fb7e19ce513344b55b960f4f6dddc"
     },
     "src/observation/registry.cpp": {
       "sha256": "be5ed0e40a2e0c221a128d4e13da0345e1b7fc7b997510f9b26d9ee1c272b826",
@@ -34,22 +44,22 @@
       "base_sha256": "31ebfde6b03ad87f24c37949c5ef60f4b0de76a1a9a986f94c678808f353087c"
     },
     "src/routing/bridge.cpp": {
-      "sha256": "0f955cc0c4d753b965ded235fa985182a55513fab137a0ca80ca18257a26a3e8",
+      "sha256": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0",
       "existed_at_base": true,
       "base_sha256": "7a523087b09d35e00010e8d78406b25ee73ff14a9ca9b193661c58c0dfe34c7f"
     },
     "src/routing/runtime_normalization.cpp": {
-      "sha256": "3eecc7e2a2ebb6160e2804d1cce2edfd40a4d3fb906d0309c50fdd44cb5d95bf",
+      "sha256": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58",
       "existed_at_base": true,
       "base_sha256": "f80569ba516c1570b7ad8678e8ab245b62866483ba2cb4764581060a5b5c9dea"
     },
     "tests/capability_propagation_tests.cpp": {
-      "sha256": "cda75c34d7a6ed0fe665c8621f8e48d125e7349465e1e08f206b22f6b225518d",
+      "sha256": "2ba1bd437fe249723e0fee8c70d4d214070417a9e873a2f1e40752f6e9644097",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/capability_runtime_scope.py": {
-      "sha256": "a5837156a9fda7c282e9c2f2d76394f8a9a439d3ad2e7d82af3fb1a3b5da2e10",
+      "sha256": "2329916db7f0297a16be758a5f1569c609a81d62fda3023863e8afa7cfa524ff",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -69,9 +79,19 @@
       "base_sha256": "f27c791bcf0f0245b7bcfd99830f089b2d2d49098c8d4e51ecdf077646b3b322"
     },
     "tests/rotation_only_downstream_tests.cpp": {
-      "sha256": "84bc097c0136b94d4bc0ce9d8fd79503c3467ee1adca8ba0b4defb6ae0c6f6ab",
+      "sha256": "49eaf9acbd39ddab2d7d9973e320d4144dd816ea37b797c10f491be50473bc04",
       "existed_at_base": true,
       "base_sha256": "64c8f137993d7a6f3332e6ea48c53cdcbabae2a6643f4e517f6fb45cd3117694"
+    },
+    "tests/trajectory_calibration_tests.cpp": {
+      "sha256": "2ec5c624455b2a308fccbc34ef0866a896b1c70bb2576b5b047d06fa94b7c4b8",
+      "existed_at_base": true,
+      "base_sha256": "b151817392215d1f20f08d60051ad9c8e926ce82838bd1031fb0a0e24942d633"
+    },
+    "tests/world_calibration_tests.cpp": {
+      "sha256": "eaf133f91c92004aea1a656bd0ab0566214e7778aae2d04f62c009dd7e38d664",
+      "existed_at_base": true,
+      "base_sha256": "9a3416c353f26e3a3a04dea0602bcddc96b4ea1abc117b971b707b8136200859"
     }
   }
 }

@@ -44,6 +44,8 @@ int main()try{
     auto stalePairs=exact;stalePairs[0].reference.timeNs+=100000000;reject([&]{mb::solveTrajectory(stalePairs,1);});
 
     auto c=config();auto& b=c.bindings.at({"pico","device"});b.mount.translation={1,2,3};b.mount.rotation=axis(2,.5);
+    // Existing offset mount cannot provide acceleration terms; explicit fixture contract.
+    c.contracts.at({"pico","device"}).outputDeclaration={"position","orientation","linear_velocity","angular_velocity","battery_fraction","charging"};
     auto target=mb::selectWorldCalibrationTarget(c,"pico","device","logical-pico","native",1);
     mb::TrajectoryRecorder recorder(c,target,"controller-serial");auto p=sample();p.orientation=mb::Quat{0,0,0,1};
     CHECK(recorder.observation(p,1000000000));CHECK(recorder.sourceSamples().back().timeNs==999000000);

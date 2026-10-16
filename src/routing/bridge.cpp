@@ -4,26 +4,6 @@
 namespace mb {
 namespace {
 bool contains(const std::vector<std::string>& values,const std::string& value){return std::find(values.begin(),values.end(),value)!=values.end();}
-std::vector<std::string> outputCapabilities(const Device* device,const CapabilityProfile& contract,const Binding& binding){
- if(!device||!device->hasCapabilities)return {};
- const auto& source=device->capabilities;
- const bool orientation=contains(source,"orientation");
- const bool offset=norm(binding.mount.translation)>0;
- std::vector<std::string> result;
- for(const auto& capability:contract.outputDeclaration){
-  bool supported=false;
-  if(capability=="position"||capability=="orientation")supported=contains(source,capability);
-  else if(capability=="linear_velocity")supported=contains(source,"position")&&contains(source,capability)&&(!offset||orientation);
-  // Angular velocity may be converted from an admitted orientation stream
-  // when no native angular-velocity channel is declared.
-  else if(capability=="angular_velocity")supported=orientation;
-  // The current mount transform omits angular/centripetal acceleration terms.
-  else if(capability=="linear_acceleration")supported=contains(source,"position")&&contains(source,capability)&&!offset;
-  else if(capability=="battery_fraction"||capability=="charging")supported=contains(source,capability);
-  if(supported)result.push_back(capability);
- }
- return result;
-}
 std::string queueKey(const c1::Envelope& e){return std::visit([](const auto& v)->std::string{
  using T=std::decay_t<decltype(v)>;std::string id;
  if constexpr(std::is_same_v<T,c1::TrackerObservation>||std::is_same_v<T,c1::ObservationDeviceState>||
@@ -66,7 +46,7 @@ void Bridge::tick(std::int64_t now){
   const auto& contract=config_.contracts.at(key);
   // Support belongs to the logical output lifetime, not pose freshness or the
   // backend session. Keep the last verified declaration while invalidating data.
-  if(d&&d->hasCapabilities)l.capabilities=outputCapabilities(d,contract,b);
+  if(d&&d->hasCapabilities)l.capabilities=projectOutputCapabilities(d->capabilities,contract,b);
   if(fresh && d->pose && (l.inputSequence!=d->poseSequence || !l.pose)){
    const auto& in=*d->pose;
    if(l.poseSequence==std::numeric_limits<std::int64_t>::max())throw std::runtime_error("MTP sequence exhausted: restart Bridge");
@@ -109,7 +89,7 @@ void Bridge::reconfigure(Config c,std::int64_t now){
  for(const auto& [key,l]:logical_){
   const auto old=config_.bindings.find(key),next=c.bindings.find(key);const auto* device=registry.find(key);
   if(old!=config_.bindings.end()&&next!=c.bindings.end()&&old->second.tracker==next->second.tracker&&device&&device->hasCapabilities&&!l.capabilities.empty()&&
-     c.contracts.count(key)&&outputCapabilities(device,c.contracts.at(key),next->second)!=l.capabilities)
+     c.contracts.count(key)&&projectOutputCapabilities(device->capabilities,c.contracts.at(key),next->second)!=l.capabilities)
    throw std::invalid_argument("output capability transform change requires coordinated new session/restart");
  }
  auto owners=trackerOwners_;std::set<Key> lifetimeKeys;for(auto& [key,l]:logical_)lifetimeKeys.insert(key);
