@@ -10,7 +10,7 @@ int main(int argc,char** argv)try{
  if(argc<2||argc>3)throw std::runtime_error("test fixture directory required");
  fixture::Run run(std::filesystem::absolute(std::filesystem::u8path(argv[1])));
  std::string fault=argc==3?argv[2]:"";
- std::atomic<int> lines{0},writes{0},commands{0};std::atomic<std::int64_t> clock{run.time};
+ std::atomic<int> lines{0},writes{0},commands{0};std::atomic<std::int64_t> clock{run.time.load()};
  std::unique_ptr<fixture::ReviewEvents> sync;
  if(fault.rfind("review-",0)==0)sync=std::make_unique<fixture::ReviewEvents>(run.root.filename().u8string());
  auto mark=[&](const char* name){sync->signal(name);};

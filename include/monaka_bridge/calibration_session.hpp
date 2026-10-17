@@ -79,6 +79,9 @@ public:
     virtual ProviderBatch discover(const std::atomic<bool>& cancel)=0;
     virtual void capture(const std::function<void(const ProviderBatch&)>& sink,const std::atomic<bool>& cancel)=0;
     virtual ProviderBatch guard()=0;
+    // Called exactly once by the input owner after discovery starts, including
+    // failure/cancellation. N1 releases its SDK/transport on that same thread.
+    virtual void shutdown(){}
 protected:
     // Validation only: no retained borrowed state, capture resources or IO.
     virtual void validateConfiguration(const ProviderOpenOptions&)const{}
@@ -133,6 +136,7 @@ private:
     void adopt(const std::string& name); // Caller owns root quota lock.
 };
 
+struct CaptureSnapshot;
 class CalibrationSession {
 public:
     CalibrationSession(CaptureProvider&,SessionEnvironment);
@@ -149,6 +153,7 @@ public:
     std::string runId()const;
     const InputWitness* frozenInput()const;
     std::pair<std::int64_t,std::optional<std::int64_t>> highwaters()const;
+    CaptureSnapshot captureSnapshot()const;
     std::size_t solveCalls()const;
     std::size_t commitCalls()const;
 private:

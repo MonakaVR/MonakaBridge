@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,re,subprocess
+from continuous_monitor_scope import approved_continuous_monitor,predecessor as monitor_predecessor,predecessor_text as monitor_predecessor_text
 BASE='b39216bcc69687ae2c0cce974ba259146c5982d7'
 N0A_BASE='31f47a4672b0eef22ef55bd2c6d866103e483ee6'
 PIN='dependencies/writer-fixture-baseline.json'
@@ -22,7 +23,7 @@ def existed(repo,base,name):return subprocess.run(['git','--no-optional-locks','
 def profile(root):
  return (N0A_BASE,N0A_PIN,FILES|N0A_EXTRA,OLD_PINS|{PROVIDER_PIN}) if (Path(root)/PROVIDER_PIN).exists() else (BASE,PIN,FILES,OLD_PINS)
 def approved_writer_fixture(root,git_root=None):
- root=Path(root);repo=str(git_root or root);base,pin,files,old_pins=profile(root);p=json.loads((root/pin).read_bytes())
+ root=Path(root);repo=str(git_root or root);extra=approved_continuous_monitor(root,git_root);base,pin,files,old_pins=profile(root);p=json.loads((root/pin).read_bytes())
  if p['base_commit']!=base or set(p['files'])!=files:raise RuntimeError('writer fixture scope/base mismatch')
  for name in old_pins:
   if (root/name).read_bytes()!=historical(repo,base,name):raise RuntimeError('writer fixture changed accepted pin: '+name)
@@ -32,10 +33,10 @@ def approved_writer_fixture(root,git_root=None):
   if subprocess.run(['git','--no-optional-locks','-C',repo,'merge-base','--is-ancestor',dependency,'HEAD'],capture_output=True).returncode:raise RuntimeError('writer dependency ancestry')
   if (root/PIN).read_bytes()!=historical(repo,dependency,PIN):raise RuntimeError('writer dependency pin changed')
  for name,e in p['files'].items():
-  if digest((root/name).read_bytes())!=e['sha256']:raise RuntimeError('writer fixture unreviewed current source: '+name)
+  if digest(monitor_predecessor(root,name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('writer fixture unreviewed current source: '+name)
   if existed(repo,base,name)!=e['existed_at_base']:raise RuntimeError('writer fixture predecessor presence: '+name)
   if e['existed_at_base'] and digest(historical(repo,base,name))!=e['base_sha256']:raise RuntimeError('writer fixture predecessor hash: '+name)
- return files|{PIN}|({N0A_PIN} if pin==N0A_PIN else set())
+ return extra|files|{PIN}|({N0A_PIN} if pin==N0A_PIN else set())
 def check_names(names,allowed):
  unexpected=set(names)-set(allowed)
  if unexpected:raise RuntimeError('outside writer fixture scope: '+','.join(sorted(unexpected)))
@@ -45,13 +46,13 @@ def verify_diff_scope(root):
  names+=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'ls-files','--others','--exclude-standard']).decode().splitlines()
  check_names(names,approved_writer_fixture(root))
 def predecessor(root,name,raw,git_root=None):
- root=Path(root);base,pin,_,_=profile(root);e=json.loads((root/pin).read_bytes())['files'].get(name)
+ root=Path(root);raw=monitor_predecessor(root,name,raw,git_root);base,pin,_,_=profile(root);e=json.loads((root/pin).read_bytes())['files'].get(name)
  if not e:return raw
  if e['existed_at_base'] and digest(raw)==e['base_sha256']:return raw
  if digest(raw)!=e['sha256']:raise RuntimeError('writer fixture unreviewed projection: '+name)
  return historical(str(git_root or root),base,name) if e['existed_at_base'] else raw
 def predecessor_text(root,text):
- root=Path(root);approved_writer_fixture(root);base,pin,_,_=profile(root)
+ root=Path(root);text=monitor_predecessor_text(root,text);approved_writer_fixture(root);base,pin,_,_=profile(root)
  for name,e in json.loads((root/pin).read_bytes())['files'].items():
   if e['existed_at_base'] and digest(text.encode())==e['sha256']:return historical(str(root),base,name).decode()
  return text
