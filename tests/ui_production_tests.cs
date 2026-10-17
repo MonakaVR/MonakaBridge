@@ -87,6 +87,16 @@ class Tests {
  static object Property(object control,string name){return control.GetType().GetProperty(name).GetValue(control,null);}
  static void Set(object control,string name,object value){control.GetType().GetProperty(name).SetValue(control,value,null);}
  static void Invoke(object window,string method){window.GetType().GetMethod(method,BindingFlags.Instance|BindingFlags.NonPublic,null,Type.EmptyTypes,null).Invoke(window,null);}
+ static void WaitSave(object window){
+  var until=DateTime.UtcNow.AddSeconds(20);
+  var dispatcher=window.GetType().GetProperty("Dispatcher").GetValue(window,null);
+  var priority=dispatcher.GetType().Assembly.GetType("System.Windows.Threading.DispatcherPriority");
+  var invoke=dispatcher.GetType().GetMethod("Invoke",new[]{typeof(Delegate),priority,typeof(object[])});
+  while((bool)Field(window,"busy")){
+   Check(DateTime.UtcNow<until,"WPF save completion timed out");
+   invoke.Invoke(dispatcher,new object[]{(Action)delegate{},Enum.Parse(priority,"Background"),new object[0]});Thread.Sleep(5);
+  }
+ }
  static void WpfEvents(Dictionary<string,object> initial,string directory,string executable){
   // Instantiate controls on STA without showing a window or pumping timers. All
   // config/native validation writes are confined to this synthetic test root.
@@ -114,11 +124,14 @@ class Tests {
    catch(TargetInvocationException e){Check(e.InnerException is InvalidOperationException&&e.InnerException.Message.Contains("Select an existing profile"),"WPF save has a controlled profile error");}
    Set(profile,"SelectedItem","vive-hil-v1");Set(Field(window,"source"),"Text","rebound-source");Set(approval,"IsChecked",true);
    Invoke(window,"SaveMapping");
+   WaitSave(window);
+   Check(((string)Property(Field(window,"status"),"Text")).Contains("SAVED. Runtime application unconfirmed"),"Saved config cannot imply downstream application");
    var disk=SteamVrControlWpf.Read(target);
    Check(Rows(disk).Count==1&&(string)Row(disk,0)["source_id"]=="rebound-source"&&(bool)Row(disk,0)["space_approved"],"WPF atomic save persists rebound mapping");
    Check((int)Property(mappings,"SelectedIndex")==0&&(bool)Property(approval,"IsChecked")&&(string)Property(Field(window,"source"),"Text")=="rebound-source","WPF save reload reselects new key and persisted approval");
    var observations=(ArrayList)Field(window,"observations");observations.Add(new Dictionary<string,object>{{"source","rebound-source"},{"device","device-a"},{"space","test-native"},{"revision",1},{"convention","test"}});
    var devices=Field(window,"devices");var items=(IList)Property(devices,"Items");items.Add("synthetic observation");Set(devices,"SelectedIndex",0);
+   foreach(var entry in new Dictionary<string,object>{{"healthAvailable",true},{"healthSnapshotUtc",DateTime.UtcNow},{"healthPublisher",createdPublisher(initial)}})type.GetField(entry.Key,BindingFlags.Instance|BindingFlags.NonPublic).SetValue(window,entry.Value);
    Invoke(window,"SelectObservation");Check(!(bool)Property(approval,"IsChecked"),"Observation adoption clears approval even for unchanged identity values");
    Row(disk,0)["profile"]="missing-profile";File.WriteAllText(target,json.Serialize(disk),new UTF8Encoding(false));Invoke(window,"Reload");
    Check(Property(profile,"SelectedItem")==null&&((string)Property(Field(window,"status"),"Text")).Contains("Unknown profile"),"Unknown persisted profile does not retain previous selection");
@@ -128,6 +141,7 @@ class Tests {
   }finally{type.GetMethod("Close").Invoke(window,null);}
   Console.WriteLine("PASS WPF event wiring: hidden STA controls, save/reload/native validation, observation adoption, unknown profile and missing mapping; interactive UI NOT RUN");
  }
+ static string createdPublisher(Dictionary<string,object> c){return (string)c["bridge_id"];}
  [STAThread]
  static int Main(string[] args){try{
   var original=SteamVrControlWpf.Read(args[2]);original["bridge_id"]="test-publisher";

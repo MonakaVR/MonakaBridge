@@ -11,14 +11,14 @@ namespace MonakaBridge
         {
             try
             {
-                string repoRoot = ResolveRepoRoot(args);
-                if (HasSwitch(args, "--control-window-only"))
+                var options = GuiLaunchOptions.Parse(args, ResolveDefaultRoot());
+                if (options.ControlWindowOnly)
                 {
-                    SteamVrControlWpf.Run(repoRoot);
+                    SteamVrControlWpf.Run(options);
                     return 0;
                 }
 
-                using (var tray = new SteamVrControlTray(repoRoot))
+                using (var tray = new SteamVrControlTray(options))
                 {
                     tray.Run();
                 }
@@ -35,37 +35,8 @@ namespace MonakaBridge
             }
         }
 
-        private static bool HasSwitch(string[] args, string value)
+        private static string ResolveDefaultRoot()
         {
-            if (args == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < args.Length; ++i)
-            {
-                if (string.Equals(args[i], value, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static string ResolveRepoRoot(string[] args)
-        {
-            if (args != null)
-            {
-                for (int i = 0; i < args.Length; ++i)
-                {
-                    string arg = args[i];
-                    if (!string.IsNullOrWhiteSpace(arg) && !arg.StartsWith("--", StringComparison.Ordinal))
-                    {
-                        return Path.GetFullPath(arg);
-                    }
-                }
-            }
-
             string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             DirectoryInfo buildDirectory = new DirectoryInfo(
                 baseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -82,8 +53,7 @@ namespace MonakaBridge
                 return currentDirectory;
             }
 
-            throw new InvalidOperationException(
-                "Repository root could not be determined. Launch through scripts\\build_gui.ps1 -Run or pass the repository path as the first argument.");
+            return baseDirectory;
         }
     }
 }
