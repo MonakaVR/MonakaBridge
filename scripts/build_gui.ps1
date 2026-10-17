@@ -8,10 +8,11 @@ $GuiTraySource = Join-Path $RepoRoot "ui\steamvr_control_tray.cs"
 $GuiMainSource = Join-Path $RepoRoot "ui\steamvr_control_gui_main.cs"
 $GuiModelsSource = Join-Path $RepoRoot "ui\control_models.cs"
 $InstallationSource = Join-Path $RepoRoot "ui\installation_control.cs"
+$CalibrationSources = @('calibration_json.cs','calibration_profile.cs','calibration_models.cs','calibration_owned_process.cs','calibration_pipe_frames.cs','calibration_process_client.cs','calibration_panel.cs','calibration_profile_dialog.cs') | ForEach-Object { Join-Path $RepoRoot ('ui/' + $_) }
 $BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "build-gui" }
 $GuiExe = Join-Path $BuildDir "monaka_bridge_control.exe"
 
-foreach ($path in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource)) {
+foreach ($path in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource) + $CalibrationSources)) {
     if (-not (Test-Path $path)) {
         throw "SteamVR control GUI source was not found: $path"
     }
@@ -119,7 +120,7 @@ $WpfRefs = Get-WpfReferenceSet
 $needsBuild = $Force -or -not (Test-Path $GuiExe)
 if (-not $needsBuild) {
     $exeTime = (Get-Item $GuiExe).LastWriteTimeUtc
-    foreach ($source in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $PSCommandPath)) {
+    foreach ($source in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $PSCommandPath) + $CalibrationSources)) {
         if ((Get-Item $source).LastWriteTimeUtc -gt $exeTime) {
             $needsBuild = $true
             break
@@ -134,6 +135,7 @@ if ($needsBuild) {
 
     $compilerArgs = @(
         "/nologo",
+        "/utf8output",
         "/target:winexe",
         "/optimize+",
         "/out:$GuiExe",
@@ -153,6 +155,7 @@ if ($needsBuild) {
         $GuiMainSource
     )
 
+    $compilerArgs += $CalibrationSources
     & $Csc @compilerArgs
 
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $GuiExe)) {

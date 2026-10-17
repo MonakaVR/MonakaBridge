@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import ast,hashlib,json,subprocess
+from calibration_gui_scope import approved_gui,gui_project,gui_project_text
 PIN='dependencies/native-control-integration-baseline.json'
 COMMON_BASE='279a01363f47ad3564b5cd8b9346180c49ee41d3'
 PARENTS={'native': 'bf637c228c2f6fd4d972614660386702e194bdbb', 'control': '1b02d3628e11254bb0584e546c8a17713a6e6e26'}
@@ -85,8 +86,8 @@ PROTECTED_PARENTS={'include/monaka_bridge/calibration_capture_monitor.hpp': 'nat
 FILES|=set(PROTECTED_PARENTS)
 
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
-def read(root,name):
- try:return (Path(root)/name).read_bytes()
+def read(root,name,git_root=None):
+ try:return gui_project(root,name,(Path(root)/name).read_bytes(),git_root)
  except OSError as e:raise RuntimeError('J0 required current file missing/unreadable: '+name) from e
 @lru_cache(maxsize=None)
 def historical(repo,view,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENTS[view]+':'+name])
@@ -94,51 +95,53 @@ def historical(repo,view,name):return subprocess.check_output(['git','--no-optio
 def existed(repo,view,name):return subprocess.run(['git','--no-optional-locks','-C',repo,'cat-file','-e',PARENTS[view]+':'+name],capture_output=True).returncode==0
 @lru_cache(maxsize=None)
 def parent_base(repo):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'merge-base',*PARENTS.values()],text=True).strip()
-def tree(root,name):
- try:return ast.parse(read(root,name).decode('utf-8-sig'))
+def tree(root,name,git_root=None):
+ try:return ast.parse(read(root,name,git_root).decode('utf-8-sig'))
  except (SyntaxError,UnicodeError) as e:raise RuntimeError('J0 invalid current Python source: '+name) from e
 def function(module,name):
  found=[n for n in module.body if isinstance(n,ast.FunctionDef) and n.name==name]
  if len(found)!=1:raise RuntimeError('J0 missing/ambiguous connection: '+name)
  return found[0]
 def expression(s):return ast.dump(ast.parse(s,mode='eval').body,include_attributes=False)
-def verify_connections(root):
+def verify_connections(root,git_root=None):
  # Current connector semantics remain independently checked even if a mutant
  # changes its metadata hash to match a deleted delegation.
- module=tree(root,'tests/capability_runtime_scope.py');fn=function(module,'approved_capabilities')
+ module=tree(root,'tests/capability_runtime_scope.py',git_root);fn=function(module,'approved_capabilities')
  extras=[n.value for n in ast.walk(fn) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='extra' for t in n.targets)]
  if len(extras)!=1 or ast.dump(extras[0],include_attributes=False)!=expression('approved_measurement(root,git_root)|approved_control(root,git_root)'):raise RuntimeError('J0 lost native/control approval delegation')
  for path,view,entry in [('tests/native_capture_scope.py','native','approved_native_capture'),('tests/control_foundation_scope.py','control','approved_control')]:
-  module=tree(root,path);fn=function(module,entry)
+  module=tree(root,path,git_root);fn=function(module,entry)
   if not any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='approved_integration' for n in ast.walk(fn)):raise RuntimeError('J0 lost current-tree approval connection: '+view)
   calls=[n for n in ast.walk(module) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='integration_project']
   if len(calls)<2 or any(len(n.args)<2 or not isinstance(n.args[1],ast.Constant) or n.args[1].value!=view for n in calls):raise RuntimeError('J0 wrong explicit projection view: '+view)
- module=tree(root,'tests/integration_scope.py');imports={n.module for n in ast.walk(module) if isinstance(n,ast.ImportFrom)}
+ module=tree(root,'tests/integration_scope.py',git_root);imports={n.module for n in ast.walk(module) if isinstance(n,ast.ImportFrom)}
  imports|={a.name for n in ast.walk(module) if isinstance(n,ast.Import) for a in n.names}
  if not imports<={'pathlib','functools','ast','hashlib','json','subprocess'}:raise RuntimeError('J0 leaf imports a parent/cycle')
 def approved_integration(root,git_root=None):
  root=Path(root)
- if not (root/PIN).exists():return set()
- repo=str(git_root or root);p=json.loads(read(root,PIN))
+ extra=approved_gui(root,git_root)
+ if not (root/PIN).exists():return extra
+ repo=str(git_root or root);p=json.loads(read(root,PIN,git_root))
  if set(p)!={'common_base','parents','files','pins','overlap'} or p['common_base']!=COMMON_BASE or p['parents']!=PARENTS or set(p['files'])!=FILES or set(p['pins'])!=set(PIN_OWNERS) or p['overlap']!=OVERLAP:raise RuntimeError('J0 exact scope/parents/overlap mismatch')
  if parent_base(repo)!=COMMON_BASE:raise RuntimeError('J0 parent ancestry/base mismatch')
  for name,owners in PIN_OWNERS.items():
   if set(p['pins'][name])!=set(owners):raise RuntimeError('J0 pin owner mismatch: '+name)
   for view in owners:
    raw=historical(repo,view,name)
-   if hashlib.sha256(raw).hexdigest()!=p['pins'][name][view] or read(root,name)!=raw:raise RuntimeError('J0 immutable parent pin changed: '+name)
+   if hashlib.sha256(raw).hexdigest()!=p['pins'][name][view] or read(root,name,git_root)!=raw:raise RuntimeError('J0 immutable parent pin changed: '+name)
  for name,e in p['files'].items():
-  if set(e)!={'sha256','parents'} or digest(read(root,name))!=e['sha256'] or set(e['parents'])!=set(PARENTS):raise RuntimeError('J0 unreviewed current composite: '+name)
+  if set(e)!={'sha256','parents'} or digest(read(root,name,git_root))!=e['sha256'] or set(e['parents'])!=set(PARENTS):raise RuntimeError('J0 unreviewed current composite: '+name)
   for view,v in e['parents'].items():
    exists=existed(repo,view,name)
    if type(v['existed']) is not bool or exists!=v['existed'] or set(v)!=({'existed','sha256'} if exists else {'existed'}):raise RuntimeError('J0 parent presence: '+view+':'+name)
    if exists and digest(historical(repo,view,name))!=v['sha256']:raise RuntimeError('J0 parent blob hash: '+view+':'+name)
  for name,view in PROTECTED_PARENTS.items():
-  if digest(read(root,name))!=digest(historical(repo,view,name)):raise RuntimeError('J0 protected product source changed: '+name)
- verify_connections(root)
- return FILES|set(PIN_OWNERS)|{PIN}
+  if digest(read(root,name,git_root))!=digest(historical(repo,view,name)):raise RuntimeError('J0 protected product source changed: '+name)
+ verify_connections(root,git_root)
+ return FILES|set(PIN_OWNERS)|{PIN}|extra
 def project(root,view,name,raw,git_root=None,allow_older=False):
  root=Path(root)
+ raw=gui_project(root,name,raw,git_root,allow_older)
  if view not in PARENTS:raise RuntimeError('J0 unknown parent view')
  if not (root/PIN).exists():return raw
  e=json.loads(read(root,PIN))['files'].get(name)
@@ -151,6 +154,7 @@ def project(root,view,name,raw,git_root=None,allow_older=False):
  if allow_older and parent['existed']:return raw
  raise RuntimeError('J0 unknown/foreign projection: '+view+':'+name)
 def project_text(root,view,text):
+ text=gui_project_text(root,text)
  root=Path(root)
  if not (root/PIN).exists():return text
  approved_integration(root);matches=set()

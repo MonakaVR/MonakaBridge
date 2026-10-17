@@ -120,5 +120,5 @@ void RuntimeCaptureProvider::shutdown(){
  if(!started_||closed_)return;need(std::this_thread::get_id()==owner_,"CAPTURE_OWNER_REQUIRED");closed_=true;
  std::exception_ptr error;try{transport_->shutdown();}catch(...){error=std::current_exception();}try{api_->shutdown();}catch(...){if(!error)error=std::current_exception();}if(error)std::rethrow_exception(error);
 }
-Json productionCalibrationVersion(){return {{"api_version",1},{"software_policy",1},{"capture_supported",true},{"static_supported",false},{"production_capture","OPENVR_BACKGROUND_MIRROR"},{"standing_policy","EXACT_FINITE_NUMERIC"},{"runtime_validation","NOT_RUN"},{"output_approval",false}};}
+Json productionCalibrationVersion(){return {{"api_version",1},{"software_policy",1},{"capture_supported",true},{"static_supported",false},{"production_capture","OPENVR_BACKGROUND_MIRROR"},{"standing_policy","EXACT_FINITE_NUMERIC"},{"runtime_validation","NOT_RUN"},{"output_approval",false},{"gui_contract",1},{"features",Json::array({"idle_invalidation","phase_events","witness_details","immutable_result_commit"})}};}
 } // namespace mb::local_calibration

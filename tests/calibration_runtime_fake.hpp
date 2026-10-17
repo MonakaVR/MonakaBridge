@@ -25,7 +25,7 @@ struct State {
 struct Api final:lc::CalibrationReferenceApi {
  State& s;explicit Api(State& value):s(value){}
  void initialize(vr::EVRApplicationType app)override{s.owner=std::this_thread::get_id();++s.initCalls;s.application=app;if(s.failInit)throw std::runtime_error("OPENVR_BACKGROUND_UNAVAILABLE");s.initialized=true;}
- void shutdown()override{s.thread();++s.shutdownCalls;s.initialized=false;}
+ void shutdown()override{if(!s.initCalls)return;s.thread();++s.shutdownCalls;s.initialized=false;}
  std::uint64_t generation()override{s.thread();return s.generation;}
  bool event(vr::VREvent_t& e)override{s.thread();++s.eventCalls;if(s.events.empty())return false;e=s.events.front();s.events.pop_front();return true;}
  vr::HmdMatrix34_t standing()override{s.thread();return s.frame;}
@@ -41,7 +41,7 @@ struct Transport final:lc::CalibrationMirrorTransport {
  State& s;explicit Transport(State& value):s(value){}
  void open(std::uint16_t port)override{s.thread();CHECK(port==49123);++s.bindCalls;if(s.failBind)throw std::runtime_error("MIRROR_BIND_FAILED");s.bound=true;}
  std::optional<mb::Datagram> receive()override{s.thread();CHECK(s.bound);if(!s.datagrams.empty()){auto p=s.datagrams.front();s.datagrams.pop_front();return p;}if(!s.generate)return {};if(s.packetSent){s.packetSent=false;return {};}s.packetSent=true;return s.packet();}
- void shutdown()override{s.thread();++s.transportCloses;s.bound=false;}
+ void shutdown()override{if(!s.bindCalls)return;s.thread();++s.transportCloses;s.bound=false;}
 };
 inline std::unique_ptr<lc::RuntimeCaptureProvider> provider(State& s,bool paced=false){return std::make_unique<lc::RuntimeCaptureProvider>(std::make_unique<Api>(s),std::make_unique<Transport>(s),[&]{return s.time.load();},[&,paced](auto ns){s.time+=ns.count();if(paced){fixture::CapturePacer pacer;pacer.wait();}});}
 } // namespace runtime_fixture

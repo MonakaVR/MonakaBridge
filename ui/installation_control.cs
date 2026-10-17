@@ -13,8 +13,9 @@ namespace MonakaBridge {
  internal sealed class GuiLaunchOptions {
   internal readonly string Root,ConfigFile,HealthFile,ConfigHelper,HelperSha256,InstallationName;
   internal readonly bool ReadOnly,ControlWindowOnly;
-  GuiLaunchOptions(string root,string config,string health,string helper,string hash,string name,bool readOnly,bool window){
-   Root=root;ConfigFile=config;HealthFile=health;ConfigHelper=helper;HelperSha256=hash;InstallationName=name;ReadOnly=readOnly;ControlWindowOnly=window;
+  internal readonly CalibrationInstallation Calibration;
+  GuiLaunchOptions(string root,string config,string health,string helper,string hash,string name,bool readOnly,bool window,CalibrationInstallation calibration=null){
+   Root=root;ConfigFile=config;HealthFile=health;ConfigHelper=helper;HelperSha256=hash;InstallationName=name;ReadOnly=readOnly;ControlWindowOnly=window;Calibration=calibration;
   }
   internal static GuiLaunchOptions FromRoot(string root){return Parse(new[]{root},root);}
   internal static string Absolute(string value,string option){
@@ -29,7 +30,7 @@ namespace MonakaBridge {
    return Absolute(Path.IsPathRooted(value)?value:Path.Combine(directory,value),key);
   }
   internal static GuiLaunchOptions Parse(string[] args,string defaultRoot){
-   string root=null,config=null,health=null,helper=null,hash=null,installation=null,name=null;
+   string root=null,config=null,health=null,helper=null,hash=null,installation=null,name=null,profileHash=null;
    bool readOnly=false,allowWrite=false,window=false,profileReadOnly=true;
    var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
    for(int i=0;args!=null&&i<args.Length;i++){
@@ -40,7 +41,7 @@ namespace MonakaBridge {
      case "--read-only":readOnly=true;break;
      case "--allow-write":allowWrite=true;break;
      case "--control-window-only":window=true;break;
-     case "--installation":case "--config":case "--health":case "--config-helper":case "--helper-sha256":case "--installation-name":
+     case "--installation":case "--config":case "--health":case "--config-helper":case "--helper-sha256":case "--installation-name":case "--profile-sha256":
       if(++i>=args.Length||string.IsNullOrWhiteSpace(args[i])||args[i].StartsWith("--",StringComparison.Ordinal))throw new ArgumentException("Missing value for "+arg);
       switch(arg.ToLowerInvariant()){
        case "--installation":installation=Absolute(args[i],arg);break;
@@ -49,16 +50,29 @@ namespace MonakaBridge {
        case "--config-helper":helper=Absolute(args[i],arg);break;
        case "--helper-sha256":hash=args[i];break;
        case "--installation-name":name=args[i];break;
+       case "--profile-sha256":profileHash=args[i];break;
       }break;
      default:throw new ArgumentException("Unknown GUI option: "+arg);
     }
    }
    if(readOnly&&allowWrite)throw new ArgumentException("Read-only and allow-write conflict");
    bool explicitPaths=config!=null||health!=null||helper!=null||hash!=null;
+   if(profileHash!=null&&(installation==null||profileHash.Length!=64))throw new ArgumentException("Profile snapshot hash requires an installation and64 hexadecimal characters");
+   if(profileHash!=null)foreach(char c in profileHash)if(!Uri.IsHexDigit(c))throw new ArgumentException("Invalid profile snapshot SHA256");
    if(installation!=null){
     if(explicitPaths||name!=null)throw new ArgumentException("Installation profile cannot be combined with path/name overrides");
     var info=new FileInfo(installation);if(!info.Exists||info.Length>65536)throw new ArgumentException("Installation profile missing or too large");
-    var p=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(installation,Encoding.UTF8));
+    byte[] profileBytes=CalibrationInstallation.ReadBytes(installation);
+    string legacyText;using(var reader=new StreamReader(new MemoryStream(profileBytes),Encoding.UTF8,true))legacyText=reader.ReadToEnd();
+    var p=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(legacyText);
+    object schema;
+    if(p.TryGetValue("schema",out schema)&&object.Equals(schema,CalibrationInstallation.Schema)){
+     var selected=CalibrationInstallation.Parse(installation,profileBytes);
+     if(profileHash!=null&&!string.Equals(profileHash,selected.ProfileSha256,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Selected profile changed since launch; reopen explicitly");
+     bool effectiveReadonly=readOnly||selected.ReadOnly;
+     return new GuiLaunchOptions(Path.GetFullPath(root??Path.GetDirectoryName(installation)),selected.ConfigFile,selected.HealthFile,selected.ConfigHelper,selected.ConfigHelperSha256,selected.Name,effectiveReadonly,window,selected);
+    }
+    if(profileHash!=null)throw new ArgumentException("Profile snapshot requires the selected v2 schema; no fallback");
     var keys=new HashSet<string>(new[]{"schema","name","config","health","config_helper","helper_sha256","read_only"});
     foreach(string key in p.Keys)if(!keys.Contains(key))throw new ArgumentException("Unknown installation field: "+key);
     if(!p.ContainsKey("schema")||!object.Equals(p["schema"],"monaka.bridge.installation.v1"))throw new ArgumentException("Unsupported installation profile schema");
@@ -84,7 +98,7 @@ namespace MonakaBridge {
    foreach(char c in value){if(c=='\\'){slashes++;continue;}if(c=='"'){b.Append('\\',slashes*2+1);b.Append(c);}else{b.Append('\\',slashes);b.Append(c);}slashes=0;}
    b.Append('\\',slashes*2);return b.Append('"').ToString();
   }
-  internal string WindowArguments(){return Quote(Root)+" --control-window-only --installation-name "+Quote(InstallationName)+" --config "+Quote(ConfigFile)+" --health "+Quote(HealthFile)+" --config-helper "+Quote(ConfigHelper)+(HelperSha256==null?"":" --helper-sha256 "+HelperSha256)+(ReadOnly?" --read-only":" --allow-write");}
+  internal string WindowArguments(){if(Calibration!=null)return Quote(Root)+" --control-window-only --installation "+Quote(Calibration.ProfilePath)+" --profile-sha256 "+Calibration.ProfileSha256+(ReadOnly?" --read-only":" --allow-write");return Quote(Root)+" --control-window-only --installation-name "+Quote(InstallationName)+" --config "+Quote(ConfigFile)+" --health "+Quote(HealthFile)+" --config-helper "+Quote(ConfigHelper)+(HelperSha256==null?"":" --helper-sha256 "+HelperSha256)+(ReadOnly?" --read-only":" --allow-write");}
   internal string EditBlockReason(){
    if(ReadOnly)return "Read-only installation: editing is disabled";
    if(!File.Exists(ConfigFile))return "Configuration unavailable: "+ConfigFile;

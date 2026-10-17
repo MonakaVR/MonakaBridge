@@ -38,7 +38,10 @@ int runLocalApi(CaptureProvider& provider,SessionEnvironment env){
  if(GetFileType(input)!=FILE_TYPE_PIPE||GetFileType(output)!=FILE_TYPE_PIPE||
     !GetNamedPipeInfo(input,&flags,nullptr,nullptr,nullptr)||(flags&PIPE_TYPE_MESSAGE))return 2;
  auto ioHook=env.ioHook;auto io=[&](const char* point){if(ioHook)ioHook(point);};
- EventOutbox out;env.progress=[&](Json event){out.push(std::move(event),true,false,steadyNow());};CalibrationSession session(provider,std::move(env));
+ EventOutbox out;env.progress=[&](Json event){
+  const bool progress=event.value("status",std::string{})=="PROGRESS";
+  if(!out.push(std::move(event),progress,false,steadyNow()))throw std::runtime_error("OUTPUT_BACKPRESSURE");
+ };CalibrationSession session(provider,std::move(env));
  std::mutex mutex;std::condition_variable changed;std::deque<Json> queue,reserved;std::optional<Json> inflight;
  std::atomic<bool> inputDone{false},workerDone{false},writerDone{false},stopWriter{false};std::atomic<unsigned> rejects{0};
  auto reject=[&](const char* reason){if(++rejects>=16){session.requestCancel(true);inputDone=true;}if(!out.push({{"status","REJECTED"},{"reason",reason}})){session.requestCancel(true);inputDone=true;}changed.notify_one();};

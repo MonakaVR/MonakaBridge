@@ -54,7 +54,7 @@ namespace MonakaBridge {
   void RefreshRoutePresentation(){
    string requested="unavailable",publisher=null;
    try{var config=SteamVrControlWpf.Read(options.ConfigFile);requested=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);publisher=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture);}catch{}
-   string reason=busy?"Save in progress":needsReload?"Outcome requires reload/review":options.EditBlockReason()??helperIssue;
+   string reason=ControlAlive()?"Owned Bridge Control window is open; save there or close it first":busy?"Save in progress":needsReload?"Outcome requires reload/review":options.EditBlockReason()??helperIssue;
    foreach(var item in policies){item.Value.Checked=item.Key==requested;item.Value.Enabled=reason==null;item.Value.ToolTipText=reason??"Save through the selected native helper; runtime application remains unconfirmed";}
    string diagnostic="unavailable / historical";
    string observedPolicy;
@@ -80,12 +80,14 @@ namespace MonakaBridge {
     });
    }catch(Exception e){Forms.MessageBox.Show(e.Message,"Output policy",Forms.MessageBoxButtons.OK,Forms.MessageBoxIcon.Error);}
   }
-  void RequireRouteChange(){options.RequireEdit();if(busy||needsReload)throw new InvalidOperationException("Reload and review before saving");}
+  void RequireRouteChange(){options.RequireEdit();if(busy||needsReload||ControlAlive())throw new InvalidOperationException("Reload and review before saving");}
+  bool ControlAlive(){return controlProcess!=null&&!controlProcess.HasExited;}
   void OpenControlWindow(){
    try{
-    if(controlProcess!=null&&!controlProcess.HasExited){icon.ShowBalloonTip(1500,"Monaka Bridge","Bridge Control is already open.",Forms.ToolTipIcon.Info);return;}
+    if(busy)throw new InvalidOperationException("Wait for the pending tray save");
+    if(ControlAlive()){icon.ShowBalloonTip(1500,"Monaka Bridge","Bridge Control is already open.",Forms.ToolTipIcon.Info);return;}
     if(controlProcess!=null)controlProcess.Dispose();
-    controlProcess=Process.Start(new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,options.WindowArguments()){UseShellExecute=false,CreateNoWindow=true});
+    controlProcess=Process.Start(new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,options.WindowArguments()){UseShellExecute=false,CreateNoWindow=true});RefreshRouteUi();
    }catch(Exception e){Forms.MessageBox.Show(e.Message,"Bridge Control",Forms.MessageBoxButtons.OK,Forms.MessageBoxIcon.Error);}
   }
   void Exit(){context.ExitThread();}

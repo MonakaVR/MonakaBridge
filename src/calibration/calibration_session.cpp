@@ -124,7 +124,7 @@ struct CalibrationSession::Impl {
   if(!candidate.empty())need(readConfigBytes(drafts.path("candidate.json"))==candidate,"CANDIDATE_ARTIFACT_CHANGED");
  }
  Json resultJson()const{
-  need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
+  need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"mount_existing",rigid(frozen->target().binding.mount)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
  }
  Json action(const Json& j){
   auto op=text(j,"op");auto t=now();if(op!="cancel"&&op!="close")checkCancel();
@@ -160,7 +160,9 @@ struct CalibrationSession::Impl {
    need(now()-t<10*second,"DISCOVER_TIMEOUT");checkCancel();
    input=std::make_unique<const InputWitness>(witness);live(true);
    const auto floor=witness.initialPoseFloor;const auto stateFloor=witness.initialStateFloor;state=DISCOVERED;
-   return {{"status","DISCOVERED"},{"initial_pose_floor",floor},{"initial_state_floor",stateFloor?Json(*stateFloor):Json(nullptr)},{"reference_serial",witness.referenceSerial},{"source_session",witness.session},{"source_clock",witness.clock}};
+   Json detail={{"bridge_id",frozen->publisher()},{"source",witness.source},{"device",witness.device},{"tracker",frozen->target().binding.tracker},{"session",witness.session},{"clock",witness.clock},{"peer",witness.peer},{"input_space",witness.space},{"input_revision",witness.revision},{"convention",witness.convention},{"reference_role",witness.referenceRole},{"reference_serial",witness.referenceSerial},{"reference_generation",witness.referenceGeneration},{"standing_witness",witness.standing}};
+   const auto& declaration=providerOptions->capabilityProfile();need(bool(declaration),"EXPLICIT_DECLARATION_REQUIRED");detail["capability_profile"]=declaration->id;detail["capabilities"]=declaration->inputDeclaration;
+   return {{"status","DISCOVERED"},{"initial_pose_floor",floor},{"initial_state_floor",stateFloor?Json(*stateFloor):Json(nullptr)},{"reference_serial",witness.referenceSerial},{"source_session",witness.session},{"source_clock",witness.clock},{"witness",std::move(detail)}};
   }
   if(op=="confirm_target"){
    need(state==DISCOVERED,"STATE_REJECTED");guards(true);confirmation=opaqueId();confirmationDeadline=now()+10*second;state=CONFIRMED;
@@ -175,6 +177,7 @@ struct CalibrationSession::Impl {
    drafts.write("expected.json",original);
    if(env.ioHook)env.ioHook("begin-draft-written");beginReady();
    confirmation.clear();recorder=std::make_unique<TrajectoryRecorder>(config,*frozen,input->referenceSerial);state=RECORDING;
+   if(env.progress)env.progress({{"status","PHASE"},{"phase","RECORDING"},{"session_id",session},{"run_id",run}});
    std::int64_t progressAt=-1;
    try{owner->record([&](const RecordingDelivery& delivery){checkCancel();record(delivery);if(env.progress&&(progressAt<0||now()-progressAt>=second/4)){progressAt=now();env.progress({{"status","PROGRESS"},{"phase","RECORDING"},{"session_id",session},{"run_id",run},{"samples",recorder->sourceSamples().size()}});}});}catch(const std::exception&){checkCancel();auto fault=owner->snapshot().fault;if(!fault.empty())invalidate(fault.c_str());throw;}checkCancel();guards(true);
 
@@ -183,6 +186,7 @@ struct CalibrationSession::Impl {
    for(const auto& r:recorder->referenceSamples())raw["reference"].push_back({{"time_ns",r.timeNs},{"valid",r.valid},{"pose",rigid(r.pose)}});
    drafts.write("raw.json",raw.dump());
    state=SOLVING;auto solveStart=now();++solves;
+   if(env.progress)env.progress({{"status","PHASE"},{"phase","SOLVING"},{"session_id",session},{"run_id",run}});
    if(env.ioHook)env.ioHook("solve-before");
    auto solved=recorder->solve();checkCancel();need(now()-solveStart<10*second,"SOLVE_TIMEOUT");guards(true);
    result=std::make_unique<const TrajectoryResult>(std::move(solved));resultId=opaqueId();resultDeadline=now()+10*60*second;

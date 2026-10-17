@@ -379,3 +379,13 @@ if(BUILD_TESTING)
  add_test(NAME native_control_integration_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/integration_scope_tests.py")
  set_tests_properties(native_control_integration_scope PROPERTIES TIMEOUT 180)
 endif()
+
+option(MB_BUILD_CONTROL_GUI "Build normal Bridge WPF GUI" ${WIN32})
+if(WIN32 AND MB_BUILD_CONTROL_GUI)
+ include(scripts/control_gui.cmake)
+endif()
+
+if(BUILD_TESTING)
+ add_test(NAME calibration_gui_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/calibration_gui_scope_tests.py")
+ set_tests_properties(calibration_gui_scope PROPERTIES TIMEOUT 180)
+endif()
