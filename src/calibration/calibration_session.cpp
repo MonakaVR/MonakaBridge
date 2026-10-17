@@ -105,10 +105,17 @@ struct CalibrationSession::Impl {
   if(result&&t>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
   if(owner)try{owner->check(t,fresh);}catch(const std::exception& e){if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
  }
- void guards(bool fresh,bool scope=true){
+ void guards(bool fresh,bool scope=true,std::int64_t confirmationLimit=0){
   if(scope)try{current();}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
-  if(owner)try{owner->barrier(opaqueId());}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
+  auto wait=10*second;
+  if(confirmationLimit){auto t=now();checkCancel();if(t>=confirmationLimit)invalidate("CONFIRMATION_EXPIRED");if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");wait=std::min({wait,confirmationLimit-t,created+20*60*second-t});}
+  if(owner)try{owner->barrier(opaqueId(),wait);}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
   live(fresh);
+ }
+ void beginReady(){
+  auto t=now();checkCancel();
+  if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
+  if(t>=confirmationDeadline)invalidate("CONFIRMATION_EXPIRED");
  }
  void artifactCheck(){
   drafts.verify();
@@ -161,8 +168,12 @@ struct CalibrationSession::Impl {
   }
   if(op=="begin"){
    need(state==CONFIRMED&&text(j,"confirmation_token")==confirmation&&!confirmation.empty(),"CONFIRMATION_TOKEN_INVALID");
-   if(now()>=confirmationDeadline)invalidate("CONFIRMATION_EXPIRED");guards(true);
-   drafts.begin(run);createdDraft=true;drafts.write("expected.json",original);
+   beginReady();guards(true,true,confirmationDeadline);
+   if(env.ioHook)env.ioHook("begin-barrier-acked");beginReady();
+   drafts.begin(run);createdDraft=true;
+   if(env.ioHook)env.ioHook("begin-draft-created");beginReady();
+   drafts.write("expected.json",original);
+   if(env.ioHook)env.ioHook("begin-draft-written");beginReady();
    confirmation.clear();recorder=std::make_unique<TrajectoryRecorder>(config,*frozen,input->referenceSerial);state=RECORDING;
    std::int64_t progressAt=-1;
    try{owner->record([&](const RecordingDelivery& delivery){checkCancel();record(delivery);if(env.progress&&(progressAt<0||now()-progressAt>=second/4)){progressAt=now();env.progress({{"status","PROGRESS"},{"phase","RECORDING"},{"session_id",session},{"run_id",run},{"samples",recorder->sourceSamples().size()}});}});}catch(const std::exception&){checkCancel();auto fault=owner->snapshot().fault;if(!fault.empty())invalidate(fault.c_str());throw;}checkCancel();guards(true);
@@ -198,13 +209,18 @@ struct CalibrationSession::Impl {
   need(op=="commit"&&state==PREPARED&&!providerOptions->readOnly(),"COMMIT_NOT_PREPARED_OR_READONLY");
   need(!review.empty()&&text(j,"review_token")==review&&text(j,"candidate_sha256")==candidateHash,"REVIEW_TOKEN_CANDIDATE_MISMATCH");
   if(now()>=reviewDeadline){review.clear();state=RESULT_READY;throw std::runtime_error("REVIEW_TOKEN_EXPIRED_REPREPARE");}
-  checkCancel();current();
-  auto beforeBarrier=now();auto remaining=std::min({10*second,reviewDeadline-beforeBarrier,resultDeadline-beforeBarrier,created+20*60*second-beforeBarrier});
-  need(remaining>0,"REVIEW_TOKEN_EXPIRED_REPREPARE");
-  auto commitBarrier=owner->barrier(text(j,"request_id"),remaining);
-  if(env.ioHook)env.ioHook("precommit-barrier-acked");
-  auto admissionAt=now();need(admissionAt<reviewDeadline,"REVIEW_TOKEN_EXPIRED_REPREPARE");need(admissionAt<resultDeadline&&admissionAt-created<20*60*second,"RESULT_REVIEW_EXPIRED");
-  try{auto admission=owner->admit(commitBarrier,admissionAt);state=COMMITTING;}catch(const std::exception& e){if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
+  try{
+   checkCancel();current();
+   auto beforeBarrier=now();auto remaining=std::min({10*second,reviewDeadline-beforeBarrier,resultDeadline-beforeBarrier,created+20*60*second-beforeBarrier});
+   need(remaining>0,"REVIEW_TOKEN_EXPIRED_REPREPARE");
+   auto commitBarrier=owner->barrier(text(j,"request_id"),remaining);
+   if(env.ioHook)env.ioHook("precommit-barrier-acked");
+   auto admissionAt=now();checkCancel();need(admissionAt<reviewDeadline,"REVIEW_TOKEN_EXPIRED_REPREPARE");need(admissionAt<resultDeadline&&admissionAt-created<20*60*second,"RESULT_REVIEW_EXPIRED");
+   auto admission=owner->admit(commitBarrier,admissionAt);state=COMMITTING;
+  }catch(const std::exception& e){
+   review.clear();if(state==PREPARED)state=RESULT_READY;
+   if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;
+  }
   review.clear();auto started=now();++commits;
   try{
    commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{guards(false,false);}catch(...){evidenceStale=true;}});

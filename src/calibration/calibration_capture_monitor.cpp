@@ -24,12 +24,15 @@ CaptureMonitor::CaptureMonitor(const ProviderOpenOptions& options,const Provider
 }
 void CaptureMonitor::tick(std::int64_t now){
  check(now>=lastNow_,"MONOTONIC_CLOCK_ROLLBACK");lastNow_=now;
+ checkLifetime(now);
+}
+void CaptureMonitor::checkLifetime(std::int64_t now){
  check(now-created_<20*60*second,"WORKER_TTL_EXPIRED");
  check(state_.lastValidPose>=0&&now-state_.lastValidPose<second&&state_.lastValidReference>=0&&now-state_.lastValidReference<second,"LIVENESS_GAP");
 }
 void CaptureMonitor::requireLive(std::int64_t now,bool fresh){
  if(!state_.fault.empty())throw std::runtime_error(state_.fault);
- now=std::max(now,lastNow_);tick(now);if(fresh)need(state_.poseValid&&state_.referenceValid&&now-state_.lastValidPose<=50000000&&now-state_.referenceAt<=50000000,"NOT_READY_STALE");
+ now=std::max(now,lastNow_);checkLifetime(now);if(fresh)need(state_.poseValid&&state_.referenceValid&&now-state_.lastValidPose<=50000000&&now-state_.referenceAt<=50000000,"NOT_READY_STALE");
 }
 RecordingDelivery CaptureMonitor::consume(const ProviderBatch& b,bool recording,std::int64_t now){
  if(!state_.fault.empty())throw std::runtime_error(state_.fault);

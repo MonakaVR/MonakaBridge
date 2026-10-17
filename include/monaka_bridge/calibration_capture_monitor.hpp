@@ -37,6 +37,9 @@ private:
  } poses_,states_;
  InputWitness input_;std::vector<std::string> declaration_;
  CaptureSnapshot state_;std::int64_t created_,lastNow_,lastPoseReceipt_=-1,lastStateReceipt_=-1;
+ // Only owner samples advance lastNow_; worker freshness reads can overtake a
+ // sample captured before the mutex. They must not move its clock watermark.
+ void checkLifetime(std::int64_t now);
  void check(bool,const char*);
 };
 

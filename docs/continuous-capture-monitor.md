@@ -54,3 +54,11 @@ CaptureProvider.shutdownはdiscovery開始後のownerで一回呼び、実adapte
 旧T03は新しいboundary-based scope契約に合わせ、idleでfilesystemを検査しないこととbegin前のhelper drift拒否を検査する。
 旧501入力fixtureは値・synthetic時刻・期待結果を保ち、単独ownerへの適応としてmutex/atomicとtest-only高分解能1ms pacingを追加する。
 高速・停止consumerの合算overflowは別の明示fixtureで検証し、製品timeoutやqueue capacityを緩めない。
+
+## N0b independent-review corrections
+
+- Owner clock ordering belongs only to successive owner samples. A worker freshness evaluation can overtake a clock value already captured by the owner outside the mutex; it evaluates lifetime/freshness against the latest known owner time without advancing that owner watermark. A true decrease between owner samples still causes sticky `MONOTONIC_CLOCK_ROLLBACK`; the Session worker retains its own rollback check.
+- The confirmation's original 10-second absolute deadline covers scope checks, the input barrier and draft setup before recording. The barrier receives only the remaining confirmation/worker-lifetime budget. Begin rechecks that same deadline, cancellation and worker TTL after the barrier and after each synchronous draft operation, before starting the next operation or entering recording. Synchronous filesystem calls cannot be interrupted by this deadline: if one returns after expiry, an already-created draft can remain for inspection, but capture/solve/config write does not start. The expired run is terminal; no deadline reset or automatic retry occurs. Filesystem failure/indefinite blocking remains subject to the existing failure/watchdog model.
+- Any rejected final precommit admission destroys the review token and returns a transiently stale `PREPARED` result to `RESULT_READY`. Fresh data cannot reuse the old token; explicit prepare may issue a new token over the identical frozen candidate, without another capture or solve. Sticky faults still invalidate the run. Once `COMMITTING` is entered the existing transaction/outcome rules apply unchanged.
+
+Native review fixtures force both guard/callback clock interleavings, real owner rollback, confirmation expiry during scope/barrier/draft setup, cancellation/worker TTL after draft I/O, and ACK→transient stale→fresh→old-token rejection→explicit reprepare with identical candidate bytes. They use fake providers and local temporary draft/config files only; production capture remains unsupported.
