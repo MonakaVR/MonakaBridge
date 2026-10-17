@@ -1,9 +1,10 @@
 from pathlib import Path
 import json,shutil,uuid
 from continuous_monitor_scope import FILES,PIN,OLD_PINS,approved_continuous_monitor,historical,verify_diff_scope,predecessor
+from native_capture_scope import OLD_PINS as NATIVE_OLD_PINS
 root=Path(__file__).resolve().parents[1];approved=approved_continuous_monitor(root);verify_diff_scope(root)
 scratch=root/'build/n0b-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
-for name in approved|OLD_PINS:
+for name in approved|OLD_PINS|NATIVE_OLD_PINS:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
 approved_continuous_monitor(scratch,root);count=0
 for name in sorted(FILES|OLD_PINS):

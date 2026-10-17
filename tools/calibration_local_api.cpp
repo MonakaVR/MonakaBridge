@@ -127,17 +127,4 @@ int runLocalApi(CaptureProvider& provider,SessionEnvironment env){
  }
  writer.join();return out.failed()?3:0;
 }
-int calibrationLocalDispatch(int argc,char** argv){
- if(argc!=2)return -1;std::string mode=argv[1];
- if(mode=="--local-api-version"){
-  std::cout<<Json{{"api_version",1},{"software_policy",1},{"capture_supported",false},{"static_supported",false},{"production_capture","B3_REQUIRED"},{"output_approval",false}}.dump()<<'\n';return 0;
- }
- if(mode!="--local-api")return -1;
- try{
-  wchar_t path[32768];DWORD length=GetModuleFileNameW(nullptr,path,32768);if(!length||length==32768)throw std::runtime_error("HELPER_PATH_UNAVAILABLE");
-  wchar_t local[32768];DWORD n=GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768);if(!n||n>=32768)throw std::runtime_error("OWNER_APPDATA_UNAVAILABLE");
-  SessionEnvironment env;env.draftRoot=std::filesystem::path(local)/"MonakaBridge"/"CalibrationDrafts";env.helperPath=std::filesystem::path(path).u8string();env.helperSha256=sha256(readConfigBytes(std::filesystem::path(path)));
-  UnsupportedProvider provider;return runLocalApi(provider,std::move(env));
- }catch(const std::exception& e){std::cout<<Json{{"status","UNAVAILABLE"},{"reason",diagnostic(e)}}.dump()<<'\n';return 2;}
-}
 } // namespace mb::local_calibration

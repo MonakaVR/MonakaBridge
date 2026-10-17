@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from native_capture_scope import approved_native_capture,predecessor as native_predecessor,predecessor_text as native_predecessor_text
 BASE='29245bd885ffd502df52a9a654887aed208d3bf2'
 PIN='dependencies/continuous-monitor-baseline.json'
 FILES={'include/monaka_bridge/calibration_session.hpp','include/monaka_bridge/calibration_capture_monitor.hpp',
@@ -21,17 +22,17 @@ def existed(repo,name):return subprocess.run(['git','--no-optional-locks','-C',r
 def approved_continuous_monitor(root,git_root=None):
  root=Path(root)
  if not (root/PIN).exists():return set()
- repo=str(git_root or root);p=json.loads((root/PIN).read_bytes())
+ repo=str(git_root or root);extra=approved_native_capture(root,git_root);p=json.loads((root/PIN).read_bytes())
  if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('N0b scope/base mismatch')
  for name in OLD_PINS:
   if (root/name).read_bytes()!=historical(repo,name):raise RuntimeError('N0b old pin changed: '+name)
  for name,e in p['files'].items():
-  if digest((root/name).read_bytes())!=e['sha256']:raise RuntimeError('N0b unreviewed current source: '+name)
+  if digest(native_predecessor(root,name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('N0b unreviewed current source: '+name)
   if existed(repo,name)!=e['existed_at_base']:raise RuntimeError('N0b predecessor presence: '+name)
   if e['existed_at_base'] and digest(historical(repo,name))!=e['base_sha256']:raise RuntimeError('N0b predecessor hash: '+name)
- return FILES|{PIN}
+ return FILES|{PIN}|extra
 def predecessor(root,name,raw,git_root=None):
- root=Path(root)
+ root=Path(root);raw=native_predecessor(root,name,raw,git_root,allow_older=True)
  if not (root/PIN).exists():return raw
  e=json.loads((root/PIN).read_bytes())['files'].get(name)
  if not e:return raw
@@ -39,7 +40,7 @@ def predecessor(root,name,raw,git_root=None):
  if digest(raw)!=e['sha256']:raise RuntimeError('N0b unreviewed projection: '+name)
  return historical(str(git_root or root),name) if e['existed_at_base'] else raw
 def predecessor_text(root,text):
- root=Path(root)
+ root=Path(root);text=native_predecessor_text(root,text)
  if not (root/PIN).exists():return text
  approved_continuous_monitor(root)
  for name,e in json.loads((root/PIN).read_bytes())['files'].items():

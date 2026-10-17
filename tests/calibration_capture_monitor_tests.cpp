@@ -51,12 +51,12 @@ void advanceLive(fixture::Run& r,std::int64_t untilTime){
 }
 void reviewCase(const std::filesystem::path& base,const std::string& mode){
  if(mode=="review-clock-guard"||mode=="review-clock-record"){
-  fixture::Run r(base);Controlled p(r.time);configure(r,p);std::atomic<bool> cancel{false},armed{false};Gate sampled;std::atomic<std::int64_t> captured{0};
-  lc::CaptureOwner owner(p,[&]{auto t=r.time.load();if(armed.exchange(false)){captured=t;sampled.pause();}return t;},cancel,r.time,mode);owner.discover();
-  if(mode=="review-clock-record")p.onCapture=[&](const auto& sink,const auto&){sink(p.next(1));};
-  std::string recordError;armed=true;
+  fixture::Run r(base);Controlled p(r.time);configure(r,p);std::atomic<bool> cancel{false},armed{false},inCallback{false},capturedCallback{false};Gate sampled;std::atomic<std::int64_t> captured{0};
+  lc::CaptureOwner owner(p,[&]{auto t=r.time.load();if(armed.exchange(false)){captured=t;capturedCallback=inCallback.load();sampled.pause();}return t;},cancel,r.time,mode);owner.discover();
+  if(mode=="review-clock-record")p.onCapture=[&](const auto& sink,const auto&){inCallback=true;armed=true;sink(p.next(1));inCallback=false;};
+  std::string recordError;if(mode=="review-clock-guard")armed=true;
   GuardedWorker worker(sampled,[&]{if(mode=="review-clock-record")try{owner.record([](const auto&){});}catch(const std::exception& e){recordError=e.what();}});
-  sampled.wait();auto t=captured.load();owner.check(t+1,true);r.time=t+1;sampled.release();worker.join();
+  sampled.wait();CHECK(capturedCallback==(mode=="review-clock-record"));auto t=captured.load();owner.check(t+1,true);r.time=t+1;sampled.release();worker.join();
   owner.barrier("after-worker-freshness");CHECK(owner.snapshot().fault.empty()&&recordError.empty());
   // A genuine subsequent owner-clock decrease must still invalidate the run.
   r.time=t-1;until([&]{return !owner.snapshot().fault.empty();});CHECK(owner.snapshot().fault=="MONOTONIC_CLOCK_ROLLBACK"&&owner.snapshot().invalidationEpoch==1);cancel=true;owner.shutdown();
