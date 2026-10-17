@@ -15,6 +15,7 @@ using MonakaBridge;
 
 class FoundationTests {
  static string directory,helper,fake,example;static int cases;
+ static Exception trayCallbackError;
  static readonly JavaScriptSerializer json=new JavaScriptSerializer();
  static void Check(bool value,string reason){if(!value)throw new Exception(reason);}
  static void Pass(string name){++cases;Console.WriteLine("PASS "+name);}
@@ -159,5 +160,48 @@ class FoundationTests {
   }
   Pass("actual hidden WPF async cancel/failure disable editing, retain target and require reload/review");
  }
- [STAThread] static int Main(string[] args){try{directory=args[0];helper=args[1];fake=args[2];example=args[3];Directory.CreateDirectory(directory);Arguments();Access();Helpers();NativeTransactions();Health();TargetSwitch();AsyncState();Console.WriteLine("PASS control foundation: "+cases+" cases; manual visual UI NOT_RUN; hardware/network NOT_RUN");return 0;}catch(Exception e){Console.Error.WriteLine(e);return 1;}}
+ static void WriteTrayHealth(string path,object policy,bool includePolicy,int ageSeconds,string publisher){
+  var value=new Dictionary<string,object>{{"publisher_id",publisher},{"mapping_revision",10},{"devices",new object[0]},{"snapshot_unix_ms",(long)(DateTime.UtcNow.AddSeconds(-ageSeconds)-new DateTime(1970,1,1)).TotalMilliseconds}};
+  if(includePolicy)value["policy"]=policy;File.WriteAllText(path,json.Serialize(value),new UTF8Encoding(false));
+ }
+ static HealthReadResult TrayCallback(object tray,Func<HealthReadResult,bool> expected){
+  Set(tray,"health",null);var until=DateTime.UtcNow.AddSeconds(5);
+  while(DateTime.UtcNow<until){
+   Invoke(tray,"ReadHealth");System.Windows.Forms.Application.DoEvents();Pump();
+   Check(trayCallbackError==null,"Unhandled actual WinForms health callback: "+trayCallbackError);
+   var value=(HealthReadResult)Field(tray,"health");if(value!=null&&expected(value))return value;Thread.Sleep(5);
+  }throw new Exception("Actual tray health callback did not complete with expected result");
+ }
+ static void TrayHealth(){
+  string target=Fixture("tray-health-policy"),path=target+".status.json";var options=Options(target,helper,true);byte[] before=File.ReadAllBytes(target);
+  WriteTrayHealth(path,"steamvr",true,0,"fixture-publisher");object window=Window(options);
+  using(var tray=new SteamVrControlTray(options))try{
+   Invoke(window,"Reload");TrayCallback(tray,delegate(HealthReadResult r){return r.Error==null;});
+   object[] invalid={null,null,42,true,new object[]{"steamvr"},new Dictionary<string,object>{{"name","steamvr"}},"","unknown-policy"};
+   for(int i=0;i<invalid.Length;i++){
+    WriteTrayHealth(path,invalid[i],i!=0,0,"fixture-publisher");
+    TrayCallback(tray,delegate(HealthReadResult r){return r.Error!=null&&r.Error.Contains("policy");});
+    string display=(string)Field(tray,"statusItem").GetType().GetProperty("Text").GetValue(Field(tray,"statusItem"),null);
+    Check(display.Contains("health: unavailable / historical")&&!display.Contains("health: policy="),"Malformed tray policy presented as current: "+display);
+    Rejected(delegate{HealthReader.ReadOnce(path);},"policy");
+    ((TextBlock)Field(window,"healthStatus")).Text="";Invoke(window,"Health");var until=DateTime.UtcNow.AddSeconds(5);
+    while(((bool)Field(window,"healthAvailable")||!((TextBlock)Field(window,"healthStatus")).Text.Contains("Invalid health snapshot policy"))&&DateTime.UtcNow<until){Invoke(window,"Health");System.Windows.Forms.Application.DoEvents();Pump();Thread.Sleep(5);}
+    Check(!((bool)Field(window,"healthAvailable"))&&((TextBlock)Field(window,"healthStatus")).Text.Contains("Invalid health snapshot policy"),"WPF did not reject malformed policy");
+   }
+   Pass("8 malformed policies rejected through actual WinForms callback, shared reader and WPF; no current policy claim");
+   foreach(string policy in new[]{"steamvr","monaka","both","disabled"}){
+    WriteTrayHealth(path,policy,true,0,"fixture-publisher");TrayCallback(tray,delegate(HealthReadResult r){return r.Error==null&&(string)r.Value["policy"]==policy;});
+    Check(((System.Windows.Forms.ToolStripMenuItem)Field(tray,"statusItem")).Text.Contains("health: policy="+policy+" (diagnostic only)"),"Tray failed valid recovery");
+   }
+   foreach(int age in new[]{10,-10}){WriteTrayHealth(path,"both",true,age,"fixture-publisher");TrayCallback(tray,delegate(HealthReadResult r){return r.Error==null;});Check(((System.Windows.Forms.ToolStripMenuItem)Field(tray,"statusItem")).Text.Contains("stale / historical"),"Stale/future tray health current");}
+   WriteTrayHealth(path,"both",true,0,"foreign-publisher");TrayCallback(tray,delegate(HealthReadResult r){return r.Error==null;});Check(((System.Windows.Forms.ToolStripMenuItem)Field(tray,"statusItem")).Text.Contains("INSTANCE MISMATCH"),"Foreign tray health current");
+   File.Delete(path);TrayCallback(tray,delegate(HealthReadResult r){return r.Error!=null;});Check(((System.Windows.Forms.ToolStripMenuItem)Field(tray,"statusItem")).Text.Contains("unavailable / historical"),"Missing tray health current");
+   foreach(var entry in (IDictionary)Field(tray,"policies"))Check(!((System.Windows.Forms.ToolStripMenuItem)((DictionaryEntry)entry).Value).Enabled,"Readonly lost after malformed/recovered health");
+   Check(Convert.ToBase64String(before)==Convert.ToBase64String(File.ReadAllBytes(target)),"Tray health callbacks wrote configuration");
+   Pass("tray valid recovery/all 4 policies, stale/future/mismatch/unavailable, readonly and config no-write");
+   Set(tray,"options",null);Invoke(tray,"RefreshRouteUi");Check(((System.Windows.Forms.ToolStripMenuItem)Field(tray,"statusItem")).Text.Contains("unavailable / historical"),"Presentation fault not contained");Set(tray,"options",options);
+   Pass("tray presentation boundary contains unexpected model fault without escaping UI callback");
+  }finally{Close(window);}
+ }
+ [STAThread] static int Main(string[] args){try{System.Windows.Forms.Application.SetUnhandledExceptionMode(System.Windows.Forms.UnhandledExceptionMode.CatchException);System.Windows.Forms.Application.ThreadException+=delegate(object sender,ThreadExceptionEventArgs e){trayCallbackError=e.Exception;};directory=args[0];helper=args[1];fake=args[2];example=args[3];Directory.CreateDirectory(directory);Arguments();Access();Helpers();NativeTransactions();Health();TargetSwitch();AsyncState();TrayHealth();Console.WriteLine("PASS control foundation: "+cases+" cases; manual visual UI NOT_RUN; hardware/network NOT_RUN");return 0;}catch(Exception e){Console.Error.WriteLine(e);return 1;}}
 }

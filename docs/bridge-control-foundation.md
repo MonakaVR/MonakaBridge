@@ -106,6 +106,12 @@ separate gates. The scoped baseline pins current control files and exact
 predecessors; historical capability/config/P2R pins and algorithm bytes remain
 unchanged. Current-source drift and old-pin mutations must fail.
 
+Health policy must be present as one of the four canonical string values.
+Missing, null, wrong-type or unknown values are unavailable/historical in both
+WPF and tray; the entire tray presentation has an exception boundary. Regression
+drives actual WinForms callbacks, and packaged smoke covers the real tray parent
+and WPF child on a private hidden desktop as well as window-only launches.
+
 ## Migration and rollback
 
 Keep existing toolsets and frozen HIL evidence. Close old configuration editors,

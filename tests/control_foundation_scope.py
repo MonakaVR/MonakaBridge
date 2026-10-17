@@ -5,7 +5,7 @@ import hashlib,json,subprocess
 BASE='279a01363f47ad3564b5cd8b9346180c49ee41d3'
 PIN='dependencies/control-foundation-baseline.json'
 FILES={
- 'ui/installation_control.cs','ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs',
+ 'ui/control_models.cs','ui/installation_control.cs','ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs',
  'scripts/build_gui.ps1','scripts/package_control.ps1',
  'tests/ui_production_tests.cs','tests/control_foundation_tests.cs','tests/control_helper_fixture.cs','tests/control_foundation_tests.ps1',
  'tests/control_packaged_smoke.py','tests/control_foundation_scope.py','tests/control_foundation_scope_tests.py',

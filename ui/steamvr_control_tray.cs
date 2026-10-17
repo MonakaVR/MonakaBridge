@@ -42,14 +42,25 @@ namespace MonakaBridge {
   void RefreshTarget(){helperIssue=options.ValidateEditing();RefreshRouteUi();}
   void ReadHealth(){reader.Request(options.HealthFile,delegate(Action apply){dispatcher.BeginInvoke(apply);},delegate(HealthReadResult result){health=result;RefreshRouteUi();});}
   void RefreshRouteUi(){
+   if(disposed)return;
+   try{RefreshRoutePresentation();}catch(Exception e){
+    // Diagnostic/presentation failures never escape a WinForms callback and
+    // cannot establish runtime application or write permission.
+    foreach(var item in policies)item.Value.Enabled=false;
+    statusItem.Text="Saved: unavailable | health: unavailable / historical | runtime ownership unverified";
+    statusItem.ToolTipText="Presentation unavailable: "+e.Message.Substring(0,Math.Min(e.Message.Length,256));
+   }
+  }
+  void RefreshRoutePresentation(){
    string requested="unavailable",publisher=null;
    try{var config=SteamVrControlWpf.Read(options.ConfigFile);requested=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);publisher=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture);}catch{}
    string reason=busy?"Save in progress":needsReload?"Outcome requires reload/review":options.EditBlockReason()??helperIssue;
    foreach(var item in policies){item.Value.Checked=item.Key==requested;item.Value.Enabled=reason==null;item.Value.ToolTipText=reason??"Save through the selected native helper; runtime application remains unconfirmed";}
    string diagnostic="unavailable / historical";
-   if(health!=null&&health.Error==null){
-    object id;bool same=health.Value.TryGetValue("publisher_id",out id)&&publisher!=null&&publisher==Convert.ToString(id,CultureInfo.InvariantCulture);
-    diagnostic=!same?"INSTANCE MISMATCH":!HealthPresentation.Current(health.SnapshotUtc,DateTime.UtcNow)?"stale / historical":"policy="+Convert.ToString(health.Value["policy"],CultureInfo.InvariantCulture)+" (diagnostic only)";
+   string observedPolicy;
+   if(health!=null&&health.Error==null&&HealthPresentation.TryPolicy(health.Value,out observedPolicy)){
+    object id;bool same=health.Value.TryGetValue("publisher_id",out id)&&id is string&&publisher!=null&&publisher==(string)id;
+    diagnostic=!same?"INSTANCE MISMATCH":!HealthPresentation.Current(health.SnapshotUtc,DateTime.UtcNow)?"stale / historical":"policy="+observedPolicy+" (diagnostic only)";
    }
    statusItem.Text="Saved: "+requested+" | health: "+diagnostic+" | runtime ownership unverified";
    statusItem.ToolTipText=options.ConfigFile+"\n"+options.HealthFile+"\n"+(reason??"Writable; native commit checks directory permission/lock/CAS");

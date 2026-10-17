@@ -6,7 +6,7 @@ scratch=root/'build/control-scope-mutants'/str(uuid.uuid4());scratch.mkdir(paren
 for name in FILES|OLD_PINS|{PIN}:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
 approved_control(scratch,root);count=0
-for name in ['ui/installation_control.cs','ui/steamvr_control_wpf.cs','tests/capability_runtime_scope.py',*sorted(OLD_PINS)]:
+for name in ['ui/control_models.cs','ui/installation_control.cs','ui/steamvr_control_wpf.cs','tests/capability_runtime_scope.py',*sorted(OLD_PINS)]:
  p=scratch/name;old=p.read_bytes();p.write_bytes(old+b'\n# deliberate drift\n')
  try:approved_control(scratch,root)
  except RuntimeError:count+=1
@@ -21,5 +21,5 @@ p=scratch/PIN;old=p.read_bytes();value=json.loads(old);value['files']['tools/bri
 try:approved_control(scratch,root)
 except RuntimeError:count+=1
 else:raise RuntimeError('Scope broadening accepted')
-p.write_bytes(old);assert count==8
-print('PASS WS01a exact control scope; 8 source/old-pin/rollback/scope mutants rejected')
+p.write_bytes(old);assert count==9
+print('PASS WS01a exact control scope; 9 source/old-pin/rollback/scope mutants rejected')
