@@ -27,7 +27,7 @@ add_custom_command(OUTPUT "${MB_CONTROL_EXE}"
  DEPENDS ${MB_CONTROL_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/control_gui.cmake" VERBATIM)
 add_custom_target(monaka_bridge_control ALL DEPENDS "${MB_CONTROL_EXE}")
 if(BUILD_TESTING AND TARGET calibration_runtime_process_fixture)
- foreach(group json profile models job launch client wpf)
+ foreach(group json profile models job launch client wpf b4)
   add_test(NAME calibration_gui_${group} COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_calibration_managed.py"
    --group "${group}" --root "${CMAKE_CURRENT_SOURCE_DIR}" --out "${CMAKE_CURRENT_BINARY_DIR}/managed-${group}"
    --compiler "${MB_CSC}" --references "${MB_NET48_REFERENCES}"

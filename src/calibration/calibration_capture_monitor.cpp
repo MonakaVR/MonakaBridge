@@ -16,6 +16,7 @@ void CaptureMonitor::fail(const std::string& reason){if(state_.fault.empty()){st
 CaptureMonitor::CaptureMonitor(const ProviderOpenOptions& options,const ProviderBatch& batch,std::int64_t now,std::int64_t created)
  :input_(batch.identity),created_(created),lastNow_(now){
  const auto& frozen=options.measurementTarget();const auto& b=frozen.target().binding;
+  orientationRequired_=!options.staticMode()||norm(b.mount.translation)>0;
  need(bool(options.capabilityProfile()),"EXPLICIT_DECLARATION_REQUIRED");declaration_=options.capabilityProfile()->inputDeclaration;
  need(input_.source==b.source&&input_.device==b.device&&input_.space==b.inputSpace&&input_.revision==b.inputRevision&&input_.convention==frozen.target().profile.convention&&!input_.session.empty()&&!input_.clock.empty()&&!input_.peer.empty()&&!input_.referenceSerial.empty()&&!input_.standing.empty()&&input_.referenceRole==options.referenceRole(),"DISCOVERY_WITNESS_MISMATCH");
  // This local state becomes the active monitor by move, never by reseeding.
@@ -56,7 +57,7 @@ RecordingDelivery CaptureMonitor::consume(const ProviderBatch& b,bool recording,
    bool fresh=p.timestamp_ns>=0&&p.sent_at_ns>=p.timestamp_ns&&age<=50000000&&now-f.receiptNs<=50000000;
    bool eligible=true;using P=std::decay_t<decltype(p)>;
    if constexpr(std::is_same_v<P,c1::TrackerObservation>){
-    eligible=fresh&&p.modality=="full"&&p.tracking_state=="tracked"&&p.validity.position&&p.validity.orientation;
+     eligible=fresh&&p.modality=="full"&&p.tracking_state=="tracked"&&p.validity.position&&(!orientationRequired_||p.validity.orientation);
     if(eligible){check(state_.lastValidPose<0||f.receiptNs-state_.lastValidPose<second,"SOURCE_LIVENESS_GAP");state_.lastValidPose=f.receiptNs;}state_.poseValid=eligible;
    }else check(p.presence!="absent","EXPLICIT_ABSENCE");
    if(recording){out.values.frames.push_back(f);out.eligible.push_back(eligible);}
@@ -78,6 +79,7 @@ struct CaptureOwner::Context {
  std::string error,shutdownFault;std::uint64_t preflightEpoch=0,generation=1,nextBarrier=0,pendingBarrier=0,ackedBarrier=0,usedBarrier=0,barrierEpoch=0,barrierReceived=0;
  std::string barrierRequest;std::uint64_t issued=0,acked=0,stopReceived=0,stopDelivery=0;
  std::size_t frames=0,references=0;std::thread::id owner;
+  bool pointRequested=false,pointStop=false,pointActive=false;
  Context(CaptureProvider& p,Clock c,const std::atomic<bool>& stop,std::int64_t t,std::string r):provider(p),clock(std::move(c)),cancel(stop),created(t),run(std::move(r)){}
  void fail(const std::string& why){if(error.empty()){error=why;if(!monitor)++preflightEpoch;}if(monitor)monitor->fail(why);changed.notify_all();}
  void guard(){auto batch=provider.guard();auto now=clock();std::lock_guard<std::mutex> lock(mutex);if(active&&monitor)monitor->consume(batch,false,now);}
@@ -107,7 +109,16 @@ struct CaptureOwner::Context {
    {std::lock_guard<std::mutex> lock(mutex);witness=initial->witness();monitor=std::move(initial);if(!error.empty())monitor->fail(error);discovering=false;}changed.notify_all();
    while(!stopping&&!cancel){
     bool capture=false;std::uint64_t gen=0;
-    {std::unique_lock<std::mutex> lock(mutex);changed.wait_for(lock,std::chrono::milliseconds(8),[&]{return stopping||cancel||recordRequested||pendingBarrier>ackedBarrier;});if(stopping||cancel)break;capture=recordRequested;recordRequested=false;if(capture){recording=true;captureDone=false;gen=generation;}}
+     bool point=false;
+     {std::unique_lock<std::mutex> lock(mutex);changed.wait_for(lock,std::chrono::milliseconds(8),[&]{return stopping||cancel||recordRequested||pointRequested||pendingBarrier>ackedBarrier;});if(stopping||cancel)break;capture=recordRequested;point=pointRequested;recordRequested=false;pointRequested=false;if(capture||point){recording=true;captureDone=false;gen=generation;}}
+     if(point){
+      try{while(!stopping&&!cancel){
+       {std::lock_guard<std::mutex> lock(mutex);if(pointStop)break;}
+       receive(provider.guard(),gen);
+       std::unique_lock<std::mutex> lock(mutex);changed.wait_for(lock,std::chrono::milliseconds(8),[&]{return pointStop||stopping||cancel;});
+      }}catch(const std::exception& e){std::lock_guard<std::mutex> lock(mutex);if(!cancel)fail(diagnostic(e));}
+      {std::lock_guard<std::mutex> lock(mutex);recording=false;pointActive=false;captureDone=true;stopReceived=monitor->snapshot().received;stopDelivery=issued;}changed.notify_all();
+     }
     if(capture){
      auto self=shared_from_context();
      try{provider.capture([self,gen](const ProviderBatch& b){self->receive(b,gen);},cancel);}catch(const std::exception& e){std::lock_guard<std::mutex> lock(mutex);if(!cancel)fail(diagnostic(e));}
@@ -169,6 +180,24 @@ void CaptureOwner::record(const std::function<void(const RecordingDelivery&)>& s
  }
 }
 void CaptureOwner::invalidate(const std::string& reason){auto c=context_;std::lock_guard<std::mutex> lock(c->mutex);c->fail(reason);}
+void CaptureOwner::recordPoint(const std::function<bool(const RecordingDelivery&)>& sink,std::int64_t deadline){
+ auto c=context_;{
+  std::lock_guard<std::mutex> lock(c->mutex);
+  need(c->active&&!c->cancel&&!c->stopping&&!c->pointActive&&!c->recording&&!c->recordingStarted&&c->queue.empty()&&!c->inflight,"STATIC_CAPTURE_STATE_REJECTED");
+  c->pointActive=true;c->pointStop=false;c->captureDone=false;c->pointRequested=true;
+ }c->changed.notify_all();bool done=false;
+ try{while(true){
+  RecordingDelivery delivery;{
+   std::unique_lock<std::mutex> lock(c->mutex);c->changed.wait_for(lock,std::chrono::milliseconds(8),[&]{return !c->queue.empty()||c->captureDone||!c->error.empty()||c->cancel||c->stopping;});
+   need(!c->cancel&&!c->stopping,"CANCELLED");if(!c->error.empty())throw std::runtime_error(c->error);
+   need(c->clock()<deadline,"STATIC_POINT_TIMEOUT");
+   if(c->queue.empty()){if(c->captureDone){need(done&&c->acked==c->stopDelivery&&!c->inflight,"STATIC_RECORDING_DRAIN_INCOMPLETE");return;}continue;}
+   delivery=std::move(c->queue.front());c->queue.pop_front();need(!c->inflight,"RECORDING_DELIVERY_INFLIGHT");c->inflight=delivery.delivery;
+  }
+  if(!done)done=sink(delivery);
+  {std::lock_guard<std::mutex> lock(c->mutex);need(c->inflight&&*c->inflight==delivery.delivery&&delivery.delivery==c->acked+1,"RECORDING_ACK_ORDER");c->frames-=delivery.values.frames.size();c->references-=delivery.values.references.size();c->acked=delivery.delivery;c->inflight.reset();if(done)c->pointStop=true;}c->changed.notify_all();
+ }}catch(...){std::lock_guard<std::mutex> lock(c->mutex);c->pointStop=true;c->changed.notify_all();throw;}
+}
 void CaptureOwner::shutdown(){
  auto c=context_;if(!c)return;{std::lock_guard<std::mutex> lock(c->mutex);if(c->active){c->active=false;++c->generation;}c->stopping=true;}c->changed.notify_all();
  if(thread_.joinable()){need(thread_.get_id()!=std::this_thread::get_id(),"OWNER_SHUTDOWN_REENTRY");thread_.join();}

@@ -1,6 +1,7 @@
 from pathlib import Path
 import json,shutil,uuid
 from calibration_review_r1_scope import FILES,PINS,PROTECTED,PIN,approved_r1,digest,r1_project,historical
+from calibration_b4_scope import b4_project
 def verify_r1(root):
  root=Path(root);approved=approved_r1(root);scratch=root/'build/r1-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True);count=0
  for name in approved:
@@ -24,7 +25,7 @@ def verify_r1(root):
   p=scratch/name;original=p.read_bytes();text=original.decode();assert old in text;p.write_text(text.replace(old,new),encoding='utf-8');v=json.loads(raw);v['files'][name]['sha256']=digest(p.read_bytes());pin.write_text(json.dumps(v),encoding='utf-8');reject('critical semantic/connection despite hash redeclaration');p.write_bytes(original);pin.write_bytes(raw)
  name='src/calibration/calibration_runtime_provider.cpp';p=scratch/name;original=p.read_bytes();text=original.decode().replace(' need(o.mirrorAddress()', ' need(o.capabilityProfile().has_value(),"EXPLICIT_DECLARATION_REQUIRED");\n need(o.mirrorAddress()');p.write_text(text,encoding='utf-8');v=json.loads(raw);v['files'][name]['sha256']=digest(p.read_bytes());pin.write_text(json.dumps(v),encoding='utf-8');reject('declaration restored at wrong configure boundary despite hash rewrite');p.write_bytes(original);pin.write_bytes(raw)
  for name,e in json.loads(raw)['files'].items():
-  current=(root/name).read_bytes();assert r1_project(root,name,current)==(historical(str(root),name) if e['parent']['existed'] else current)
+  current=b4_project(root,name,(root/name).read_bytes());assert r1_project(root,name,current)==(historical(str(root),name) if e['parent']['existed'] else current)
   try:r1_project(root,name,current+b'foreign')
   except RuntimeError:count+=1
   else:raise RuntimeError('R1 foreign projection')

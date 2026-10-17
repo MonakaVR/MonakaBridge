@@ -1,6 +1,7 @@
 // Separate test executable: same runtime provider/codec/owner/session/solver,
 // with fake public SDK and in-memory datagrams. Never packaged as a helper.
 #include "calibration_runtime_fake.hpp"
+#include "calibration_b4_fixture.hpp"
 #include <iostream>
 namespace lc=mb::local_calibration;
 int main(int argc,char** argv)try{
@@ -15,7 +16,10 @@ int main(int argc,char** argv)try{
  run.env.helperPath=std::filesystem::path(self).u8string();run.env.helperSha256=lc::sha256(mb::readConfigBytes(std::filesystem::path(self)));
  std::string mode=local||seed?std::filesystem::path(environment(L"MONAKA_CALIBRATION_TEST_MODE",false)).u8string():(argc==3?argv[2]:"");
  std::atomic<bool> blockReference{false};
- if(mode=="post-replace-exit")run.env.afterReplace=[](){ExitProcess(73);};
+ if(mode=="b4-static") {state.extrinsic={};state.poseHook=[&]{state.time+=8000000;};}
+ else if(mode=="b4-approval"){state.poseHook=[&]{state.time+=8000000;};run.env.outputApprovalAuthority=std::make_shared<b4_fixture::Authority>();}
+ else if(mode=="b4-unadopted")state.poseHook=[&]{state.time+=8000000;};
+ else if(mode=="post-replace-exit")run.env.afterReplace=[](){ExitProcess(73);};
  else if(mode=="post-replace-unknown")run.env.afterReplace=[](){throw std::runtime_error("test-only lost commit reply");};
  else if(mode=="slow-commit")run.env.transactionHook=[](const char* stage){if(std::string(stage)=="before-replace")Sleep(200);};
  else if(mode=="init-failure")state.failInit=true;

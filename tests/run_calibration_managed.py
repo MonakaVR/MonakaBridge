@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,json,subprocess,tempfile,time,hashlib,sys
 sys.stdout.reconfigure(encoding="utf-8",errors="replace");sys.stderr.reconfigure(encoding="utf-8",errors="replace")
-p=argparse.ArgumentParser();p.add_argument('--group',required=True,choices=['json','profile','models','job','launch','client','wpf'])
+p=argparse.ArgumentParser();p.add_argument('--group',required=True,choices=['json','profile','models','job','launch','client','wpf','b4'])
 for name in ['root','out','compiler','references','native','config']:p.add_argument('--'+name,required=True)
 a=p.parse_args();root=Path(a.root).resolve();out=Path(a.out).resolve();out.mkdir(parents=True,exist_ok=True)
 base=['ui/control_models.cs','ui/installation_control.cs','ui/calibration_json.cs','ui/calibration_profile.cs']
@@ -30,5 +30,7 @@ elif a.group=='launch':
  fixture=build('launch-fixture','CalibrationLaunchFixture',process+['tests/calibration_launch_tests.cs']);exe=build('launch-tests','CalibrationLaunchTests',process+['tests/calibration_launch_tests.cs']);run([exe,fixture,short],a.group)
 elif a.group=='client':
  fault=build('protocol-fault.fixture','CalibrationProtocolFaultFixture',['tests/calibration_protocol_fault_fixture.cs']);exe=build('client-tests','CalibrationClientProcessTests',process+['tests/calibration_client_process_tests.cs']);run([exe,a.native,fault,short],a.group)
+elif a.group=='b4':
+ exe=build('unshown-b4-tests','CalibrationB4GuiTests',wpf+['tests/calibration_wpf_tests.cs','tests/calibration_b4_gui_tests.cs'],True);run([exe,a.native,a.config,short],a.group)
 else:
  exe=build('unshown-wpf-tests','CalibrationWpfTests',wpf+['tests/calibration_wpf_tests.cs'],True);run([exe,a.native,a.config,short],a.group)

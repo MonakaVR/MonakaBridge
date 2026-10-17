@@ -12,6 +12,7 @@ namespace MonakaBridge {
   internal string Phase,Fault,ActualOutcome,Progress,LastNative;
   internal bool Busy,Stopping,Stopped,CommitMayHaveStarted,CanPrepare,CanCommit;
   internal CalibrationNativeResult Result;internal CalibrationPreparedCandidate Prepared;
+   internal CalibrationOutputReview Approval;internal string PointToken,PointInstruction;
  }
  internal sealed class CalibrationProcessClient:IDisposable {
   internal delegate CalibrationOwnedProcess Launcher(string executable,string arguments,bool version);
@@ -29,6 +30,7 @@ namespace MonakaBridge {
   Request active,cancelRequest,closeRequest;long lastNow,workerStart,versionDeadline,stopDeadline,drainDeadline,confirmDeadline,resultDeadline,reviewDeadline,phaseDeadline,cacheBytes;
   long sequence;int ordinaryCount;string session,run,confirmation,openHash,phase="NEW",fault,actualOutcome,progress,lastNative,terminalNotification;
   CalibrationNativeResult result;CalibrationPreparedCandidate prepared;
+   CalibrationOutputReview approval;bool staticMode,approvalMode,supportsStatic,supportsApproval;int staticPoints=3,staticSamples=60;string pointToken,pointInstruction;long pointWaitDeadline,staticRunDeadline;
   bool haveTime,started,stopRequested,closed,stdoutDone,stderrDone,mayCommit,commitUnconfirmed,recordPhase,solvePhase,watchDone,disposed,launchPending;
 
   internal CalibrationProcessClient(CalibrationInstallation selected,bool effectiveReadOnly):this(selected,effectiveReadOnly,null,null,null){}
@@ -40,6 +42,8 @@ namespace MonakaBridge {
    write=writer??delegate(Stream stream,byte[] bytes,string op){stream.Write(bytes,0,bytes.Length);stream.Flush();};
   }
   long Now(){long value=clock();if(value<0||(haveTime&&value<lastNow))throw new InvalidOperationException("MONOTONIC_CLOCK_ROLLBACK");haveTime=true;lastNow=value;return value;}
+   internal void SelectStatic(int points,int samples){lock(gate){if(started||points<3||points>16||samples<1||samples>4096||points*samples>16384)throw new InvalidOperationException("Static plan requires 3..16 points, 1..4096 pairs and total <=16384");staticMode=true;staticPoints=points;staticSamples=samples;}}
+   internal void SelectOutputApproval(){lock(gate){if(started||staticMode)throw new InvalidOperationException("Output review requires a fresh separate session");approvalMode=true;}}
   static Thread Background(ThreadStart body){var thread=new Thread(body){IsBackground=true};thread.Start();return thread;}
   static bool Terminal(string value){return value=="SAVED"||value=="SAVED_CONFIG_EVIDENCE_STALE"||value=="CANCELLED"||value=="CLOSED"||value=="FAILED"||value=="INSPECT_ONLY"||value=="UNKNOWN";}
   static string Text(Dictionary<string,object> value,string key){return CalibrationJson.Text(value,key,4096);}
@@ -70,7 +74,8 @@ namespace MonakaBridge {
     CalibrationOwnedProcess process;try{process=launch(profile.CalibrationHelper,"--local-api",false);}catch{lock(gate){launchPending=false;}throw;}
     lock(gate){child=process;launchPending=false;if(!process.AssignedBeforeCommands){FailLocked("Owned job assignment required");throw new InvalidOperationException(fault);}if(stopRequested){stdoutDone=stderrDone=true;process.KillOwned();throw new InvalidOperationException("Calibration session closed during startup");}phase="NEW";phaseDeadline=0;}
     outputThread=Background(ReadOutput);errorThread=Background(ReadError);
-    return await Command("open",profile.OpenRequest(readOnly),10000).ConfigureAwait(false);
+     var fields=profile.OpenRequest(readOnly);if(staticMode){fields["mode"]="static";fields["static_points"]=staticPoints;fields["static_samples"]=staticSamples;}if(approvalMode)fields["purpose"]="output_approval";
+     return await Command("open",fields,10000).ConfigureAwait(false);
    }catch(Exception e){Fail(e.Message);CalibrationOwnedProcess current;lock(gate){current=child??bootstrap;if(current==null){closed=true;stopped.TrySetResult(true);}}
     if(current!=null)try{current.KillOwned();}catch{}throw;
    }
@@ -83,7 +88,8 @@ namespace MonakaBridge {
    var err=Background(delegate{try{CalibrationPipeFrames.Drain(process.Error,256*1024,null);}catch(Exception e){errorFailure=e;try{process.KillOwned();}catch{}}});
    try{
     byte[] bytes=CalibrationPipeFrames.ReadLine(process.Output,CalibrationContract.LineBytes);if(bytes==null)throw new InvalidOperationException("Calibration version unavailable");
-    CalibrationContract.VerifyVersion(profile,bytes);
+     var capabilities=CalibrationContract.VerifyVersion(profile,bytes);supportsStatic=CalibrationJson.Boolean(capabilities,"static_supported");supportsApproval=CalibrationJson.Boolean(capabilities,"output_approval");
+     if(staticMode&&!supportsStatic||approvalMode&&!supportsApproval)throw new InvalidOperationException("Selected helper does not support this static/output-review operation; no legacy fallback");
     if(process.Output.ReadByte()!=-1||!process.WaitForExit(1000)||process.ExitCode!=0)throw new InvalidOperationException("Invalid calibration version process outcome");
     if(!err.Join(1000)||errorFailure!=null)throw new InvalidOperationException("Calibration version stderr unavailable",errorFailure);
     lock(gate){if(stopRequested)throw new InvalidOperationException("Calibration bootstrap stopped");versionDeadline=0;}
@@ -93,15 +99,18 @@ namespace MonakaBridge {
   internal Task<Dictionary<string,object>> ConfirmAsync(){return Command("confirm_target",null,10000);}
   internal Task<Dictionary<string,object>> BeginAsync(){Dictionary<string,object> fields;lock(gate){fields=new Dictionary<string,object>{{"confirmation_token",confirmation}};}return Command("begin",fields,30000);}
   internal Task<Dictionary<string,object>> PrepareAsync(){Dictionary<string,object> fields;lock(gate){if(readOnly)throw new InvalidOperationException("Read-only calibration cannot prepare/save");if(result==null)throw new InvalidOperationException("Native result required");fields=new Dictionary<string,object>{{"result_id",result.ResultId}};}return Command("prepare_commit",fields,10000);}
-  internal Task<Dictionary<string,object>> CommitAsync(){Dictionary<string,object> fields;lock(gate){if(readOnly||prepared==null)throw new InvalidOperationException("Native writable prepared candidate required");fields=prepared.CommitFields();}return Command("commit",fields,15000);}
+   internal Task<Dictionary<string,object>> CapturePointAsync(){Dictionary<string,object> fields;lock(gate){fields=new Dictionary<string,object>{{"point_token",pointToken}};}return Command("capture_point",fields,80000);}
+   internal Task<Dictionary<string,object>> ReviewOutputAsync(){return Command("review_output",null,10000);}
+   internal Task<Dictionary<string,object>> PrepareOutputAsync(string[] members){Dictionary<string,object> fields;lock(gate){if(readOnly||approval==null)throw new InvalidOperationException("Fresh writable output review required");fields=new Dictionary<string,object>{{"approval_id",approval.ApprovalId},{"members",members}};}return Command("prepare_output",fields,10000);}
+   internal Task<Dictionary<string,object>> CommitAsync(){Dictionary<string,object> fields;string op;lock(gate){if(readOnly||prepared==null)throw new InvalidOperationException("Native writable prepared candidate required");fields=prepared.CommitFields();op=prepared.OutputApproval?"commit_output":"commit";}return Command(op,fields,15000);}
   void RequirePhase(string op,long now) {
    if(stopRequested||closed||fault!=null)throw new InvalidOperationException("Calibration session is inspect-only; close before a new measurement");
-   bool okay=op=="open"?phase=="NEW":op=="discover"?phase=="OPEN":op=="confirm_target"?phase=="DISCOVERED":op=="begin"?phase=="CONFIRMED"&&confirmation!=null&&now<confirmDeadline:op=="prepare_commit"?(phase=="RESULT_READY"||phase=="PREPARED")&&result!=null&&now<resultDeadline:op=="commit"?phase=="PREPARED"&&prepared!=null&&now<reviewDeadline:false;
+    bool okay=op=="open"?phase=="NEW":op=="discover"?phase=="OPEN":op=="confirm_target"?phase=="DISCOVERED":op=="begin"?!approvalMode&&phase=="CONFIRMED"&&confirmation!=null&&now<confirmDeadline:op=="capture_point"?staticMode&&phase=="WAITING_POINT"&&pointToken!=null&&now<pointWaitDeadline&&now<staticRunDeadline:op=="review_output"?approvalMode&&(phase=="CONFIRMED"&&now<confirmDeadline||phase=="APPROVAL_REVIEW"):op=="prepare_output"?approvalMode&&phase=="APPROVAL_REVIEW"&&approval!=null&&now<resultDeadline:op=="prepare_commit"?(phase=="RESULT_READY"||phase=="PREPARED")&&result!=null&&now<resultDeadline:(op=="commit"||op=="commit_output")?phase=="PREPARED"&&prepared!=null&&now<reviewDeadline:false;
    if(!okay)throw new InvalidOperationException("Calibration action unavailable in "+phase);
   }
   async Task<Dictionary<string,object>> Command(string op,Dictionary<string,object> fields,int timeout) {
    if(!ordinary.Wait(0))throw new InvalidOperationException("Another calibration command is pending");
-   try{Request entry;lock(gate){long now=Now();RequirePhase(op,now);if(ordinaryCount>=126)throw new InvalidOperationException("Calibration request limit; close and start explicitly");entry=Create(op,fields,prefix+"-"+(++ordinaryCount),now,timeout);active=entry;}
+    try{Request entry;lock(gate){long now=Now();RequirePhase(op,now);if(ordinaryCount>=126)throw new InvalidOperationException("Calibration request limit; close and start explicitly");entry=Create(op,fields,prefix+"-"+(++ordinaryCount),now,timeout);active=entry;if(op=="capture_point"){phase="RECORDING";pointToken=null;pointWaitDeadline=0;}}
     Write(entry);return await entry.Reply.Task.ConfigureAwait(false);
    }finally{ordinary.Release();}
   }
@@ -115,7 +124,7 @@ namespace MonakaBridge {
   void Write(Request entry) {
    Task.Run(delegate{
     try{lock(writerGate){CalibrationOwnedProcess process;lock(gate){process=child;if(closed||process==null||(stopRequested&&entry.Op!="cancel"&&entry.Op!="close"))throw new InvalidOperationException("Command stopped before write");
-      if(entry.Op=="commit"){mayCommit=true;commitUnconfirmed=true;}entry.Written=true;
+       if(entry.Op=="commit"||entry.Op=="commit_output"){mayCommit=true;commitUnconfirmed=true;}entry.Written=true;
      }write(process.Input,entry.Bytes,entry.Op);}}
     catch(Exception e){Fail("Native write failed: "+e.Message);}
    });
@@ -170,17 +179,23 @@ namespace MonakaBridge {
     var witness=Map(value,"witness");if(Text(witness,"bridge_id")!=profile.BridgeId||Text(witness,"source")!=profile.Source||Text(witness,"device")!=profile.Device||Text(witness,"tracker")!=profile.Tracker||Text(witness,"input_space")!=profile.InputSpace||CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue)!=profile.InputRevision||Text(witness,"reference_role")!=profile.ReferenceRole)throw new InvalidOperationException("Native witness differs from selected target");
     Text(witness,"standing_witness");Text(witness,"reference_serial");phase="DISCOVERED";
    }else if(entry.Op=="confirm_target"&&status=="CONFIRMED"){confirmation=Text(value,"confirmation_token");confirmDeadline=entry.SentAt+10000;phase="CONFIRMED";
-   }else if(entry.Op=="begin"&&status=="RESULT_READY"){
+    }else if((entry.Op=="begin"||entry.Op=="capture_point")&&status=="WAITING_POINT"){
+     if(!staticMode)throw new InvalidOperationException("Unexpected static point");pointToken=Text(value,"point_token");pointWaitDeadline=now+59000;if(staticRunDeadline==0)staticRunDeadline=entry.SentAt+300000;confirmation=null;phase="WAITING_POINT";
+     pointInstruction="Point "+CalibrationJson.Integer(value,"point_index",1,16)+" / "+CalibrationJson.Integer(value,"points",3,16)+". Place the rigid tracker/reference fixture at a new non-collinear location, keep it still, then Capture static point. Fresh pairs required: "+CalibrationJson.Integer(value,"pairs_required",1,4096)+". Physical stillness is not automatically verified.";
+    }else if((entry.Op=="begin"||entry.Op=="capture_point")&&status=="RESULT_READY"){
     var nativeResult=new CalibrationNativeResult(bytes);if(nativeResult.ConfigSha256!=openHash)throw new InvalidOperationException("Native result config snapshot changed");result=nativeResult;prepared=null;resultDeadline=entry.SentAt+600000;confirmation=null;phase=stopRequested?"INSPECT_ONLY":"RESULT_READY";
-   }else if(entry.Op=="prepare_commit"&&status=="PREPARED"){prepared=new CalibrationPreparedCandidate(result,bytes);reviewDeadline=entry.SentAt+30000;phase=stopRequested?"INSPECT_ONLY":"PREPARED";
-   }else if(entry.Op=="commit"&&(status=="SAVED"||status=="SAVED_CONFIG_EVIDENCE_STALE"||status=="UNKNOWN")){
+     pointToken=null;staticRunDeadline=pointWaitDeadline=0;
+    }else if(entry.Op=="review_output"&&status=="APPROVAL_REVIEW"){var reviewed=new CalibrationOutputReview(bytes);if(reviewed.ConfigSha256!=openHash||Text(value,"source")!=profile.Source||Text(value,"input_space")!=profile.InputSpace||CalibrationJson.Integer(value,"input_revision",0,UInt32.MaxValue)!=profile.InputRevision)throw new InvalidOperationException("Native approval review differs from fresh target snapshot");approval=reviewed;resultDeadline=entry.SentAt+600000;confirmation=null;phase="APPROVAL_REVIEW";
+    }else if(entry.Op=="prepare_output"&&status=="OUTPUT_PREPARED"){prepared=new CalibrationPreparedCandidate(null,approval,bytes);reviewDeadline=entry.SentAt+30000;phase=stopRequested?"INSPECT_ONLY":"PREPARED";
+    }else if(entry.Op=="prepare_commit"&&status=="PREPARED"){prepared=new CalibrationPreparedCandidate(result,bytes);reviewDeadline=entry.SentAt+30000;phase=stopRequested?"INSPECT_ONLY":"PREPARED";
+    }else if((entry.Op=="commit"||entry.Op=="commit_output")&&(status=="SAVED"||status=="SAVED_CONFIG_EVIDENCE_STALE"||status=="UNKNOWN")){
     actualOutcome=status;commitUnconfirmed=false;phase=status;prepared=null;if(stopRequested)stopDeadline=now+2000;
    }else if(entry.Op=="cancel"||entry.Op=="close"){
     if(!Terminal(status)&&status!="REJECTED")throw new InvalidOperationException("Native close/cancel outcome invalid");
     if(status=="SAVED"||status=="SAVED_CONFIG_EVIDENCE_STALE"){if(!mayCommit)throw new InvalidOperationException("Unrequested native save outcome");actualOutcome=status;commitUnconfirmed=false;phase=status;}
     else if(actualOutcome==null&&!commitUnconfirmed)phase=nativePhase;
    }else if(status=="REJECTED"){
-    prepared=null;confirmation=null;if(entry.Op=="commit"){commitUnconfirmed=false;actualOutcome=nativePhase=="UNKNOWN"?"UNKNOWN":"REJECTED";}
+     prepared=null;confirmation=null;if(entry.Op=="commit"||entry.Op=="commit_output"){commitUnconfirmed=false;actualOutcome=nativePhase=="UNKNOWN"?"UNKNOWN":"REJECTED";}
     phase=nativePhase;if(Terminal(nativePhase)||entry.Op=="open")FailLocked(value.ContainsKey("reason")?Text(value,"reason"):"Native action rejected");
    }else throw new InvalidOperationException("Unexpected native outcome for "+entry.Op);
   }
@@ -207,9 +222,11 @@ namespace MonakaBridge {
      if(active!=null&&deadline!=0&&now>=deadline)FailLocked("Native operation timeout: "+active.Op);
      if(!stopRequested&&confirmDeadline!=0&&phase=="CONFIRMED"&&now>=confirmDeadline)FailLocked("Confirmation expired; new measurement required");
      if(!stopRequested&&resultDeadline!=0&&now>=resultDeadline)FailLocked("Native result review budget expired");
-     if(!stopRequested&&prepared!=null&&reviewDeadline!=0&&now>=reviewDeadline){prepared=null;phase="RESULT_READY";reviewDeadline=0;Notify("Review token expired; explicitly prepare the same native result again",false);}
+      if(!stopRequested&&staticRunDeadline!=0&&now>=staticRunDeadline)FailLocked("Static run five-minute software budget expired");
+      if(!stopRequested&&phase=="WAITING_POINT"&&pointWaitDeadline!=0&&now>=pointWaitDeadline)FailLocked("Static point wait expired; new measurement required");
+      if(!stopRequested&&prepared!=null&&reviewDeadline!=0&&now>=reviewDeadline){prepared=null;phase=approvalMode?"APPROVAL_REVIEW":"RESULT_READY";reviewDeadline=0;Notify("Review token expired; explicitly prepare the same native candidate again",false);}
      if(stopRequested&&child!=null){
-      if(commitUnconfirmed&&active!=null&&active.Op=="commit"&&now>=active.Deadline){actualOutcome=actualOutcome??"UNKNOWN";phase="UNKNOWN";kill=child;}
+       if(commitUnconfirmed&&active!=null&&(active.Op=="commit"||active.Op=="commit_output")&&now>=active.Deadline){actualOutcome=actualOutcome??"UNKNOWN";phase="UNKNOWN";kill=child;}
       else if(!commitUnconfirmed&&stopDeadline!=0&&now>=stopDeadline)kill=child;
       if(child.HasExited){if(drainDeadline==0)drainDeadline=now+2000;if((stdoutDone&&stderrDone)||now>=drainDeadline){
        if(commitUnconfirmed){actualOutcome=actualOutcome??"UNKNOWN";phase="UNKNOWN";}
@@ -225,7 +242,7 @@ namespace MonakaBridge {
    }}catch(Exception e){lock(gate){FailLocked("Calibration watchdog failed: "+e.Message);}CalibrationOwnedProcess process;lock(gate){process=child??bootstrap;}if(process!=null)try{process.KillOwned();}catch{}stopped.TrySetException(e);
    }finally{lock(gate){watchDone=true;}}
   }
-  internal CalibrationClientSnapshot Snapshot(){lock(gate){return new CalibrationClientSnapshot{Phase=phase,Fault=fault,ActualOutcome=actualOutcome,Progress=progress,LastNative=lastNative,Busy=active!=null,Stopping=stopRequested,Stopped=closed,CommitMayHaveStarted=mayCommit,Result=result,Prepared=prepared,CanPrepare=!readOnly&&!stopRequested&&result!=null&&(phase=="RESULT_READY"||phase=="PREPARED"),CanCommit=!readOnly&&!stopRequested&&prepared!=null&&phase=="PREPARED"};}}
+   internal CalibrationClientSnapshot Snapshot(){lock(gate){return new CalibrationClientSnapshot{Phase=phase,Fault=fault,ActualOutcome=actualOutcome,Progress=progress,LastNative=lastNative,Busy=active!=null,Stopping=stopRequested,Stopped=closed,CommitMayHaveStarted=mayCommit,Result=result,Prepared=prepared,Approval=approval,PointToken=pointToken,PointInstruction=pointInstruction,CanPrepare=!readOnly&&!stopRequested&&result!=null&&(phase=="RESULT_READY"||phase=="PREPARED"),CanCommit=!readOnly&&!stopRequested&&prepared!=null&&phase=="PREPARED"};}}
   internal string[] DrainNotifications(){lock(gate){var values=new List<string>(controls);controls.Clear();if(terminalNotification!=null){values.Add(terminalNotification);terminalNotification=null;}return values.ToArray();}}
   internal byte[] StderrBytes(){lock(gate){return stderr.ToArray();}}
   public void Dispose(){if(disposed)return;disposed=true;RequestStop(false);}

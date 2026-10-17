@@ -1,6 +1,7 @@
 #include "monaka_bridge/calibration_session.hpp"
 #include "monaka_bridge/calibration_capture_monitor.hpp"
 #include "monaka_bridge/config_transaction.hpp"
+#include "monaka_bridge/static_calibration_session.hpp"
 #include <algorithm>
 #include <set>
 
@@ -8,8 +9,8 @@ namespace mb::local_calibration {
 std::string diagnostic(const std::exception& error){std::string s;const char* p=error.what();for(std::size_t i=0;i<512&&p[i];++i)s+=p[i];return Json::parse(Json(s).dump(-1,' ',false,Json::error_handler_t::replace)).get<std::string>();}
 namespace {
 void need(bool b,const char* reason){if(!b)throw std::runtime_error(reason);}
-enum Phase {NEW,OPEN,DISCOVERED,CONFIRMED,RECORDING,SOLVING,RESULT_READY,PREPARED,COMMITTING,SAVED,SAVED_STALE,CANCELLED,CLOSED,FAILED,INSPECT_ONLY,UNKNOWN};
-const char* name(Phase p){return std::array<const char*,16>{"NEW","OPEN","DISCOVERED","CONFIRMED","RECORDING","SOLVING","RESULT_READY","PREPARED","COMMITTING","SAVED","SAVED_CONFIG_EVIDENCE_STALE","CANCELLED","CLOSED","FAILED","INSPECT_ONLY","UNKNOWN"}.at(p);}
+enum Phase {NEW,OPEN,DISCOVERED,CONFIRMED,WAITING_POINT,RECORDING,SOLVING,APPROVAL_REVIEW,RESULT_READY,PREPARED,COMMITTING,SAVED,SAVED_STALE,CANCELLED,CLOSED,FAILED,INSPECT_ONLY,UNKNOWN};
+const char* name(Phase p){return std::array<const char*,18>{"NEW","OPEN","DISCOVERED","CONFIRMED","WAITING_POINT","RECORDING","SOLVING","APPROVAL_REVIEW","RESULT_READY","PREPARED","COMMITTING","SAVED","SAVED_CONFIG_EVIDENCE_STALE","CANCELLED","CLOSED","FAILED","INSPECT_ONLY","UNKNOWN"}.at(p);}
 bool terminalPhase(Phase p){return p>=SAVED;}
 Json rigid(const Rigid& r){return {{"rotation_xyzw",r.rotation},{"translation_m",r.translation}};}
 void fields(const Json& j,const std::set<std::string>& allowed){for(auto it=j.begin();it!=j.end();++it)need(allowed.count(it.key())!=0,"UNKNOWN_FIELD");}
@@ -22,12 +23,18 @@ void schema(const Json& j){
   for(auto f:{"config_path","source","device","tracker","input_space","bridge_id","installation_path","helper_path","helper_sha256","association","mirror_address","reference_role"}){text(j,f);allowed.insert(f);}
   for(auto f:{"input_revision","mirror_port"}){need(j.contains(f)&&j.at(f).is_number_integer()&&j.at(f)>=0,"MISSING_OR_WRONG_TYPE");allowed.insert(f);}
   need(j.contains("readonly")&&j.at("readonly").is_boolean(),"MISSING_OR_WRONG_TYPE");allowed.insert("readonly");
+  for(auto f:{"mode","purpose"})if(j.contains(f)){text(j,f);allowed.insert(f);}
+  for(auto f:{"static_points","static_samples"})if(j.contains(f)){need(j.at(f).is_number_unsigned()||(j.at(f).is_number_integer()&&j.at(f)>=0),"STATIC_PLAN_TYPE");allowed.insert(f);}
  }else{
-  need(std::set<std::string>{"discover","confirm_target","begin","capture_point","cancel","prepare_commit","commit","close"}.count(op),"UNSUPPORTED_OPERATION");
+  need(std::set<std::string>{"discover","confirm_target","begin","capture_point","cancel","prepare_commit","commit","close","review_output","prepare_output","commit_output"}.count(op),"UNSUPPORTED_OPERATION");
   for(auto f:{"session_id","run_id"}){text(j,f);allowed.insert(f);}
   if(op=="begin"){text(j,"confirmation_token");allowed.insert("confirmation_token");}
   if(op=="prepare_commit"||op=="commit"){text(j,"result_id");allowed.insert("result_id");}
   if(op=="commit")for(auto f:{"review_token","candidate_sha256"}){text(j,f);allowed.insert(f);}
+  if(op=="capture_point")for(auto f:{"point_token"}){if(j.contains(f))text(j,f);allowed.insert(f);}
+  if(op=="prepare_output"||op=="commit_output"){text(j,"approval_id");allowed.insert("approval_id");}
+  if(op=="prepare_output"){need(j.contains("members")&&j.at("members").is_array(),"APPROVAL_SELECTION_REQUIRED");for(const auto& member:j.at("members"))need(member.is_string(),"APPROVAL_MEMBER_TYPE");allowed.insert("members");}
+  if(op=="commit_output")for(auto f:{"review_token","candidate_sha256"}){text(j,f);allowed.insert(f);}
  }
  fields(j,allowed);
 }
@@ -74,6 +81,11 @@ struct CalibrationSession::Impl {
  std::unique_ptr<const InputWitness> input;
  std::unique_ptr<const TrajectoryResult> result;
  std::unique_ptr<TrajectoryRecorder> recorder;
+  bool staticMode=false,approvalPurpose=false;
+  StaticOptions staticOptions;std::unique_ptr<StaticMeasurement> staticMeasurement;
+  std::optional<RigidAlignmentResult> staticResult;
+  std::int64_t staticStart=0,pointWaitDeadline=0;std::string pointToken;
+  std::string approvalFingerprint;Json approvalDiff;
  std::unique_ptr<CaptureOwner> owner;
  bool evidenceStale=false,createdDraft=false;
  std::size_t solves=0,commits=0,cacheBytes=0,ordinaryIds=0,reservedIds=0;
@@ -102,7 +114,8 @@ struct CalibrationSession::Impl {
  void live(bool fresh){
   auto t=now();checkCancel();
   if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
-  if(result&&t>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
+  if((result||staticResult||!approvalFingerprint.empty())&&t>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
+  if(staticMeasurement&&!staticResult){if(t-staticStart>=5*60*second)invalidate("STATIC_RUN_TIMEOUT");if(state==WAITING_POINT&&t>=pointWaitDeadline)invalidate("STATIC_POINT_WAIT_TIMEOUT");}
   if(owner)try{owner->check(t,fresh);}catch(const std::exception& e){if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
  }
  void guards(bool fresh,bool scope=true,std::int64_t confirmationLimit=0){
@@ -124,7 +137,53 @@ struct CalibrationSession::Impl {
   if(!candidate.empty())need(readConfigBytes(drafts.path("candidate.json"))==candidate,"CANDIDATE_ARTIFACT_CHANGED");
  }
  Json resultJson()const{
+  if(staticResult)return {{"result_id",resultId},{"mode","static"},{"world",rigid(staticResult->transform)},{"extrinsic_not_mount",nullptr},{"mount_existing",rigid(frozen->target().binding.mount)},{"points",staticResult->pointCount},{"pairs_per_point",staticOptions.samples},{"rms_position",staticResult->rmsResidual},{"max_position",staticResult->maxResidual},{"rms_orientation",nullptr},{"quality","STATIC_RESIDUAL_ONLY_PHYSICAL_ACCURACY_UNVERIFIED"},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association",providerOptions->association()},{"review_deadline_ns",resultDeadline}};
   need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"mount_existing",rigid(frozen->target().binding.mount)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
+ }
+ Json waitingPoint(){pointToken=opaqueId();pointWaitDeadline=now()+60*second;state=WAITING_POINT;return {{"status","WAITING_POINT"},{"point_token",pointToken},{"point_index",staticMeasurement->pointCount()+1},{"points",staticOptions.points},{"pairs_required",staticOptions.samples},{"point_wait_deadline_ns",pointWaitDeadline},{"physical_stillness","NOT_VERIFIED"}};}
+ OutputApprovalCriteria criteria(){
+  need(bool(env.outputApprovalAuthority),"PHYSICAL_CRITERIA_NOT_ADOPTED");
+  auto c=env.outputApprovalAuthority->verify({*frozen,*input,config,providerOptions->configSha256(),now()});
+  need(!c.policyId.empty()&&c.policyId.size()<=4096&&!c.evidenceId.empty()&&c.evidenceId.size()<=4096&&c.evidenceSha256.size()==64&&c.expiresAt>now(),"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
+  for(char v:c.evidenceSha256)need((v>='0'&&v<='9')||(v>='a'&&v<='f'),"PHYSICAL_EVIDENCE_HASH_INVALID");
+  const auto& b=frozen->target().binding;
+  for(const auto& k:c.eligible){auto it=config.bindings.find(k);need(it!=config.bindings.end()&&it->second.source==b.source&&it->second.inputSpace==b.inputSpace&&it->second.inputRevision==b.inputRevision,"APPROVAL_CRITERIA_FOREIGN_MEMBER");}
+  return c;
+ }
+ std::string fingerprint(const OutputApprovalCriteria& c){return Json({{"policy",c.policyId},{"evidence",c.evidenceId},{"sha256",c.evidenceSha256},{"expires",c.expiresAt},{"eligible",c.eligible}}).dump();}
+ Json outputAction(const Json& j){
+  const auto op=text(j,"op");need(approvalPurpose,"OUTPUT_APPROVAL_SESSION_REQUIRED");
+  if(op=="review_output"){
+   need(state==CONFIRMED||state==APPROVAL_REVIEW,"STATE_REJECTED");if(state==CONFIRMED)beginReady();guards(true);
+   std::optional<OutputApprovalCriteria> adopted;std::string reason;
+   try{adopted=criteria();}catch(const std::exception& e){reason=diagnostic(e);}
+   need(candidate.empty(),"APPROVAL_CANDIDATE_FIXED_REPREPARE_OR_NEW_SESSION");approvalFingerprint=adopted?fingerprint(*adopted):"UNADOPTED";resultId=opaqueId();resultDeadline=now()+10*60*second;state=APPROVAL_REVIEW;
+   const auto& b=frozen->target().binding;Json members=Json::array();
+   for(const auto& [k,v]:config.bindings)if(v.source==b.source&&v.inputSpace==b.inputSpace&&v.inputRevision==b.inputRevision)members.push_back({{"device",v.device},{"tracker",v.tracker},{"approved",v.spaceApproved},{"eligible",bool(adopted)&&adopted->eligible.count(k)!=0&&!v.spaceApproved&&!providerOptions->readOnly()},{"selected",false},{"mount_existing",rigid(v.mount)},{"world",rigid(v.world)},{"profile",v.profile},{"reason",providerOptions->readOnly()?"READONLY_APPROVAL_REJECTED":(!reason.empty()?reason:(v.spaceApproved?"ALREADY_APPROVED":(adopted&&adopted->eligible.count(k)?"ELIGIBLE_UNSELECTED":"MEMBER_PHYSICAL_EVIDENCE_MISSING")))}});
+   return {{"status","APPROVAL_REVIEW"},{"approval_id",resultId},{"members",members},{"world",rigid(b.world)},{"mount_existing",rigid(b.mount)},{"extrinsic_not_mount",nullptr},{"config_sha256",providerOptions->configSha256()},{"source",b.source},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"standing_witness",input->standing},{"criteria",adopted?adopted->policyId:"NOT_ADOPTED"},{"evidence",adopted?adopted->evidenceId:"MISSING"},{"evidence_sha256",adopted?adopted->evidenceSha256:""},{"reason",reason},{"runtime","UNCONFIRMED"}};
+  }
+  need((state==APPROVAL_REVIEW||state==PREPARED)&&text(j,"approval_id")==resultId,"APPROVAL_REVIEW_REQUIRED");
+  need(!providerOptions->readOnly(),"READONLY_APPROVAL_REJECTED");guards(true);auto adopted=criteria();need(fingerprint(adopted)==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED_REVIEW_REQUIRED");
+  if(op=="prepare_output"){
+   need(!j.at("members").empty(),"APPROVAL_SELECTION_REQUIRED");
+   auto proposed=config;std::set<Key> selected;Json newDiff=Json::array();const auto& b=frozen->target().binding;
+   for(const auto& item:j.at("members")){Key key{b.source,item.get<std::string>()};need(selected.insert(key).second,"APPROVAL_DUPLICATE_MEMBER");need(adopted.eligible.count(key),"APPROVAL_MEMBER_INELIGIBLE");auto& value=proposed.bindings.at(key);need(!value.spaceApproved,"APPROVAL_NO_CHANGE");value.spaceApproved=true;newDiff.push_back({{"source",key.first},{"device",key.second},{"space_approved_before",false},{"space_approved_after",true}});}
+   if(!candidate.empty()){need(newDiff==approvalDiff,"APPROVAL_SELECTION_FIXED");drafts.verify();need(readConfigBytes(drafts.path("candidate.json"))==candidate,"APPROVAL_ARTIFACT_CHANGED");}
+   else{
+   approvalDiff=newDiff;
+   need(proposed.revision<UINT32_MAX,"MAPPING_REVISION_EXHAUSTED");++proposed.revision;
+   drafts.begin(run);createdDraft=true;drafts.write("expected.json",original);proposed.sourcePath.clear();drafts.publishCandidate(proposed,env.draftPublishHook);candidate=readConfigBytes(drafts.path("candidate.json"));candidateHash=sha256(candidate);
+   }review=opaqueId();reviewDeadline=now()+30*second;state=PREPARED;
+   return {{"status","OUTPUT_PREPARED"},{"approval_id",resultId},{"review_token",review},{"review_deadline_ns",reviewDeadline},{"candidate_sha256",candidateHash},{"candidate_bytes",candidate.size()},{"candidate_path",drafts.path("candidate.json").u8string()},{"diff",approvalDiff},{"world_extrinsic_mount","UNCHANGED"}};
+  }
+  need(op=="commit_output"&&state==PREPARED&&!review.empty()&&text(j,"review_token")==review&&text(j,"candidate_sha256")==candidateHash,"OUTPUT_COMMIT_NOT_PREPARED");
+  if(now()>=reviewDeadline){review.clear();state=APPROVAL_REVIEW;throw std::runtime_error("APPROVAL_REVIEW_TOKEN_EXPIRED");}drafts.verify();need(readConfigBytes(drafts.path("expected.json"))==original&&readConfigBytes(drafts.path("candidate.json"))==candidate,"APPROVAL_ARTIFACT_CHANGED");
+  auto barrier=owner->barrier(text(j,"request_id"),std::min(10*second,reviewDeadline-now()));
+  current();need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");
+  {auto admission=owner->admit(barrier,now());need(now()<reviewDeadline&&now()<adopted.expiresAt,"APPROVAL_REVIEW_TOKEN_EXPIRED");state=COMMITTING;}
+  review.clear();++commits;auto started=now();
+  try{commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{guards(false,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}});if(env.afterReplace)env.afterReplace();try{guards(true,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}if(cancel||readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;state=now()-started>=15*second?UNKNOWN:(evidenceStale?SAVED_STALE:SAVED);}catch(const std::exception& e){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"action","OUTPUT_APPROVAL"},{"reason",diagnostic(e)}};}
+  Json saved={{"status",name(state)},{"action","OUTPUT_APPROVAL"},{"config_sha256",candidateHash},{"runtime","UNCONFIRMED"},{"message","OUTPUT APPROVAL CONFIG SAVED / RUNTIME UNCONFIRMED"}};try{drafts.write("terminal.json",saved.dump());drafts.terminal(name(state));}catch(...){saved["artifact_warning"]="TERMINAL_ARTIFACT_IO_FAILED";}return saved;
  }
  Json action(const Json& j){
   auto op=text(j,"op");auto t=now();if(op!="cancel"&&op!="close")checkCancel();
@@ -134,10 +193,13 @@ struct CalibrationSession::Impl {
    auto path=std::filesystem::u8path(text(j,"config_path"));requirePlainPath(path);auto installation=std::filesystem::u8path(text(j,"installation_path"));requirePlainPath(installation);need(std::filesystem::is_directory(installation),"INSTALLATION_UNAVAILABLE");
    need(j.at("association")=="operator_declared_process_owner_unverified"&&j.at("mirror_address")=="127.0.0.1"&&j.at("mirror_port").get<std::uint64_t>()>0&&j.at("mirror_port").get<std::uint64_t>()<=65535,"ASSOCIATION_UNSUPPORTED");
    need(j.at("reference_role")=="left"||j.at("reference_role")=="right"||j.at("reference_role")=="hmd","REFERENCE_ROLE_UNSUPPORTED");
+   auto mode=j.value("mode",std::string("trajectory"));need(mode=="trajectory"||mode=="static","CAPTURE_MODE_UNSUPPORTED");staticMode=mode=="static";
+   auto purpose=j.value("purpose",std::string("measurement"));need(purpose=="measurement"||purpose=="output_approval","PURPOSE_UNSUPPORTED");approvalPurpose=purpose=="output_approval";need(!approvalPurpose||!staticMode,"APPROVAL_MEASUREMENT_MODE_CONFLICT");
+   if(j.contains("static_points"))staticOptions.points=j.at("static_points").get<std::size_t>();if(j.contains("static_samples"))staticOptions.samples=j.at("static_samples").get<std::size_t>();staticOptions.validate();need(staticMode||(!j.contains("static_points")&&!j.contains("static_samples")),"STATIC_OPTIONS_REQUIRE_STATIC_MODE");
    auto nextOriginal=readConfigBytes(path);auto nextConfig=parseConfigDocument(nextOriginal);nextConfig.sourcePath=std::filesystem::weakly_canonical(path);
    need(j.at("bridge_id")==nextConfig.bridgeId&&j.at("input_revision").get<std::uint64_t>()<=UINT32_MAX,"TARGET_OWNER_REVISION_MISMATCH");
    auto target=freezeMeasurementTarget(nextConfig,text(j,"source"),text(j,"device"),text(j,"tracker"),text(j,"input_space"),j.at("input_revision").get<std::uint32_t>());
-   auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>()});
+   auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>(),staticMode});
    Json reply={{"status","OPEN"},{"config_sha256",options->configSha256()},{"capture_supported",provider.supported()},{"readonly",options->readOnly()},{"association",options->association()}};
    try{provider.configure(options);}catch(...){state=FAILED;throw;}
    original=std::move(nextOriginal);config=std::move(nextConfig);providerOptions=std::move(options);frozen=&providerOptions->measurementTarget();state=OPEN;
@@ -152,7 +214,15 @@ struct CalibrationSession::Impl {
   }
   need(!terminalPhase(state),"INSPECT_ONLY_NEW_MEASUREMENT_REQUIRED");
   if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
-  if(op=="capture_point")throw std::runtime_error("STATIC_CAPTURE_UNSUPPORTED_B4_REQUIRED");
+  if(op=="review_output"||op=="prepare_output"||op=="commit_output")return outputAction(j);
+  if(op=="capture_point"){
+   need(staticMode,"STATIC_CAPTURE_UNSUPPORTED_B4_REQUIRED");need(state==WAITING_POINT&&j.contains("point_token")&&!pointToken.empty()&&text(j,"point_token")==pointToken,"STATIC_POINT_TOKEN_INVALID");
+   guards(true);pointToken.clear();const auto start=now();staticMeasurement->beginPoint(start);state=RECORDING;
+   owner->recordPoint([&](const RecordingDelivery& d){checkCancel();current();return staticMeasurement->consume(d);},std::min(staticStart+5*60*second,start+staticOptions.pointTimeout()));
+   guards(true);staticMeasurement->finishPoint();
+   if(staticMeasurement->pointCount()<staticOptions.points)return waitingPoint();
+   drafts.write("raw.json",staticMeasurement->raw().dump());state=SOLVING;auto started=now();++solves;auto solved=staticMeasurement->solve();need(now()-started<10*second,"SOLVE_TIMEOUT");guards(true);staticResult=std::move(solved);resultId=opaqueId();resultDeadline=now()+10*60*second;drafts.write("result.json",resultJson().dump());current();auto barrier=owner->barrier("result:"+resultId);{auto admission=owner->admit(barrier,now());state=RESULT_READY;}return {{"status","RESULT_READY"},{"result",resultJson()}};
+  }
   if(op=="discover"){
    need(state==OPEN,"STATE_REJECTED");need(provider.supported(),"CAPTURE_UNSUPPORTED_B3_REQUIRED");current();
    owner=std::make_unique<CaptureOwner>(provider,env.clock,cancel,created,run);
@@ -169,6 +239,7 @@ struct CalibrationSession::Impl {
    return {{"status","CONFIRMED"},{"confirmation_token",confirmation},{"confirmation_deadline_ns",confirmationDeadline}};
   }
   if(op=="begin"){
+   need(!approvalPurpose,"OUTPUT_APPROVAL_SESSION_NO_MEASUREMENT");
    need(state==CONFIRMED&&text(j,"confirmation_token")==confirmation&&!confirmation.empty(),"CONFIRMATION_TOKEN_INVALID");
    beginReady();guards(true,true,confirmationDeadline);
    if(env.ioHook)env.ioHook("begin-barrier-acked");beginReady();
@@ -176,7 +247,8 @@ struct CalibrationSession::Impl {
    if(env.ioHook)env.ioHook("begin-draft-created");beginReady();
    drafts.write("expected.json",original);
    if(env.ioHook)env.ioHook("begin-draft-written");beginReady();
-   confirmation.clear();recorder=std::make_unique<TrajectoryRecorder>(config,*frozen,input->referenceSerial);state=RECORDING;
+   confirmation.clear();if(staticMode){staticStart=now();staticMeasurement=std::make_unique<StaticMeasurement>(*frozen,input->session,staticOptions);return waitingPoint();}
+   recorder=std::make_unique<TrajectoryRecorder>(config,*frozen,input->referenceSerial);state=RECORDING;
    if(env.progress)env.progress({{"status","PHASE"},{"phase","RECORDING"},{"session_id",session},{"run_id",run}});
    std::int64_t progressAt=-1;
    try{owner->record([&](const RecordingDelivery& delivery){checkCancel();record(delivery);if(env.progress&&(progressAt<0||now()-progressAt>=second/4)){progressAt=now();env.progress({{"status","PROGRESS"},{"phase","RECORDING"},{"session_id",session},{"run_id",run},{"samples",recorder->sourceSamples().size()}});}});}catch(const std::exception&){checkCancel();auto fault=owner->snapshot().fault;if(!fault.empty())invalidate(fault.c_str());throw;}checkCancel();guards(true);
@@ -201,7 +273,7 @@ struct CalibrationSession::Impl {
   if(op=="prepare_commit"){
    need(!providerOptions->readOnly(),"READONLY_COMMIT_REJECTED");
    if(candidate.empty()){
-    auto proposed=worldCalibrationCandidate(config,frozen->target(),result->world,true);
+    auto proposed=worldCalibrationCandidate(config,frozen->target(),staticResult?staticResult->transform:result->world,true);
     const auto& s=frozen->target().binding;
     for(auto& [key,b]:proposed.bindings)if(b.source==s.source&&b.inputSpace==s.inputSpace&&b.inputRevision==s.inputRevision)b.spaceApproved=false;
     proposed.sourcePath.clear();drafts.publishCandidate(proposed,env.draftPublishHook);

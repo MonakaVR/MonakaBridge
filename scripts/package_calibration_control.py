@@ -24,14 +24,14 @@ def copy(source,name):
 for n in identity['products_sha256']:copy(build/n,Path(n).name)
 copy(sdk/'bin/win64/openvr_api.dll','openvr_api.dll')
 for n in lock['files']:copy(sdk/n,'provenance/openvr/'+n)
-for n in ['dependencies/calibration-openvr-sdk.json','dependencies/mbip-p1.lock.json','dependencies/mbip-p1-source.tar','dependencies/calibration-gui-baseline.json','docs/calibration-gui.md','docs/native-calibration-capture.md']:copy(root/n,'provenance/'+n)
+for n in ['dependencies/calibration-openvr-sdk.json','dependencies/mbip-p1.lock.json','dependencies/mbip-p1-source.tar','dependencies/calibration-gui-baseline.json','dependencies/calibration-b4-baseline.json','docs/calibration-b4.md','docs/calibration-gui.md','docs/native-calibration-capture.md']:copy(root/n,'provenance/'+n)
 for n in ['build-identity.json','build-steps.json','full-regression.xml','ctest.stdout.txt','ctest.stderr.txt','build.stdout.txt','build.stderr.txt','configure.stdout.txt','configure.stderr.txt']:copy(build/n,'provenance/build/'+n)
 for n in ['LICENSE','NOTICE']:
  if (root/n).is_file():copy(root/n,n)
 subprocess.run(['git','-C',str(root),'archive','--format=zip','--output='+str(out/'provenance/bridge-source.zip'),a.commit],check=True)
 helper=out/'monaka_bridge_config.exe';profile=dict(schema='monaka.bridge.installation.v1',name='Selected Bridge installation',config='config/bridge.json',health='config/bridge.json.status.json',config_helper=helper.name,helper_sha256=sha(helper),read_only=True)
 (out/'installation.example.json').write_text(json.dumps(profile,indent=2)+'\n')
-copy(root/'docs/calibration-gui.md','README.md')
+copy(root/'docs/calibration-b4.md','README.md')
 # Known fixture/sentinel markers are a packaging failure. The exact genuine
 # SDK DLL hash is mandatory; no actual product process runs in this directory.
 markers=[b'test_only_fixture_open',b'test_only_runtime_fixture',b'MONAKA_CALIBRATION_TEST_ROOT',b'test-only deliberate fault',b'MONAKA_OPENVR_SENTINEL']

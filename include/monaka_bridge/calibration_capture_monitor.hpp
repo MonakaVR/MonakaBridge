@@ -36,6 +36,7 @@ private:
   bool accept(std::int64_t,const std::string&);
  } poses_,states_;
  InputWitness input_;std::vector<std::string> declaration_;
+  bool orientationRequired_=true;
  CaptureSnapshot state_;std::int64_t created_,lastNow_,lastPoseReceipt_=-1,lastStateReceipt_=-1;
  // Only owner samples advance lastNow_; worker freshness reads can overtake a
  // sample captured before the mutex. They must not move its clock watermark.
@@ -68,6 +69,7 @@ public:
  Barrier barrier(const std::string& request,std::int64_t maximumWait=10*second);
  Admission admit(const Barrier&,std::int64_t now);
  void record(const std::function<void(const RecordingDelivery&)>&);
+  void recordPoint(const std::function<bool(const RecordingDelivery&)>&,std::int64_t deadline);
  void invalidate(const std::string&);
  void shutdown();
  CaptureOwner(const CaptureOwner&)=delete;

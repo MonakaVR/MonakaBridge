@@ -36,6 +36,7 @@ public:
     std::uint16_t mirrorPort()const{return deployment_.mirrorPort;}
     const std::string& referenceRole()const{return deployment_.referenceRole;}
     bool readOnly()const{return deployment_.readOnly;}
+    bool staticMode()const{return deployment_.staticMode;}
     const char* association()const{return "operator_declared / process_owner_unverified";}
 private:
     struct Deployment {
@@ -43,6 +44,7 @@ private:
         std::string configSha256,mirrorAddress,referenceRole;
         std::uint16_t mirrorPort;
         bool readOnly;
+        bool staticMode=false;
     };
     const FrozenMeasurementTarget target_;
     const std::optional<CapabilityProfile> contract_;
@@ -98,6 +100,7 @@ public:
 };
 
 // Explicit library injection for isolated tests, never populated by CLI flags.
+class OutputApprovalAuthority;
 struct SessionEnvironment {
     std::filesystem::path draftRoot;
     std::string helperPath,helperSha256;
@@ -108,6 +111,8 @@ struct SessionEnvironment {
     // Native-only deterministic fault barriers; never populated by JSON/CLI.
     std::function<void(const char*)> ioHook;
     std::function<void()> draftPublishHook;
+    // Native test injection only. Production never installs an unadopted policy.
+    std::shared_ptr<const OutputApprovalAuthority> outputApprovalAuthority;
 };
 
 class DraftStore {
