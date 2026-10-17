@@ -1,6 +1,7 @@
 """Owned isolated children only. No real OpenVR DLL, devices, service or sockets."""
 from pathlib import Path
 import hashlib,json,os,queue,shutil,subprocess,sys,tempfile,threading,time
+from calibration_review_events import ReviewObserver
 fixture,production,sentinel=map(lambda p:Path(p).resolve(),sys.argv[1:4])
 root=Path(tempfile.mkdtemp(prefix='mb-b2-process-'));cases=[];transcripts=[]
 def check(ok,why):
@@ -56,47 +57,70 @@ class Client:
 
 def review_process(before=False):
  results=[]
- def wait_mark(p,d,n):
-  deadline=time.monotonic()+6
-  while time.monotonic()<deadline:
-   if (d/(n+'.fixture')).exists():return
-   if p.poll() is not None:raise RuntimeError('child exited before barrier '+n+': '+str(p.returncode))
-   time.sleep(.002)
-  raise RuntimeError('barrier timeout '+n)
  for mode in ['reader-failure','reader-ttl','reader-backpressure','writer-race','ttl-busy']+([] if before else ['writer-deadline']):
-  started=time.monotonic()
-  p=subprocess.Popen([str(fixture),str(root/('review-'+mode)),'review-'+mode],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
-  seed=json.loads(p.stdout.readline())['test_only_fixture_open'];d=Path(seed['config_path']).parent;original=Path(seed['config_path']).read_bytes();events=[];timeout=False;reason=None
-  def send(j):p.stdin.write((json.dumps(j)+'\n').encode('utf-8'));p.stdin.flush()
-  def release(n):(d/(n+'.fixture')).write_text('release')
+  started=time.perf_counter_ns();points={'popen_start':started};case=root/('review-'+mode);case.mkdir();events=[];seedraw=b'';wire=[];errors=bytearray();sync=None;d=None;original=None;reason=None;timeout=False;stage_error=None;replyraw=[]
+  p=subprocess.Popen([str(fixture),str(case),'review-'+mode],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+  def stderr_read():
+   while True:
+    b=p.stderr.read(4096)
+    if not b:break
+    errors.extend(b)
+  et=threading.Thread(target=stderr_read,daemon=True);et.start();seedq=queue.Queue()
+  st=threading.Thread(target=lambda:seedq.put(p.stdout.readline()),daemon=True);st.start()
+  def send(j):
+   raw=(json.dumps(j)+'\n').encode('utf-8');wire.append(raw);p.stdin.write(raw);p.stdin.flush()
+  def read():
+   raw=p.stdout.readline();replyraw.append(raw);return json.loads(raw)
   try:
+   seedraw=seedq.get(timeout=6);points['seed']=time.perf_counter_ns();seed_packet=json.loads(seedraw);seed=seed_packet['test_only_fixture_open'];d=Path(seed['config_path']).parent;original=Path(seed['config_path']).read_bytes();sync=ReviewObserver(p,seed_packet['test_only_review_events'])
    if mode in ('reader-failure','reader-ttl'):
-    p.stdin.write((json.dumps(seed)+'\n{').encode());p.stdin.flush();wait_mark(p,d,'reader-paused')
-    if mode=='reader-failure':p.stdout.close();release('trigger-write');wait_mark(p,d,'writer-failed')
-    else:wait_mark(p,d,'worker-stopped')
-    release('release-reader')
+    raw=(json.dumps(seed)+'\n{').encode();wire.append(raw);p.stdin.write(raw);p.stdin.flush();sync.wait('reader-paused')
+    if mode=='reader-failure':
+     sync.wait('writer-paused');sync.bind_threads();p.stdout.close();sync.signal('trigger-write');sync.wait('writer-failed')
+    else:
+     sync.wait('worker-stopped');sync.wait('writer-finished');sync.bind_threads()
+    sync.signal('release-reader')
    elif mode=='reader-backpressure':
-    send(seed);opened=json.loads(p.stdout.readline());events.append(opened);ids={k:opened[k] for k in ('session_id','run_id')}
+    send(seed);opened=read();events.append(opened);sync.bind_threads();ids={k:opened[k] for k in ('session_id','run_id')}
     for i in range(8):send(dict(api_version=1,request_id='b'+str(i),op='capture_point',**ids))
-    p.stdin.write(b'{');p.stdin.flush();wait_mark(p,d,'reader-paused');wait_mark(p,d,'worker-stopped');release('release-writer');release('release-reader')
+    wire.append(b'{');p.stdin.write(b'{');p.stdin.flush();sync.wait('reader-paused');sync.wait('worker-stopped');sync.signal('release-writer');sync.signal('release-reader')
    elif mode in ('writer-race','writer-deadline'):
-    send(seed);wait_mark(p,d,'writer-paused');p.stdin.close();wait_mark(p,d,'writer-stop-requested')
-    if mode=='writer-race':release('release-writer')
+    send(seed);sync.wait('writer-paused');points['writer_paused']=time.perf_counter_ns();sync.bind_threads();p.stdin.close();points['stdin_closed']=time.perf_counter_ns();sync.wait('writer-stop-requested');points['stop_seen']=time.perf_counter_ns()
+    # Race release occurs inside the fixture's stop hook, after the first cancel.
+    # The parent never has to complete a disk roundtrip inside the100ms window.
    else:
-    send(seed);events.append(json.loads(p.stdout.readline()));send(seed);events.append(json.loads(p.stdout.readline()));reason=events[-1].get('reason')
+    send(seed);events.append(read());sync.bind_threads();send(seed);events.append(read());reason=events[-1].get('reason')
    try:exit_code=p.wait(timeout=3)
    except subprocess.TimeoutExpired:timeout=True;p.kill();exit_code=p.wait(timeout=3)
-   correct=(not timeout and reason=='WORKER_TTL_EXPIRED') if mode=='ttl-busy' else (not timeout and exit_code in (0,3))
-   if not before:
-    correct=correct and time.monotonic()-started<2.8
-    if mode=='writer-race':correct=correct and (d/'writer-finished.fixture').exists() and not (d/'writer-deadline-expired.fixture').exists()
-    if mode=='writer-deadline':correct=correct and (d/'writer-deadline-expired.fixture').exists() and exit_code==3
-   results.append(dict(mode=mode,elapsed_seconds=time.monotonic()-started,observed_timeout=timeout,exit_code=exit_code,events=events,meets_fixed_acceptance=correct,fixture_root=str(d),config_unchanged=Path(seed['config_path']).read_bytes()==original))
-   check(results[-1]['config_unchanged'],'review fixture changed config')
+   points['exit_observed']=time.perf_counter_ns()
+  except Exception as e:
+   stage_error=repr(e)
+   if p.poll() is None:p.kill();p.wait(timeout=3)
+   exit_code=p.returncode
   finally:
    if p.poll() is None:p.kill();p.wait(timeout=3)
+   et.join(1);st.join(1)
+   if not p.stdout.closed:replyraw.append(p.stdout.read())
    for pipe in (p.stdin,p.stdout,p.stderr):
     if not pipe.closed:pipe.close()
+  telemetry=sync.snapshot() if sync else {};markers=sync.markers(d) if sync and d else [];threads=telemetry.get('threads',{});native=telemetry.get('points',{});signaled=telemetry.get('events',{})
+  shutdown=None
+  if 'worker' in threads and threads['worker']['times']['exit']:
+   shutdown=(telemetry['process_times']['exit']-threads['worker']['times']['exit'])/10000000
+  startup=(points.get('seed',started)-started)/1000000000
+  total=(points.get('exit_observed',time.perf_counter_ns())-started)/1000000000
+  correct=stage_error is None and not timeout and total<2.8 and startup<6 and shutdown is not None and 0<=shutdown<2.8 and exit_code in (0,3)
+  if mode=='ttl-busy':correct=correct and reason=='WORKER_TTL_EXPIRED'
+  if mode=='writer-race':
+   order=[native.get(key,0) for key in ['writer-paused','writer-stop-requested','release-writer','writer-call-ready','writer-failed','writer-finished']]
+   correct=correct and all(order) and order==sorted(order) and not signaled.get('writer-deadline-expired') and threads.get('writer',{}).get('wait_zero')==0 and threads['writer']['exit_code']==0
+  if mode=='writer-deadline':
+   correct=correct and signaled.get('writer-deadline-expired') and not signaled.get('release-writer') and not signaled.get('writer-call-ready') and exit_code==3 and threads.get('writer',{}).get('wait_zero')==0 and threads['writer']['exit_code']==3
+  unchanged=d is not None and Path(seed['config_path']).read_bytes()==original
+  observation=dict(mode=mode,elapsed_seconds=(time.perf_counter_ns()-started)/1000000000,startup_seconds=startup,process_total_seconds=total,shutdown_seconds=shutdown,observed_timeout=timeout,stage_error=stage_error,exit_code=exit_code,events=events,meets_fixed_acceptance=bool(correct),fixture_root=str(d),config_unchanged=unchanged,points_ns=points,telemetry=telemetry,markers=markers,stderr=errors.decode('utf-8',errors='replace'))
+  (case/'stdin.bin').write_bytes(b''.join(wire));(case/'stdout.bin').write_bytes(seedraw+b''.join(replyraw));(case/'stderr.bin').write_bytes(errors);(case/'observation.json').write_text(json.dumps(observation,indent=2),encoding='utf-8');results.append(observation)
+  if sync:sync.close()
+  check(unchanged,'review fixture changed config')
  (root/'review-process.json').write_text(json.dumps(dict(before=before,results=results),indent=2),encoding='utf-8');print(json.dumps(dict(before=before,results=results,evidence=str(root)),indent=2),flush=True)
  check(all(not x['meets_fixed_acceptance'] if before else x['meets_fixed_acceptance'] for x in results),'review process before/after expectation mismatch')
  return len(results)
