@@ -1,9 +1,10 @@
 from pathlib import Path
 import shutil,uuid
 from capability_runtime_scope import FILES,PIN,approved_capabilities,historical
-root=Path(__file__).resolve().parents[1];approved_capabilities(root)
+root=Path(__file__).resolve().parents[1];approved=approved_capabilities(root)
 scratch=root/'build/capability-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
-for name in FILES|{PIN,'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json'}:
+from measurement_target_scope import UNCHANGED
+for name in approved|UNCHANGED|{'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json'}:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
 approved_capabilities(scratch,root);rejected=0
 for name in ['CMakeLists.txt','src/observation/registry.cpp','tests/config_write_scope.py','dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json']:
