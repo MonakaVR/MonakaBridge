@@ -1,9 +1,9 @@
 from pathlib import Path
 import json,shutil,uuid
 from provider_options_scope import FILES,PIN,OLD_PINS,approved_provider_options,historical,verify_diff_scope,predecessor
-root=Path(__file__).resolve().parents[1];approved_provider_options(root);verify_diff_scope(root)
+root=Path(__file__).resolve().parents[1];approved=approved_provider_options(root);verify_diff_scope(root)
 scratch=root/'build/n0a-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
-for name in FILES|OLD_PINS|{PIN}:
+for name in approved|OLD_PINS:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
 approved_provider_options(scratch,root);count=0
 for name in sorted(FILES|OLD_PINS):
