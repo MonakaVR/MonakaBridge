@@ -9,6 +9,8 @@ inline mb::Quat axis(int i,double a){mb::Quat q{0,0,0,std::cos(a/2)};q[i]=std::s
 struct Provider final:lc::CaptureProvider {
  std::int64_t& time;lc::ProviderBatch latest;std::function<void(int)> captureHook;std::function<void(lc::ProviderBatch&)> guardHook;std::function<void()> discoverHook;
  int captures=0,discoveries=0;bool support=true,staticMotion=false;
+ mutable int configurationChecks=0;bool failConfigure=false;
+ std::function<void(const lc::ProviderOpenOptions&)> configurationHook;
  explicit Provider(std::int64_t& t):time(t){
   latest.identity={"pico","device",S1,S1,"native","fixture-native","fixture-peer",1,0,{},"fixture-reference","left","fixture-standing",1};
   auto p=sample();p.orientation=mb::Quat{0,0,0,1};p.timestamp_ns=time-2000000;p.sent_at_ns=time;
@@ -29,6 +31,11 @@ struct Provider final:lc::CaptureProvider {
  }
  lc::ProviderBatch guard()override{auto b=latest;b.references.clear();if(guardHook)guardHook(b);return b;}
  void fresh(){time+=1000000;auto p=std::get<mb::c1::TrackerObservation>(latest.frames.front().envelope);++p.sequence;p.timestamp_ns=time-2000000;p.sent_at_ns=time;latest.frames={{p,"fixture-peer",time}};latest.referenceReceiptNs=time;latest.referenceValid=true;}
+protected:
+ void validateConfiguration(const lc::ProviderOpenOptions& options)const override{
+  ++configurationChecks;if(configurationHook)configurationHook(options);
+  if(failConfigure)throw std::runtime_error("FIXTURE_CONFIGURE_REJECTED");
+ }
 };
 struct Run {
  std::filesystem::path root,path;std::int64_t time=100*lc::second;Provider provider{time};lc::SessionEnvironment env;

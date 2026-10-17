@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <utility>
 
 namespace mb::local_calibration {
 using Json=nlohmann::json;
@@ -20,6 +21,36 @@ std::string opaqueId();
 std::string diagnostic(const std::exception&);
 void requirePlainPath(const std::filesystem::path&);
 Json parseRequest(const std::string&);
+
+// Internal owning configuration, not a source/session witness or wire model.
+// Identity/profile/revision are accessed through the existing Frozen type.
+class ProviderOpenOptions {
+public:
+    ProviderOpenOptions(const ProviderOpenOptions&)=default;
+    const FrozenMeasurementTarget& measurementTarget()const{return target_;}
+    const std::optional<CapabilityProfile>& capabilityProfile()const{return contract_;}
+    const std::filesystem::path& configPath()const{return deployment_.configPath;}
+    const std::filesystem::path& installationPath()const{return deployment_.installationPath;}
+    const std::string& configSha256()const{return deployment_.configSha256;}
+    const std::string& mirrorAddress()const{return deployment_.mirrorAddress;}
+    std::uint16_t mirrorPort()const{return deployment_.mirrorPort;}
+    const std::string& referenceRole()const{return deployment_.referenceRole;}
+    bool readOnly()const{return deployment_.readOnly;}
+    const char* association()const{return "operator_declared / process_owner_unverified";}
+private:
+    struct Deployment {
+        std::filesystem::path configPath,installationPath;
+        std::string configSha256,mirrorAddress,referenceRole;
+        std::uint16_t mirrorPort;
+        bool readOnly;
+    };
+    const FrozenMeasurementTarget target_;
+    const std::optional<CapabilityProfile> contract_;
+    const Deployment deployment_;
+    ProviderOpenOptions(FrozenMeasurementTarget target,std::optional<CapabilityProfile> contract,Deployment deployment)
+        :target_(std::move(target)),contract_(std::move(contract)),deployment_(std::move(deployment)){}
+    friend class CalibrationSession;
+};
 
 struct InputWitness {
     std::string source,device,session,clock,space,convention,peer;
@@ -42,10 +73,18 @@ struct ProviderBatch {
 class CaptureProvider {
 public:
     virtual ~CaptureProvider()=default;
+    void configure(std::shared_ptr<const ProviderOpenOptions>);
+    std::shared_ptr<const ProviderOpenOptions> configuration()const{return configuration_;}
     virtual bool supported()const=0;
     virtual ProviderBatch discover(const std::atomic<bool>& cancel)=0;
     virtual void capture(const std::function<void(const ProviderBatch&)>& sink,const std::atomic<bool>& cancel)=0;
     virtual ProviderBatch guard()=0;
+protected:
+    // Validation only: no retained borrowed state, capture resources or IO.
+    virtual void validateConfiguration(const ProviderOpenOptions&)const{}
+private:
+    bool configurationAttempted_=false;
+    std::shared_ptr<const ProviderOpenOptions> configuration_;
 };
 class UnsupportedProvider final:public CaptureProvider {
 public:
@@ -113,6 +152,8 @@ public:
     std::size_t solveCalls()const;
     std::size_t commitCalls()const;
 private:
+    static std::shared_ptr<const ProviderOpenOptions> makeProviderOptions(const Config&,
+        FrozenMeasurementTarget,ProviderOpenOptions::Deployment);
     struct Impl;std::unique_ptr<Impl> impl_;
 };
 

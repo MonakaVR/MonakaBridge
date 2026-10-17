@@ -52,7 +52,13 @@ int main(int argc,char** argv)try{
  else if(fault=="post-replace-unknown")run.env.afterReplace=[](){throw std::runtime_error("test-only post-replace lost outcome");};
  else if(fault=="post-replace-exit")run.env.afterReplace=[](){ExitProcess(73);};
  else if(fault=="slow-commit")run.env.transactionHook=[&](const char* stage){if(std::string(stage)=="before-replace"){{std::ofstream f(run.root/"commit-entered.fixture");f<<"owned fixture committing";}Sleep(200);}};
+ else if(fault=="n0a-configure-fail")run.provider.failConfigure=true;
+ else if(fault=="n0a-options"){}
  else if(!fault.empty())throw std::runtime_error("unknown fixture fault");
  std::cout<<fixture::lc::Json{{"test_only_fixture_open",run.open()}}.dump()<<std::endl;
- return fixture::lc::runLocalApi(run.provider,run.env);
+ auto exit=fixture::lc::runLocalApi(run.provider,run.env);
+ if(fault.rfind("n0a-",0)==0){auto o=run.provider.configuration();lc::Json proof={{"configuration_checks",run.provider.configurationChecks},{"configuration_present",bool(o)},{"captures",run.provider.captures},{"discoveries",run.provider.discoveries}};
+  if(o){const auto& b=o->measurementTarget().target().binding;proof.update({{"source",b.source},{"device",b.device},{"tracker",b.tracker},{"readonly",o->readOnly()},{"declaration_present",bool(o->capabilityProfile())},{"mirror_port",o->mirrorPort()},{"reference_role",o->referenceRole()},{"config_sha256",o->configSha256()}});}
+  std::cerr<<proof.dump()<<'\n';
+ }return exit;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
