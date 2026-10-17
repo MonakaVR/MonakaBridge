@@ -7,10 +7,11 @@ $GuiSource = Join-Path $RepoRoot "ui\steamvr_control_wpf.cs"
 $GuiTraySource = Join-Path $RepoRoot "ui\steamvr_control_tray.cs"
 $GuiMainSource = Join-Path $RepoRoot "ui\steamvr_control_gui_main.cs"
 $GuiModelsSource = Join-Path $RepoRoot "ui\control_models.cs"
+$InstallationSource = Join-Path $RepoRoot "ui\installation_control.cs"
 $BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "build-gui" }
 $GuiExe = Join-Path $BuildDir "monaka_bridge_control.exe"
 
-foreach ($path in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource)) {
+foreach ($path in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource)) {
     if (-not (Test-Path $path)) {
         throw "SteamVR control GUI source was not found: $path"
     }
@@ -118,7 +119,7 @@ $WpfRefs = Get-WpfReferenceSet
 $needsBuild = $Force -or -not (Test-Path $GuiExe)
 if (-not $needsBuild) {
     $exeTime = (Get-Item $GuiExe).LastWriteTimeUtc
-    foreach ($source in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $PSCommandPath)) {
+    foreach ($source in @($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $PSCommandPath)) {
         if ((Get-Item $source).LastWriteTimeUtc -gt $exeTime) {
             $needsBuild = $true
             break
@@ -148,6 +149,7 @@ if ($needsBuild) {
         $GuiSource,
         $GuiTraySource,
         $GuiModelsSource,
+        $InstallationSource,
         $GuiMainSource
     )
 

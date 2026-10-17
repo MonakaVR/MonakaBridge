@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from integration_scope import approved_integration,project as integration_project,project_text as integration_project_text
 BASE='959a33e0847007b1d2ab7c5c7c8a12f8ea6554c4'
 PIN='dependencies/native-capture-baseline.json'
 FILES={'CMakeLists.txt','tools/calibration_local_api.cpp',
@@ -25,17 +26,17 @@ def existed(repo,name):return subprocess.run(['git','--no-optional-locks','-C',r
 def approved_native_capture(root,git_root=None):
  root=Path(root)
  if not (root/PIN).exists():return set()
- repo=str(git_root or root);p=json.loads((root/PIN).read_bytes())
+ repo=str(git_root or root);extra=approved_integration(root,git_root);p=json.loads((root/PIN).read_bytes())
  if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('N1 scope/base mismatch')
  for name in OLD_PINS:
   if (root/name).read_bytes()!=historical(repo,name):raise RuntimeError('N1 immutable old pin changed: '+name)
  for name,e in p['files'].items():
-  if digest((root/name).read_bytes())!=e['sha256']:raise RuntimeError('N1 unreviewed current source: '+name)
+  if digest(integration_project(root,'native',name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('N1 unreviewed current source: '+name)
   if existed(repo,name)!=e['existed_at_base']:raise RuntimeError('N1 predecessor presence: '+name)
   if e['existed_at_base'] and digest(historical(repo,name))!=e['base_sha256']:raise RuntimeError('N1 predecessor hash: '+name)
- return FILES|{PIN}
+ return FILES|{PIN}|extra
 def predecessor(root,name,raw,git_root=None,allow_older=False):
- root=Path(root)
+ root=Path(root);raw=integration_project(root,'native',name,raw,git_root,allow_older=True)
  if not (root/PIN).exists():return raw
  e=json.loads((root/PIN).read_bytes())['files'].get(name)
  if not e:return raw
@@ -47,7 +48,7 @@ def predecessor(root,name,raw,git_root=None,allow_older=False):
  if allow_older and e['existed_at_base']:return raw
  raise RuntimeError('N1 unreviewed projection: '+name)
 def predecessor_text(root,text):
- root=Path(root)
+ root=Path(root);text=integration_project_text(root,'native',text)
  if not (root/PIN).exists():return text
  approved_native_capture(root)
  for name,e in json.loads((root/PIN).read_bytes())['files'].items():

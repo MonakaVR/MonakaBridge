@@ -1,0 +1,46 @@
+"""Exact WS01a UI/control evolution above immutable runtime/config baselines."""
+from pathlib import Path
+from functools import lru_cache
+import hashlib,json,subprocess
+from integration_scope import approved_integration,project as integration_project,project_text as integration_project_text
+BASE='279a01363f47ad3564b5cd8b9346180c49ee41d3'
+PIN='dependencies/control-foundation-baseline.json'
+FILES={
+ 'ui/control_models.cs','ui/installation_control.cs','ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs',
+ 'scripts/build_gui.ps1','scripts/package_control.ps1',
+ 'tests/ui_production_tests.cs','tests/control_foundation_tests.cs','tests/control_helper_fixture.cs','tests/control_foundation_tests.ps1',
+ 'tests/control_packaged_smoke.py','tests/control_foundation_scope.py','tests/control_foundation_scope_tests.py',
+ 'tests/capability_runtime_scope.py','tests/capability_runtime_scope_tests.py','tests/config_write_scope_tests.py',
+ 'docs/bridge-control-foundation.md','docs/ws01a-audit-correction.md'}
+OLD_PINS={'dependencies/capabilities-runtime-baseline.json','dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json'}
+def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
+@lru_cache(maxsize=None)
+def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',BASE+':'+name])
+@lru_cache(maxsize=None)
+def existed(repo,name):return subprocess.run(['git','--no-optional-locks','-C',repo,'cat-file','-e',BASE+':'+name],capture_output=True).returncode==0
+def approved_control(root,git_root=None):
+ root=Path(root);repo=Path(git_root or root);extra=approved_integration(root,git_root);p=json.loads((root/PIN).read_text(encoding='utf-8'))
+ if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('control scope/base mismatch')
+ for name in OLD_PINS:
+  if digest((root/name).read_bytes())!=digest(historical(str(repo),name)):raise RuntimeError('historical baseline changed: '+name)
+ for name,e in p['files'].items():
+  if digest(integration_project(root,'control',name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('unreviewed control drift: '+name)
+  if existed(str(repo),name)!=e['existed_at_base']:raise RuntimeError('control predecessor presence drift: '+name)
+  if e['existed_at_base'] and digest(historical(str(repo),name))!=e['base_sha256']:raise RuntimeError('control predecessor drift: '+name)
+ return FILES|{PIN}|extra
+def verify_diff_scope(root):
+ names=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'diff','--name-only',BASE,'--']).decode().splitlines()
+ names+=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'ls-files','--others','--exclude-standard']).decode().splitlines()
+ unexpected=set(names)-approved_control(root)
+ if unexpected:raise RuntimeError('outside WS01a scope: '+','.join(sorted(unexpected)))
+def predecessor(root,name,raw,git_root=None):
+ root=Path(root);raw=integration_project(root,'control',name,raw,git_root,allow_older=True);p=json.loads((root/PIN).read_text(encoding='utf-8'));e=p['files'].get(name)
+ if not e:return raw
+ if e['existed_at_base'] and digest(raw)==e['base_sha256']:return raw
+ if digest(raw)!=e['sha256']:raise RuntimeError('unreviewed control drift: '+name)
+ return historical(str(git_root or root),name) if e['existed_at_base'] else raw
+def predecessor_text(root,text):
+ root=Path(root);text=integration_project_text(root,'control',text);approved_control(root);p=json.loads((root/PIN).read_text(encoding='utf-8'))
+ for name,e in p['files'].items():
+  if e['existed_at_base'] and digest(text.encode())==e['sha256']:return historical(str(root),name).decode()
+ return text

@@ -7,7 +7,7 @@ scratch=root/'build/config-scope-drift'/str(uuid.uuid4());scratch.mkdir(parents=
 pin=json.loads((root/'dependencies/config-write-baseline.json').read_text())
 from capability_runtime_scope import approved_capabilities
 from measurement_target_scope import UNCHANGED
-for n in set(pin['files'])|approved_capabilities(root)|UNCHANGED|{'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json','docs/dev-integration/phase2cp2r-20261015.md'}:
+for n in set(pin['files'])|approved_config_write(root)|approved_capabilities(root)|UNCHANGED|{'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json','docs/dev-integration/phase2cp2r-20261015.md'}:
  p=scratch/n;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/n,p)
 approved_config_write(scratch,root)
 count=0

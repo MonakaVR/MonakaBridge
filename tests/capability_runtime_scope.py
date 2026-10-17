@@ -3,6 +3,7 @@ from pathlib import Path
 import hashlib,json,subprocess
 from functools import lru_cache
 from measurement_target_scope import approved_measurement,predecessor as measurement_predecessor,predecessor_text as measurement_predecessor_text
+from control_foundation_scope import approved_control
 BASE='e08b95f8e147d75a9d48c4eb9e747a1db9194c1a'
 PIN='dependencies/capabilities-runtime-baseline.json'
 FILES={'tests/world_calibration_tests.cpp','tests/trajectory_calibration_tests.cpp','include/monaka_bridge/config.hpp','src/mapping/config.cpp','CMakeLists.txt','include/monaka_bridge/bridge.hpp','include/monaka_bridge/registry.hpp',
@@ -15,7 +16,7 @@ def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',BASE+':'+name])
 def approved_capabilities(root,git_root=None):
  root=Path(root);repo=str(git_root or root);p=json.loads((root/PIN).read_text())
- extra=approved_measurement(root,git_root)
+ extra=approved_measurement(root,git_root)|approved_control(root,git_root)
  if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('capability scope/base mismatch')
  for name in ['dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json']:
   if digest((root/name).read_bytes())!=digest(historical(repo,name)):raise RuntimeError('historical baseline changed: '+name)
@@ -24,6 +25,8 @@ def approved_capabilities(root,git_root=None):
   if e['existed_at_base'] and digest(historical(repo,name))!=e['base_sha256']:raise RuntimeError('capability predecessor drift: '+name)
  return FILES|{PIN}|extra
 def predecessor(root,name,raw,git_root=None):
+ # Both current parent views are approved above; native historical projection
+ # is used for this common baseline. Control has its own explicit A projection.
  # Approval boundaries validate every current source without caching. Projection
  # checks just the supplied bytes; repeating the whole approval for every entry
  # in every historical archive otherwise makes the guard quadratic.

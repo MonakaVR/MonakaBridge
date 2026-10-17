@@ -374,3 +374,8 @@ if(WIN32 AND BUILD_TESTING AND TARGET monaka_calibration_capture)
  add_test(NAME native_capture_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_capture_scope_tests.py" "${OPENVR_SDK}")
  set_tests_properties(native_capture_scope PROPERTIES TIMEOUT 120)
 endif()
+
+if(BUILD_TESTING)
+ add_test(NAME native_control_integration_scope COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/integration_scope_tests.py")
+ set_tests_properties(native_control_integration_scope PROPERTIES TIMEOUT 180)
+endif()
