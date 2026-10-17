@@ -4,10 +4,55 @@
 #include <limits>
 #include <thread>
 #include <condition_variable>
+#include <type_traits>
 namespace lc=mb::local_calibration;
 template<class F>void rejects(F f){bool thrown=false;try{f();}catch(const std::exception&){thrown=true;}CHECK(thrown);}
 
+void providerOptionsCases(const std::filesystem::path& base){
+ static_assert(!std::is_copy_assignable_v<lc::ProviderOpenOptions>);
+ static_assert(std::is_same_v<decltype(lc::Frame::envelope),mb::c1::Envelope>);
+ static_assert(std::is_same_v<decltype(std::declval<const lc::ProviderOpenOptions&>().measurementTarget()),const mb::FrozenMeasurementTarget&>);
+ int checks=0;auto pass=[&](const char* s){++checks;std::cout<<"PASS N0a "<<s<<'\n';};
+ std::shared_ptr<const lc::ProviderOpenOptions> retained;
+ {fixture::Run r(base);CHECK(!r.provider.configuration()&&r.provider.configurationChecks==0&&!std::filesystem::exists(r.env.draftRoot));
+  auto j=r.open();r.provider.configurationHook=[&](const auto& options){CHECK(r.session->phase()=="NEW"&&!r.provider.configuration()&&options.measurementTarget().target().binding.source=="pico");};
+  CHECK(r.execute(j)["status"]=="OPEN");retained=r.provider.configuration();const auto& o=*retained;const auto& t=o.measurementTarget();
+  CHECK(t.publisher()=="bridge-installation"&&t.target().binding.tracker=="logical-pico"&&t.target().binding.device=="device"&&t.target().binding.profile=="pico"&&t.target().binding.inputSpace=="native"&&t.target().binding.inputRevision==1&&t.target().mappingRevision==1);
+  CHECK(t.target().profile.quaternionAxes==(std::array<int,4>{1,2,3,4}));
+  CHECK(o.capabilityProfile()&&o.capabilityProfile()->id=="synthetic-generic-seven-channel"&&o.capabilityProfile()->inputDeclaration==std::vector<std::string>({"position","orientation"}));
+  CHECK(o.configPath()==r.path&&o.installationPath()==r.root&&o.configSha256()==lc::sha256(r.original)&&o.mirrorAddress()=="127.0.0.1"&&o.mirrorPort()==49123&&o.referenceRole()=="left"&&!o.readOnly());
+  CHECK(r.execute(j)["replayed"]==true);j["readonly"]=true;CHECK(r.execute(j)["reason"]=="REQUEST_ID_REUSE_MISMATCH");CHECK(r.execute(r.open())["status"]=="REJECTED");
+  CHECK(r.provider.configurationChecks==1&&r.provider.configuration()==retained&&r.provider.captures==0&&r.provider.discoveries==0&&!std::filesystem::exists(r.env.draftRoot));
+  rejects([&]{r.provider.configure(retained);});CHECK(r.provider.configurationChecks==1);
+  j.clear();auto c=mb::loadConfig(r.path);c.contracts.at({"pico","device"}).id="changed";c.bindings.at({"pico","device"}).mount.translation={4,5,6};++c.revision;mb::saveConfig(r.path,c);c={};r.session.reset();
+  CHECK(r.provider.configuration()->capabilityProfile()->id=="synthetic-generic-seven-channel"&&r.provider.configuration()->measurementTarget().target().binding.mount.translation==mb::Vec({0,0,0}));
+ }CHECK(retained->measurementTarget().target().binding.source=="pico"&&retained->mirrorPort()==49123);pass("owning immutable snapshot survives request/config/session/provider destruction; configure once/replay/mismatch/second-open");
+ {fixture::Run r(base);auto c=mb::loadConfig(r.path);auto b=c.bindings.at({"other","device"});b.profile="alternate";b.inputSpace="alternate-space";b.inputRevision=9;b.mount.translation={.1,.2,.3};c.bindings[{b.source,b.device}]=b;auto p=c.profiles.at("pico");p.evidence="alternate explicit fixture";c.profiles[b.profile]=p;c.contracts.at({b.source,b.device}).id="other-explicit";++c.revision;mb::saveConfig(r.path,c);
+  auto j=r.open();j.update({{"source","other"},{"tracker","logical-other"},{"input_space","alternate-space"},{"input_revision",9},{"mirror_port",49234},{"reference_role","right"},{"readonly",true}});CHECK(r.execute(j)["status"]=="OPEN");auto o=r.provider.configuration();const auto& target=o->measurementTarget().target();
+  CHECK(target.binding.source=="other"&&target.binding.tracker=="logical-other"&&target.binding.profile=="alternate"&&target.binding.inputRevision==9&&target.binding.mount.translation==mb::Vec({.1,.2,.3})&&target.profile.evidence==p.evidence&&o->capabilityProfile()->id=="other-explicit"&&o->referenceRole()=="right"&&o->mirrorPort()==49234&&o->readOnly());
+  CHECK(retained->measurementTarget().target().binding.source=="pico"&&retained->capabilityProfile()->id!=o->capabilityProfile()->id);pass("second selection has its own canonical Binding/Profile/declaration and metadata");
+ }
+ {fixture::Run r(base);auto c=mb::loadConfig(r.path);c.contracts.erase({"pico","device"});++c.revision;mb::saveConfig(r.path,c);CHECK(r.execute(r.open())["status"]=="OPEN"&&!r.provider.configuration()->capabilityProfile());CHECK(r.execute(r.command("discover"))["reason"]=="EXPLICIT_DECLARATION_REQUIRED"&&r.provider.discoveries==1&&r.provider.configurationChecks==1);pass("missing declaration permits open and retains discover refusal");}
+ int invalid=0;auto bad=[&](auto mutate){fixture::Run r(base);auto j=r.open();mutate(r,j);bool rejected=false;try{rejected=r.execute(j)["status"]=="REJECTED";}catch(const std::exception&){rejected=true;}CHECK(rejected&&r.session->phase()=="NEW"&&r.provider.configurationChecks==0&&!r.provider.configuration()&&r.provider.captures==0&&r.provider.discoveries==0&&!std::filesystem::exists(r.env.draftRoot));++invalid;};
+ for(auto field:{"config_path","source","device","tracker","input_space","input_revision","readonly","bridge_id","installation_path","helper_path","helper_sha256","association","mirror_address","mirror_port","reference_role"}){
+  bad([=](auto&,auto& j){j.erase(field);});bad([=](auto&,auto& j){j[field]=lc::Json::array();});
+ }
+ for(auto field:{"source","device","tracker","input_space","bridge_id","helper_sha256","association","mirror_address","reference_role"})bad([=](auto&,auto& j){j[field]="foreign";});
+ for(auto n:{0ULL,65536ULL})bad([=](auto&,auto& j){j["mirror_port"]=n;});
+ for(auto n:{2ULL,4294967296ULL})bad([=](auto&,auto& j){j["input_revision"]=n;});
+ for(auto field:{"config_path","installation_path","helper_path"})bad([=](auto& r,auto& j){j[field]=(r.root/"absent").u8string();});
+ bad([](auto&,auto& j){j["unexpected"]=true;});bad([](auto& r,auto&){std::ofstream f(r.path,std::ios::trunc);f<<"invalid config";});
+ std::cout<<"PASS N0a "<<invalid<<" invalid open variants never configure or publish\n";++checks;
+ {fixture::Run r(base);r.provider.failConfigure=true;auto j=r.open();auto out=r.execute(j);CHECK(out["reason"]=="FIXTURE_CONFIGURE_REJECTED"&&out["phase"]=="FAILED"&&r.session->terminal()&&!r.provider.configuration()&&!r.session->frozenInput());
+  CHECK(r.execute(j)["replayed"]==true&&r.execute(r.open())["status"]=="REJECTED"&&r.execute(r.command("discover"))["status"]=="REJECTED");rejects([&]{r.provider.configure(retained);});CHECK(r.provider.configurationChecks==1&&r.provider.captures==0&&r.provider.discoveries==0&&mb::readConfigBytes(r.path)==r.original&&!std::filesystem::exists(r.env.draftRoot));CHECK(r.execute(r.command("close"))["closed"]==true);
+  fixture::Run fresh(base);CHECK(fresh.execute(fresh.open())["status"]=="OPEN"&&fresh.provider.configurationChecks==1);pass("configure failure is terminal/unpublished/resource-free; replay never retries; new worker/provider opens");
+ }
+ {fixture::Run r(base);lc::UnsupportedProvider p;lc::CalibrationSession s(p,r.env);auto j=r.open();auto out=s.execute(j);CHECK(out["status"]=="OPEN"&&out["capture_supported"]==false&&p.configuration());auto d=r.command("discover");d["session_id"]=s.sessionId();d["run_id"]=s.runId();CHECK(s.execute(d)["reason"]=="CAPTURE_UNSUPPORTED_B3_REQUIRED"&&!std::filesystem::exists(r.env.draftRoot));pass("production UnsupportedProvider stays unsupported after resource-free open");}
+ std::cout<<"PASS N0a native "<<checks<<" groups; invalid="<<invalid<<'\n';
+}
+
 void reviewCase(const std::filesystem::path& base,const std::string& which){
+ if(which=="provider-options"){providerOptionsCases(base);return;}
  if(which=="source-stale"||which=="reference-stale"){
   fixture::Run r(base);
   r.provider.captureHook=[&](int i){

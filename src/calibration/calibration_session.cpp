@@ -59,18 +59,31 @@ Json parseRequest(const std::string& line){
  check(j,"");schema(j);return j;
 }
 
+void CaptureProvider::configure(std::shared_ptr<const ProviderOpenOptions> options){
+ need(bool(options),"PROVIDER_CONFIGURATION_REQUIRED");
+ need(!configurationAttempted_,"PROVIDER_CONFIGURATION_ALREADY_ATTEMPTED");
+ configurationAttempted_=true;validateConfiguration(*options);configuration_=std::move(options);
+}
+std::shared_ptr<const ProviderOpenOptions> CalibrationSession::makeProviderOptions(const Config& config,
+ FrozenMeasurementTarget target,ProviderOpenOptions::Deployment deployment){
+ const auto& b=target.target().binding;std::optional<CapabilityProfile> contract;
+ auto found=config.contracts.find({b.source,b.device});if(found!=config.contracts.end())contract=found->second;
+ return std::shared_ptr<const ProviderOpenOptions>(new ProviderOpenOptions(std::move(target),std::move(contract),std::move(deployment)));
+}
+
 struct CalibrationSession::Impl {
  CaptureProvider& provider;SessionEnvironment env;DraftStore drafts;
  std::atomic<Phase> state{NEW};std::atomic<bool> cancel{false},eof{false};
  const std::string session=opaqueId(),run=opaqueId();
  std::int64_t created,lastNow,confirmationDeadline=0,resultDeadline=0,reviewDeadline=0;
- std::string original,configHash,configPath,confirmation,review,resultId,candidate,candidateHash,referenceRole;
- Config config;std::unique_ptr<const FrozenMeasurementTarget> frozen;
+ std::string original,confirmation,review,resultId,candidate,candidateHash;
+ Config config;std::shared_ptr<const ProviderOpenOptions> providerOptions;
+ const FrozenMeasurementTarget* frozen=nullptr; // Alias into the owning options.
  std::unique_ptr<const InputWitness> input;
  std::unique_ptr<const TrajectoryResult> result;
  std::unique_ptr<TrajectoryRecorder> recorder;
  Counter poses,states;std::int64_t lastValidPose=-1,referenceAt=-1,lastValidReference=-1,lastPoseReceipt=-1,lastStateReceipt=-1;
- bool poseValid=false,referenceValid=false,readonly=true,evidenceStale=false,createdDraft=false;
+ bool poseValid=false,referenceValid=false,evidenceStale=false,createdDraft=false;
  std::size_t solves=0,commits=0,cacheBytes=0,ordinaryIds=0,reservedIds=0;
  struct Entry {std::string canonical;Json outcome;};std::map<std::string,Entry> cache;std::mutex cacheMutex;
  explicit Impl(CaptureProvider& p,SessionEnvironment e):provider(p),env(std::move(e)),drafts(env.draftRoot),created(env.clock()),lastNow(created){}
@@ -79,8 +92,8 @@ struct CalibrationSession::Impl {
  void checkCancel(){if(cancel&&state!=COMMITTING){state=eof?CLOSED:CANCELLED;confirmation.clear();review.clear();throw std::runtime_error(eof?"EOF_CLOSED":"CANCELLED");}}
  void current(){
   requirePlainPath(std::filesystem::u8path(env.helperPath));if(sha256(readConfigBytes(std::filesystem::u8path(env.helperPath)))!=env.helperSha256)invalidate("HELPER_HASH_CHANGED");
-  requirePlainPath(std::filesystem::u8path(configPath));
-  auto raw=readConfigBytes(std::filesystem::u8path(configPath));
+  requirePlainPath(providerOptions->configPath());
+  auto raw=readConfigBytes(providerOptions->configPath());
   if(raw!=original)invalidate("CONFIG_EXACT_BYTES_CHANGED");
   auto c=parseConfigDocument(raw);validateFrozenMeasurementTarget(c,*frozen);
  }
@@ -140,7 +153,7 @@ struct CalibrationSession::Impl {
   if(!candidate.empty())need(readConfigBytes(drafts.path("candidate.json"))==candidate,"CANDIDATE_ARTIFACT_CHANGED");
  }
  Json resultJson()const{
-  need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",configHash},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
+  need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
  }
  Json action(const Json& j){
   auto op=text(j,"op");auto t=now();if(op!="cancel"&&op!="close")checkCancel();
@@ -150,11 +163,14 @@ struct CalibrationSession::Impl {
    auto path=std::filesystem::u8path(text(j,"config_path"));requirePlainPath(path);auto installation=std::filesystem::u8path(text(j,"installation_path"));requirePlainPath(installation);need(std::filesystem::is_directory(installation),"INSTALLATION_UNAVAILABLE");
    need(j.at("association")=="operator_declared_process_owner_unverified"&&j.at("mirror_address")=="127.0.0.1"&&j.at("mirror_port").get<std::uint64_t>()>0&&j.at("mirror_port").get<std::uint64_t>()<=65535,"ASSOCIATION_UNSUPPORTED");
    need(j.at("reference_role")=="left"||j.at("reference_role")=="right"||j.at("reference_role")=="hmd","REFERENCE_ROLE_UNSUPPORTED");
-   original=readConfigBytes(path);config=loadConfig(path);configPath=path.u8string();configHash=sha256(original);
-   need(j.at("bridge_id")==config.bridgeId&&j.at("input_revision").get<std::uint64_t>()<=UINT32_MAX,"TARGET_OWNER_REVISION_MISMATCH");
-   auto target=freezeMeasurementTarget(config,text(j,"source"),text(j,"device"),text(j,"tracker"),text(j,"input_space"),j.at("input_revision").get<std::uint32_t>());
-   frozen=std::make_unique<const FrozenMeasurementTarget>(target);readonly=j.at("readonly").get<bool>();referenceRole=text(j,"reference_role");state=OPEN;
-   return {{"status","OPEN"},{"config_sha256",configHash},{"capture_supported",provider.supported()},{"readonly",readonly},{"association","operator_declared / process_owner_unverified"}};
+   auto nextOriginal=readConfigBytes(path);auto nextConfig=parseConfigDocument(nextOriginal);nextConfig.sourcePath=std::filesystem::weakly_canonical(path);
+   need(j.at("bridge_id")==nextConfig.bridgeId&&j.at("input_revision").get<std::uint64_t>()<=UINT32_MAX,"TARGET_OWNER_REVISION_MISMATCH");
+   auto target=freezeMeasurementTarget(nextConfig,text(j,"source"),text(j,"device"),text(j,"tracker"),text(j,"input_space"),j.at("input_revision").get<std::uint32_t>());
+   auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>()});
+   Json reply={{"status","OPEN"},{"config_sha256",options->configSha256()},{"capture_supported",provider.supported()},{"readonly",options->readOnly()},{"association",options->association()}};
+   try{provider.configure(options);}catch(...){state=FAILED;throw;}
+   original=std::move(nextOriginal);config=std::move(nextConfig);providerOptions=std::move(options);frozen=&providerOptions->measurementTarget();state=OPEN;
+   return reply;
   }
   need(text(j,"session_id")==session&&text(j,"run_id")==run,"WRONG_SESSION_RUN");
   if(op=="close"||op=="cancel"){need(state!=COMMITTING,"COMMIT_OUTCOME_PENDING");if(terminalPhase(state))return {{"status",name(state)},{"closed",true}};cancel=true;state=op=="close"?CLOSED:CANCELLED;confirmation.clear();review.clear();if(createdDraft)drafts.terminal(name(state));return {{"status",name(state)}};}
@@ -166,7 +182,7 @@ struct CalibrationSession::Impl {
    auto batch=provider.discover(cancel);need(now()-t<10*second,"DISCOVER_TIMEOUT");checkCancel();
    const auto& b=frozen->target().binding;need(config.contracts.count({b.source,b.device}),"EXPLICIT_DECLARATION_REQUIRED");
    auto witness=batch.identity;
-   need(witness.source==b.source&&witness.device==b.device&&witness.space==b.inputSpace&&witness.revision==b.inputRevision&&witness.convention==frozen->target().profile.convention&&!witness.session.empty()&&!witness.clock.empty()&&!witness.peer.empty()&&!witness.referenceSerial.empty()&&!witness.standing.empty()&&witness.referenceRole==referenceRole,"DISCOVERY_WITNESS_MISMATCH");
+   need(witness.source==b.source&&witness.device==b.device&&witness.space==b.inputSpace&&witness.revision==b.inputRevision&&witness.convention==frozen->target().profile.convention&&!witness.session.empty()&&!witness.clock.empty()&&!witness.peer.empty()&&!witness.referenceSerial.empty()&&!witness.standing.empty()&&witness.referenceRole==providerOptions->referenceRole(),"DISCOVERY_WITNESS_MISMATCH");
    need(batch.frames.size()<=128,"PROVIDER_BATCH_LIMIT");
    std::int64_t floor=-1;std::optional<std::int64_t> stateFloor;
    for(const auto& f:batch.frames){if(auto p=std::get_if<c1::TrackerObservation>(&f.envelope))if(p->source_id==b.source&&p->device_id==b.device)floor=std::max(floor,p->sequence);if(auto p=std::get_if<c1::ObservationDeviceState>(&f.envelope))if(p->source_id==b.source&&p->device_id==b.device)stateFloor=std::max(stateFloor.value_or(-1),p->sequence);}
@@ -201,7 +217,7 @@ struct CalibrationSession::Impl {
   try{guards(true);}catch(...){review.clear();if(state==PREPARED)state=RESULT_READY;throw;}
   try{artifactCheck();}catch(...){invalidate("DRAFT_ARTIFACT_CHANGED");}
   if(op=="prepare_commit"){
-   need(!readonly,"READONLY_COMMIT_REJECTED");
+   need(!providerOptions->readOnly(),"READONLY_COMMIT_REJECTED");
    if(candidate.empty()){
     auto proposed=worldCalibrationCandidate(config,frozen->target(),result->world,true);
     const auto& s=frozen->target().binding;
@@ -212,17 +228,17 @@ struct CalibrationSession::Impl {
    review=opaqueId();reviewDeadline=now()+30*second;state=PREPARED;
    return {{"status","PREPARED"},{"result_id",resultId},{"review_token",review},{"review_deadline_ns",reviewDeadline},{"candidate_sha256",candidateHash},{"candidate_bytes",candidate.size()},{"candidate_path",drafts.path("candidate.json").u8string()},{"output_approval","REQUIRED"}};
   }
-  need(op=="commit"&&state==PREPARED&&!readonly,"COMMIT_NOT_PREPARED_OR_READONLY");
+  need(op=="commit"&&state==PREPARED&&!providerOptions->readOnly(),"COMMIT_NOT_PREPARED_OR_READONLY");
   need(!review.empty()&&text(j,"review_token")==review&&text(j,"candidate_sha256")==candidateHash,"REVIEW_TOKEN_CANDIDATE_MISMATCH");
   if(now()>=reviewDeadline){review.clear();state=RESULT_READY;throw std::runtime_error("REVIEW_TOKEN_EXPIRED_REPREPARE");}
   checkCancel();state=COMMITTING;review.clear();auto started=now();++commits;
   try{
-   commitConfigDocument(std::filesystem::u8path(configPath),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{consume(provider.guard(),false);}catch(...){evidenceStale=true;}});
+   commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{consume(provider.guard(),false);}catch(...){evidenceStale=true;}});
    if(env.afterReplace)env.afterReplace();
    try{consume(provider.guard(),false);live(true);}catch(...){evidenceStale=true;}
    if(now()-started>=15*second){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"reason","COMMIT_TIMEOUT_NO_RETRY"}};}
    if(cancel)evidenceStale=true;
-   if(readConfigBytes(std::filesystem::u8path(configPath))!=candidate)evidenceStale=true;
+   if(readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;
    state=evidenceStale?SAVED_STALE:SAVED;
   }catch(const std::exception& e){state=UNKNOWN;try{drafts.terminal("UNKNOWN");}catch(...){}return {{"status","UNKNOWN"},{"reason",diagnostic(e)}};}
   Json saved={{"status",name(state)},{"config_sha256",candidateHash},{"output_approval","REQUIRED"},{"runtime","UNCONFIRMED"},{"message","SAVED CONFIG / OUTPUT REAPPROVAL REQUIRED / RUNTIME UNCONFIRMED"}};
