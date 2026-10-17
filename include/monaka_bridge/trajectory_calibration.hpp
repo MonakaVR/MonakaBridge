@@ -1,5 +1,6 @@
 #pragma once
 #include "world_calibration.hpp"
+#include "measurement_target.hpp"
 
 namespace mb {
 
@@ -62,6 +63,8 @@ class TrajectoryRecorder {
 public:
     TrajectoryRecorder(const Config&,const WorldCalibrationTarget&,std::string referenceId,
         TrajectoryOptions options={});
+    TrajectoryRecorder(const Config&,const FrozenMeasurementTarget&,std::string referenceId,
+        TrajectoryOptions options={});
     void checkConfig(const Config&);
     bool observation(const c1::TrackerObservation&,std::int64_t arrivalNs);
     void deviceState(const c1::ObservationDeviceState&);
@@ -76,6 +79,7 @@ private:
     void require(bool,const char*);
     double ratio(std::size_t paired) const;
     WorldCalibrationTarget target_;
+    std::optional<FrozenMeasurementTarget> frozenTarget_;
     std::string publisher_, referenceId_, clock_, failure_;
     TrajectoryOptions options_;
     std::optional<std::string> session_;
