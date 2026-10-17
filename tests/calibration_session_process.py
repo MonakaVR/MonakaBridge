@@ -148,6 +148,19 @@ env=os.environ.copy();env['LOCALAPPDATA']=str(root/'appdata');Path(env['LOCALAPP
 marker=root/'bootstrap-vr-calls.txt';env['MONAKA_B2_VR_SENTINEL']=str(marker)
 p=subprocess.run([str(actual),'--local-api-version'],capture_output=True,env=env,timeout=5);transcripts.append(dict(command=p.args,exit_code=p.returncode,stdout_utf8=p.stdout.decode('utf-8'),stderr=p.stderr.decode('utf-8')));check(p.returncode==0 and json.loads(p.stdout)['capture_supported'] is True,'version bootstrap');check(not marker.exists(),'version called OpenVR');record('actual executable version calls zero OpenVR imports')
 c=Client(actual,['--local-api'],env);op=dict(seed,request_id='open',helper_path=str(actual),helper_sha256=hashlib.sha256(actual.read_bytes()).hexdigest());before=Path(seed['config_path']).read_bytes();opened=c.execute(op);check(opened['status']=='OPEN' and opened['capture_supported'] is True,str(opened));c.close();check(not marker.exists() and not (root/'appdata/MonakaBridge').exists() and Path(seed['config_path']).read_bytes()==before,'bootstrap writes or VR');record('actual executable open/close resource-free; implemented capture available only after discover')
+# N0a contract through the actual product executable/RuntimeCaptureProvider,
+# not the older generic fixture Provider. A missing declaration is optional at
+# open and mandatory at discover before any SDK call or mirror acquisition.
+missing_config=root/'canonical-missing-declaration.json';missing=json.loads(before)
+for mapping in missing['mappings']:mapping.pop('runtime_contract',None)
+missing_bytes=json.dumps(missing).encode('utf-8');missing_config.write_bytes(missing_bytes)
+missing_marker=root/'missing-declaration-vr-calls.txt';missing_env=dict(env,MONAKA_B2_VR_SENTINEL=str(missing_marker))
+for readonly in (False,True):
+ c=Client(actual,['--local-api'],missing_env);request=dict(op,request_id='missing-open',config_path=str(missing_config),readonly=readonly)
+ opened=c.execute(request);check(opened['status']=='OPEN' and opened['phase']=='OPEN' and opened['readonly']==readonly,str(opened))
+ rejected=c.execute(c.command('discover'));check(rejected['status']=='REJECTED' and rejected['reason']=='EXPLICIT_DECLARATION_REQUIRED' and rejected['phase']=='INSPECT_ONLY',str(rejected));c.close()
+ check(not missing_marker.exists() and missing_config.read_bytes()==missing_bytes and not (root/'appdata/MonakaBridge').exists(),'missing declaration touched SDK/config/draft')
+record('actual production RuntimeCaptureProvider missing-declaration open writable/readonly succeeds; discover rejects with zero sentinel SDK calls; no draft/config writes')
 c=Client(actual,['--local-api'],env);check(c.execute(op)['status']=='OPEN','N1 open');out=c.execute(c.command('discover'));check(out.get('reason')=='OPENVR_BACKGROUND_UNAVAILABLE',str(out));c.close();check(marker.exists() and b'VR_CALL' in marker.read_bytes() and Path(seed['config_path']).read_bytes()==before and not (root/'appdata/MonakaBridge').exists(),'N1 failed init safety');record('actual production discover enters SDK sentinel and fails before mirror bind; no real SDK/socket/draft/config activity')
 # Positive control makes the same actual exe call its legacy VR path into a
 # sentinel, never the real SDK DLL/runtime. This proves the sentinel is active.

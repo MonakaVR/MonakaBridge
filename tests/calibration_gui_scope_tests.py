@@ -1,7 +1,9 @@
 from pathlib import Path
 import hashlib,json,shutil,uuid
 from calibration_gui_scope import FILES,PINS,PROTECTED,PIN,PARENT,approved_gui,historical,gui_project,digest
-root=Path(__file__).resolve().parents[1];approved=approved_gui(root)
+from calibration_review_r1_scope_tests import verify_r1
+from calibration_review_r1_scope import r1_project
+root=Path(__file__).resolve().parents[1];verify_r1(root);approved=approved_gui(root)
 scratch=root/'build/gui-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
 for name in approved:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
@@ -48,7 +50,7 @@ for name in sorted(PROTECTED):
 for name in sorted(PINS):
  p=scratch/name;source=p.read_bytes();p.write_bytes(source+b'\n');value=json.loads(raw);value['pins'][name]=hashlib.sha256(p.read_bytes()).hexdigest();pin.write_text(json.dumps(value),encoding='utf-8');reject('old pin redeclaration '+name);p.write_bytes(source);pin.write_bytes(raw)
 for name,e in json.loads(raw)['files'].items():
- current=(root/name).read_bytes();assert gui_project(root,name,current)==(historical(str(root),name) if e['parent']['existed'] else current)
+ current=r1_project(root,name,(root/name).read_bytes());assert gui_project(root,name,current)==(historical(str(root),name) if e['parent']['existed'] else current)
  try:gui_project(root,name,current+b'foreign')
  except RuntimeError:count+=1
  else:raise RuntimeError('GUI foreign projection '+name)

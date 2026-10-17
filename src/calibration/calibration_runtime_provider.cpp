@@ -40,7 +40,6 @@ RuntimeCaptureProvider::RuntimeCaptureProvider(std::unique_ptr<CalibrationRefere
 }
 void RuntimeCaptureProvider::validateConfiguration(const ProviderOpenOptions& o)const{
  need(o.mirrorAddress()=="127.0.0.1"&&o.mirrorPort()!=0,"ASSOCIATION_UNSUPPORTED");
- need(o.capabilityProfile().has_value(),"EXPLICIT_DECLARATION_REQUIRED");
  need(o.referenceRole()=="left"||o.referenceRole()=="right"||o.referenceRole()=="hmd","REFERENCE_ROLE_UNSUPPORTED");
 }
 void RuntimeCaptureProvider::requireOwner()const{need(started_&&!closed_&&std::this_thread::get_id()==owner_,"CAPTURE_OWNER_REQUIRED");}
@@ -97,7 +96,9 @@ ProviderBatch RuntimeCaptureProvider::poll(){
  batch.identity=witness_;return batch;
 }
 ProviderBatch RuntimeCaptureProvider::discover(const std::atomic<bool>& cancel){
- need(configuration()!=nullptr,"PROVIDER_CONFIGURATION_REQUIRED");need(!started_,"PROVIDER_DISCOVERY_ALREADY_STARTED");started_=true;owner_=std::this_thread::get_id();need(!cancel,"CANCELLED");
+ need(configuration()!=nullptr,"PROVIDER_CONFIGURATION_REQUIRED");need(!started_,"PROVIDER_DISCOVERY_ALREADY_STARTED");
+ need(configuration()->capabilityProfile().has_value(),"EXPLICIT_DECLARATION_REQUIRED");
+ started_=true;owner_=std::this_thread::get_id();need(!cancel,"CANCELLED");
  const auto& frozen=configuration()->measurementTarget();const auto& b=frozen.target().binding;
  witness_.source=b.source;witness_.device=b.device;witness_.space=b.inputSpace;witness_.revision=b.inputRevision;witness_.convention=frozen.target().profile.convention;
  const auto start=clock_();api_->initialize(vr::VRApplication_Background);need(!cancel,"CANCELLED");

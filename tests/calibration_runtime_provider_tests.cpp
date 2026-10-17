@@ -6,6 +6,29 @@ namespace lc=mb::local_calibration;namespace rf=runtime_fixture;
 namespace {
 template<class F>std::string rejection(F f){try{f();}catch(const std::exception& e){return e.what();}throw std::runtime_error("expected rejection");}
 int groups=0;void pass(const char* s){++groups;std::cout<<"PASS N1 "<<s<<std::endl;}
+void missingDeclaration(const std::filesystem::path& base){
+ for(bool readOnly:{false,true}){
+  fixture::Run r(base);auto canonical=lc::Json::parse(mb::readConfigBytes(r.path));for(auto& mapping:canonical["mappings"])mapping.erase("runtime_contract");
+  const auto original=canonical.dump();{std::ofstream file(r.path,std::ios::binary|std::ios::trunc);file<<original;}
+  CHECK(!mb::loadConfig(r.path).contracts.size());
+  rf::State state(r.time);auto provider=rf::provider(state,true);lc::CalibrationSession session(*provider,r.env);
+  auto open=r.open();open["readonly"]=readOnly;auto opened=session.execute(open);
+  std::cout<<"missing-declaration production open: "<<opened.dump()<<std::endl;
+  CHECK(opened["status"]=="OPEN"&&opened["phase"]=="OPEN"&&opened["readonly"]==readOnly);
+  CHECK(provider->configuration()&&!provider->configuration()->capabilityProfile());
+  auto command=[&](const char* op){return lc::Json{{"api_version",1},{"request_id",lc::opaqueId()},{"op",op},{"session_id",session.sessionId()},{"run_id",session.runId()}};};
+  auto rejected=session.execute(command("discover"));CHECK(rejected["status"]=="REJECTED"&&rejected["reason"]=="EXPLICIT_DECLARATION_REQUIRED"&&rejected["phase"]=="INSPECT_ONLY");
+  session.execute(command("close"));
+  CHECK(state.initCalls==0&&state.bindCalls==0&&state.poseCalls==0&&state.eventCalls==0&&state.shutdownCalls==0&&state.transportCloses==0);
+  CHECK(!state.initialized&&!state.bound&&!std::filesystem::exists(r.env.draftRoot)&&mb::readConfigBytes(r.path)==original);
+  // Also call the concrete provider boundary directly: an owner wrapper must
+  // not be necessary to avoid acquiring resources with no declaration.
+  r.reset();CHECK(r.execute(r.open())["status"]=="OPEN");rf::State direct(r.time);auto p=rf::provider(direct);p->configure(r.provider.configuration());std::atomic<bool> cancel{false};
+  CHECK(rejection([&]{p->discover(cancel);})=="EXPLICIT_DECLARATION_REQUIRED");p->shutdown();
+  CHECK(direct.initCalls==0&&direct.bindCalls==0&&direct.poseCalls==0&&direct.shutdownCalls==0&&direct.transportCloses==0);
+ }
+ pass("production missing declaration: canonical open writable/readonly succeeds; discover rejects before all SDK/socket calls; direct concrete boundary also closed");
+}
 struct Case {
  fixture::Run run;rf::State state{run.time};std::unique_ptr<lc::RuntimeCaptureProvider> p{rf::provider(state)};std::atomic<bool> cancel{false};
  explicit Case(const std::filesystem::path& base):run(base){CHECK(run.execute(run.open())["status"]=="OPEN");p->configure(run.provider.configuration());}
@@ -13,7 +36,8 @@ struct Case {
 };
 }
 int main(int argc,char** argv)try{
- CHECK(argc==2);auto base=std::filesystem::absolute(std::filesystem::u8path(argv[1]));
+ CHECK(argc==2||(argc==3&&std::string(argv[2])=="--missing-declaration"));auto base=std::filesystem::absolute(std::filesystem::u8path(argv[1]));
+ missingDeclaration(base);if(argc==3)return 0;
  {Case c(base);CHECK(c.p->supported()&&c.state.initCalls==0&&c.state.bindCalls==0&&c.state.poseCalls==0);auto b=c.p->discover(c.cancel);CHECK(c.state.initCalls==1&&c.state.bindCalls==1&&c.state.application==vr::VRApplication_Background&&c.state.origin==vr::TrackingUniverseStanding&&c.state.prediction==0&&b.frames.size()==1&&b.referenceValid);lc::CaptureMonitor m(*c.p->configuration(),b,c.run.time,c.run.time);CHECK(m.witness().initialPoseFloor==1&&!m.witness().initialStateFloor);c.p->shutdown();CHECK(c.state.shutdownCalls==1&&c.state.transportCloses==1);c.p->shutdown();CHECK(c.state.shutdownCalls==1);pass("resource-free constructor/configure; lazy Background/Standing/prediction0; canonical discovery and same-owner cleanup");}
  {for(const auto* role:{"hmd","right"}){fixture::Run r(base);auto open=r.open();open["reference_role"]=role;CHECK(r.execute(open)["status"]=="OPEN");rf::State s(r.time);s.controllerRole=vr::TrackedControllerRole_RightHand;auto p=rf::provider(s);p->configure(r.provider.configuration());std::atomic<bool> cancel{false};auto b=p->discover(cancel);CHECK(b.referenceValid&&b.identity.referenceRole==role);p->shutdown();CHECK(s.shutdownCalls==1&&s.transportCloses==1);}pass("explicit HMD and right-controller roles use same pinned Standing provider and owner cleanup");}
  {auto m=rf::matrix({});CHECK(lc::sameStandingValues(m,m));auto zero=m;zero.m[0][1]=-0.0f;CHECK(lc::sameStandingValues(m,zero));auto ulp=m;ulp.m[0][3]=std::nextafter(0.0f,1.0f);CHECK(!lc::sameStandingValues(m,ulp));auto nan=m;nan.m[0][3]=std::numeric_limits<float>::quiet_NaN();CHECK(!lc::sameStandingValues(nan,nan));CHECK(rejection([&]{lc::calibrationReferenceRigid(nan);})=="NONFINITE_REFERENCE_MATRIX");auto reflection=m;reflection.m[0][0]=-1;CHECK(rejection([&]{lc::calibrationReferenceRigid(reflection);})=="IMPROPER_REFERENCE_MATRIX");auto scale=m;scale.m[0][0]=2;CHECK(rejection([&]{lc::calibrationReferenceRigid(scale);})=="NONRIGID_REFERENCE_MATRIX");auto shear=m;shear.m[0][1]=.2f;CHECK(rejection([&]{lc::calibrationReferenceRigid(shear);})=="NONRIGID_REFERENCE_MATRIX");mb::Rigid known{mb::normalized({.2,.3,.1,.9}),{1,2,3}};auto r=lc::calibrationReferenceRigid(rf::matrix(known));CHECK(mb::norm(mb::add(r.translation,mb::scale(known.translation,-1)))<1e-5);pass("finite/proper rigid goldens; reflection/scale/shear reject; exact float numeric witness signed-zero equality and ULP change");}
