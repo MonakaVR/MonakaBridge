@@ -9,7 +9,7 @@ FILES={
  'scripts/build_control_toolset.py','scripts/package_calibration_control.py','scripts/verify_control_toolset.py',
  'src/calibration/calibration_runtime_provider.cpp','src/calibration/calibration_session.cpp','tools/calibration_local_api.cpp',
  'tests/calibration_runtime_fake.hpp','tests/calibration_runtime_process_fixture.cpp','tests/calibration_runtime_provider_tests.cpp',
- 'tests/integration_scope.py','tests/calibration_gui_scope.py','tests/calibration_gui_scope_tests.py','tests/run_calibration_managed.py',
+ 'tests/integration_scope.py','tests/native_capture_scope_tests.py','tests/calibration_gui_scope.py','tests/calibration_gui_scope_tests.py','tests/run_calibration_managed.py',
  'tests/calibration_client_process_tests.cs','tests/calibration_job_fixture.cs','tests/calibration_job_tests.cs',
  'tests/calibration_json_tests.cs','tests/calibration_launch_tests.cs','tests/calibration_model_tests.cs','tests/calibration_profile_tests.cs',
  'tests/calibration_protocol_fault_fixture.cs','tests/calibration_wpf_tests.cs',
@@ -33,6 +33,10 @@ PROTECTED={
  'include/monaka_bridge/calibration_capture_monitor.hpp','include/monaka_bridge/calibration_runtime_provider.hpp',
  'include/monaka_bridge/calibration_session.hpp','include/monaka_bridge/trajectory_calibration.hpp','ui/control_models.cs',
 }
+NATIVE_PROTECTED=['tools/steamvr_calibrator.cpp','src/calibration/world_calibration.cpp',
+ 'src/calibration/trajectory_calibration.cpp','src/calibration/calibration_session.cpp',
+ 'src/calibration/calibration_capture_monitor.cpp','src/mapping/config_transaction.cpp',
+ 'src/routing/runtime_normalization.cpp','src/routing/bridge.cpp']
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def read(root,name):
  try:return (Path(root)/name).read_bytes()
@@ -50,6 +54,15 @@ def verify_connections(root):
   if len(found)!=1 or not any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id==required for n in ast.walk(found[0])):raise RuntimeError('GUI lost delegation: '+name)
  fn=next(n for n in module.body if isinstance(n,ast.FunctionDef) and n.name=='approved_integration')
  if not any(isinstance(n,ast.Return) and isinstance(n.value,ast.BinOp) and ast.dump(n.value,include_attributes=False)==ast.dump(ast.parse('FILES|set(PIN_OWNERS)|{PIN}|extra',mode='eval').body,include_attributes=False) for n in ast.walk(fn)):raise RuntimeError('GUI lost approval union')
+ native=ast.parse(read(root,'tests/native_capture_scope_tests.py').decode('utf-8-sig'))
+ imported={a.name for n in native.body if isinstance(n,ast.ImportFrom) and n.module=='calibration_gui_scope' for a in n.names}
+ if imported!={'approved_gui','gui_project'}:raise RuntimeError('GUI lost native test child import')
+ if not any(isinstance(n,ast.Expr) and isinstance(n.value,ast.Call) and ast.dump(n.value,include_attributes=False)==ast.dump(ast.parse('approved_gui(root)',mode='eval').body,include_attributes=False) for n in native.body):raise RuntimeError('GUI lost actual native test approval')
+ declarations=[n for n in native.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='protected' for t in n.targets)]
+ if len(declarations)!=1 or ast.literal_eval(declarations[0].value)!=NATIVE_PROTECTED:raise RuntimeError('GUI lost native protected source list')
+ expected='approved_bytes.replace(b"\\r\\n",b"\\n")==historical(str(root),name).replace(b"\\r\\n",b"\\n")'
+ if not any(isinstance(n,ast.Assert) and ast.dump(n.test,include_attributes=False)==ast.dump(ast.parse(expected,mode='eval').body,include_attributes=False) for n in ast.walk(native)):raise RuntimeError('GUI lost native historical equality')
+ if not any(isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='approved_bytes' for t in n.targets) and ast.dump(n.value,include_attributes=False)==ast.dump(ast.parse('gui_project(root,name,(root/name).read_bytes())',mode='eval').body,include_attributes=False) for n in ast.walk(native)):raise RuntimeError('GUI lost native explicit projection')
  leaf=ast.parse(read(root,'tests/calibration_gui_scope.py').decode('utf-8-sig'))
  imports={n.module for n in ast.walk(leaf) if isinstance(n,ast.ImportFrom)}|{a.name for n in ast.walk(leaf) if isinstance(n,ast.Import) for a in n.names}
  if not imports<={'pathlib','functools','ast','hashlib','json','subprocess'}:raise RuntimeError('GUI leaf imports historical validator/cycle')

@@ -34,6 +34,15 @@ for old,new in [
  ('text=gui_project_text(root,text)','text=text'),
 ]:
  text=source.decode();assert old in text;p.write_text(text.replace(old,new),encoding='utf-8');value=json.loads(raw);value['files'][name]['sha256']=digest(p.read_bytes());pin.write_text(json.dumps(value),encoding='utf-8');reject('connection despite metadata rewrite: '+old);p.write_bytes(source);pin.write_bytes(raw)
+name='tests/native_capture_scope_tests.py';p=scratch/name;source=p.read_bytes()
+for old,new in [
+ ('from calibration_gui_scope import approved_gui,gui_project','from fake_gui_scope import approved_gui,gui_project'),
+ ('approved_gui(root)','set()'),
+ ('approved_bytes=gui_project(root,name,(root/name).read_bytes())','approved_bytes=(root/name).read_bytes()'),
+ ("assert approved_bytes.replace(b'\\r\\n',b'\\n')==historical(str(root),name).replace(b'\\r\\n',b'\\n'),name",'assert True'),
+ ("protected=['tools/steamvr_calibrator.cpp',",'protected=['),
+]:
+ text=source.decode();assert old in text;p.write_text(text.replace(old,new),encoding='utf-8');value=json.loads(raw);value['files'][name]['sha256']=digest(p.read_bytes());pin.write_text(json.dumps(value),encoding='utf-8');reject('native protection despite metadata rewrite: '+old);p.write_bytes(source);pin.write_bytes(raw)
 for name in sorted(PROTECTED):
  p=scratch/name;source=p.read_bytes();p.write_bytes(source+b'\n// deliberate protected drift\n');value=json.loads(raw);value['protected'][name]=digest(p.read_bytes());pin.write_text(json.dumps(value),encoding='utf-8');reject('protected hash redeclaration '+name);p.write_bytes(source);pin.write_bytes(raw)
 for name in sorted(PINS):

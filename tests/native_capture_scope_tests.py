@@ -1,6 +1,7 @@
 from pathlib import Path
 import json,shutil,subprocess,sys,uuid
 from native_capture_scope import BASE,FILES,PIN,OLD_PINS,approved_native_capture,historical,verify_diff_scope,predecessor
+from calibration_gui_scope import approved_gui,gui_project
 root=Path(__file__).resolve().parents[1];approved=approved_native_capture(root);verify_diff_scope(root)
 scratch=root/'build/n1-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
 for name in approved|OLD_PINS:
@@ -34,13 +35,16 @@ for name in ['CMakeLists.txt','src/calibration/calibration_runtime_provider.cpp'
  else:raise RuntimeError('N1 accepted unknown projection '+name)
 assert count==len(FILES|OLD_PINS)+7
 # Existing CLI, solver, native writer, runtime contract and protocol source stay
-# outside N1. Compare actual bytes with fixed predecessor, never merely a name.
+# outside N1. Approve the actual U1/U2 tree first, then compare its explicit
+# fixed J0 projection to N1's predecessor. Old baseline bytes stay immutable.
+approved_gui(root)
 protected=['tools/steamvr_calibrator.cpp','src/calibration/world_calibration.cpp',
  'src/calibration/trajectory_calibration.cpp','src/calibration/calibration_session.cpp',
  'src/calibration/calibration_capture_monitor.cpp','src/mapping/config_transaction.cpp',
  'src/routing/runtime_normalization.cpp','src/routing/bridge.cpp']
 for name in protected:
- assert (root/name).read_bytes().replace(b'\r\n',b'\n')==historical(str(root),name).replace(b'\r\n',b'\n'),name
+ approved_bytes=gui_project(root,name,(root/name).read_bytes())
+ assert approved_bytes.replace(b'\r\n',b'\n')==historical(str(root),name).replace(b'\r\n',b'\n'),name
 if len(sys.argv)>1:
  sdk=Path(sys.argv[1]);copy=scratch/'sdk';lock=json.loads((root/'dependencies/calibration-openvr-sdk.json').read_bytes())
  for name in lock['files']:
@@ -49,4 +53,4 @@ if len(sys.argv)>1:
  check=subprocess.run([sys.executable,'-B',str(root/'scripts/verify_calibration_sdk.py'),str(copy)],capture_output=True)
  assert check.returncode!=0 and b'calibration SDK artifact drift: headers/openvr.h' in check.stderr,check.stderr
  print('PASS actual SDK byte-copy drift fails before Git identity check; no SDK execution')
-print(f'PASS N1 exact scope; {count} current-source/9 immutable pins/rollback/metadata/projection mutants rejected; {len(protected)} protected sources equal {BASE}; current checks uncached')
+print(f'PASS N1 exact scope; {count} current-source/9 immutable pins/rollback/metadata/projection mutants rejected; {len(protected)} protected N1-view sources equal {BASE}; actual GUI tree approved before projection; current checks uncached')

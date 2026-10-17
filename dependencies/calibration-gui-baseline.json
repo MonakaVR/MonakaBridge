@@ -66,13 +66,13 @@
       }
     },
     "tests/calibration_gui_scope.py": {
-      "sha256": "86a88750b44f63bf762991c0a449cff51f2e59539a8fb23439a40e3fce88434e",
+      "sha256": "dca71e79563abe453df4dac3cad9a69b9f71a94375f8a6b7706738b76bd3bccb",
       "parent": {
         "existed": false
       }
     },
     "tests/calibration_gui_scope_tests.py": {
-      "sha256": "ca79e45f3eed2c1113c130e276db05d8ca39a1455c051c0ede0ec4e9b97873e5",
+      "sha256": "5a2812d1ccdff7fe4fd15ef8707e28c01c7ca3651059daf572f4486da3098029",
       "parent": {
         "existed": false
       }
@@ -233,6 +233,13 @@
       "parent": {
         "existed": true,
         "sha256": "8df0ff143d97eb98d685df718f75af582c87f8720479630a7306d6b1d2ad052d"
+      }
+    },
+    "tests/native_capture_scope_tests.py": {
+      "sha256": "a348b2b1fbb76f4d41ae4b8b1a36c690649516cb986ec4c488ad98d5dd031473",
+      "parent": {
+        "existed": true,
+        "sha256": "fe6b10faa5e07cad93a8d06487c1ddfd7e6e1a938d4296b8a8df3217d3f35529"
       }
     }
   },
