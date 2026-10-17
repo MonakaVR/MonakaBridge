@@ -86,7 +86,9 @@ namespace MonakaBridge {
     using(var text=new StreamReader(file,Encoding.UTF8)){
      var json=new JavaScriptSerializer{MaxJsonLength=32*1024*1024};
      var value=json.Deserialize<Dictionary<string,object>>(text.ReadToEnd());
-     if(value==null||!(value["devices"] is ICollection))throw new IOException("Invalid health snapshot.");
+     object devices;string policy;
+     if(value==null||!value.TryGetValue("devices",out devices)||!(devices is IList))throw new IOException("Invalid health snapshot devices.");
+     if(!HealthPresentation.TryPolicy(value,out policy))throw new IOException("Invalid health snapshot policy: expected steamvr, monaka, both or disabled.");
      // Time of snapshot creation, not delayed disk replacement/read completion.
      var timestamp=value.ContainsKey("snapshot_unix_ms")?new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc).AddMilliseconds(Convert.ToDouble(value["snapshot_unix_ms"],CultureInfo.InvariantCulture)):DateTime.MinValue;
      return new HealthReadResult{Value=value,SnapshotUtc=timestamp};
@@ -110,6 +112,12 @@ namespace MonakaBridge {
   public void Dispose(){Interlocked.Exchange(ref disposed,1);}
  }
  internal static class HealthPresentation {
+  internal static bool TryPolicy(Dictionary<string,object> value,out string policy){
+   object raw;policy=null;
+   if(value==null||!value.TryGetValue("policy",out raw)||!(raw is string))return false;
+   string text=(string)raw;if(text!="steamvr"&&text!="monaka"&&text!="both"&&text!="disabled")return false;
+   policy=text;return true;
+  }
   internal static string MappingRevision(object configured,object observed,bool current,bool samePublisher){
    string configText=Convert.ToString(configured,CultureInfo.InvariantCulture),healthText=observed==null?"unknown":Convert.ToString(observed,CultureInfo.InvariantCulture);
    string comparison=!current||!samePublisher||observed==null?"unavailable / historical; application status unknown":
