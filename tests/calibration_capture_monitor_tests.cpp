@@ -51,6 +51,9 @@ int main(int argc,char** argv)try{
  CHECK(argc>=2);const auto base=std::filesystem::absolute(std::filesystem::u8path(argv[1]));
  if(argc==3){
   std::string mode=argv[2];fixture::Run r(base);
+  if(mode=="commit-stall"){
+   r.env.transactionHook=[](const char* point){if(std::string(point)=="before-replace"){std::cout<<"WATCHDOG_READY commit"<<std::endl;std::this_thread::sleep_for(60s);}};r.reset();auto prepared=r.prepared();r.execute(r.commit(prepared));return 13;
+  }
   if(mode=="solver-stall"){
    r.env.ioHook=[](const char* point){if(std::string(point)=="solve-before"){std::cout<<"WATCHDOG_READY solver"<<std::endl;std::this_thread::sleep_for(60s);}};r.reset();r.result();return 11;
   }

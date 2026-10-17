@@ -30,11 +30,11 @@
       "base_sha256": "d631e101f7670d25af220635fd3084a6978598eea4280b754911ea12fdf5b492"
     },
     "tests/calibration_capture_monitor_process.py": {
-      "sha256": "d35134d5a7f4b8e010f4a227cbfc949ae705056e57bd8954e754b22bbe0aac23",
+      "sha256": "4214974704b49aa939e37774b1a1294ac120dfc0572281e1449cdf709bda45ed",
       "existed_at_base": false
     },
     "tests/calibration_capture_monitor_tests.cpp": {
-      "sha256": "6d1d1a8289404ba56b438231f77684f984c1b886c1e7d0b7b4801a3610d4116b",
+      "sha256": "391d06522e243db6c5f20f96444b4b8d3c2d152f0427d745bfe4e93b02962205",
       "existed_at_base": false
     },
     "tests/calibration_fixture_provider.hpp": {
