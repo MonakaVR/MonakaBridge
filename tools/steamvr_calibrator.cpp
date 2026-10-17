@@ -1,6 +1,7 @@
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/world_calibration.hpp"
 #include "monaka_bridge/trajectory_calibration.hpp"
+#include "monaka_bridge/calibration_session.hpp"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -635,6 +636,8 @@ int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options&
 }  // namespace
 
 int main(int argc, char** argv) try {
+    const auto localApi=mb::local_calibration::calibrationLocalDispatch(argc,argv);
+    if(localApi>=0)return localApi;
     Options options;
     if (!ParseArgs(argc, argv, options)) {
         PrintUsage();

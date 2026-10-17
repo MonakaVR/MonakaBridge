@@ -4,7 +4,7 @@ from measurement_target_scope import FILES,PIN,OLD_PINS,UNCHANGED,approved_measu
 root=Path(__file__).resolve().parents[1];approved_measurement(root);verify_diff_scope(root)
 print('PASS protected solver bytes '+json.dumps(verify_solver_bytes(root),sort_keys=True))
 scratch=root/'build/measurement-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True)
-for name in FILES|OLD_PINS|UNCHANGED|{PIN}:
+for name in approved_measurement(root)|OLD_PINS|UNCHANGED|{PIN}:
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
 approved_measurement(scratch,root);count=0
 for name in sorted(FILES|OLD_PINS|UNCHANGED):

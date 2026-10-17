@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from calibration_session_scope import approved_session,predecessor as session_predecessor,predecessor_text as session_predecessor_text
 BASE='279a01363f47ad3564b5cd8b9346180c49ee41d3'
 PIN='dependencies/measurement-target-baseline.json'
 FILES={
@@ -26,19 +27,20 @@ def existed(repo,name):return subprocess.run(['git','--no-optional-locks','-C',r
 
 def approved_measurement(root,git_root=None):
  root=Path(root);repo=str(git_root or root);p=json.loads((root/PIN).read_text(encoding='utf-8'))
+ extra=approved_session(root,git_root)
  if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('B1 scope/base mismatch')
  for name in OLD_PINS|UNCHANGED:
   if digest((root/name).read_bytes())!=digest(historical(repo,name)):raise RuntimeError('B1 protected input changed: '+name)
  for name,e in p['files'].items():
-  if digest((root/name).read_bytes())!=e['sha256']:raise RuntimeError('unreviewed B1 drift: '+name)
+  if digest(session_predecessor(root,name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('unreviewed B1 drift: '+name)
   if existed(repo,name)!=e['existed_at_base']:raise RuntimeError('B1 predecessor presence drift: '+name)
   if e['existed_at_base'] and digest(historical(repo,name))!=e['base_sha256']:raise RuntimeError('B1 predecessor drift: '+name)
- return FILES|{PIN}
+ return FILES|{PIN}|extra
 
 def verify_diff_scope(root):
  names=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'diff','--name-only',BASE,'--']).decode().splitlines()
  names+=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'ls-files','--others','--exclude-standard']).decode().splitlines()
- unexpected=set(names)-FILES-{PIN}
+ unexpected=set(names)-FILES-{PIN}-approved_session(root)
  if unexpected:raise RuntimeError('outside B1 scope: '+','.join(sorted(unexpected)))
 
 def verify_solver_bytes(root):
@@ -64,14 +66,14 @@ def verify_solver_bytes(root):
  return {name:{'sha256':hashlib.sha256(a).hexdigest(),'bytes':len(a),'equal':True} for name,(a,b) in pieces.items()}
 
 def predecessor(root,name,raw,git_root=None):
- root=Path(root);p=json.loads((root/PIN).read_text(encoding='utf-8'));e=p['files'].get(name)
+ root=Path(root);raw=session_predecessor(root,name,raw,git_root);p=json.loads((root/PIN).read_text(encoding='utf-8'));e=p['files'].get(name)
  if not e:return raw
  if e['existed_at_base'] and digest(raw)==e['base_sha256']:return raw
  if digest(raw)!=e['sha256']:raise RuntimeError('unreviewed B1 drift: '+name)
  return historical(str(git_root or root),name) if e['existed_at_base'] else raw
 
 def predecessor_text(root,text):
- root=Path(root);approved_measurement(root);p=json.loads((root/PIN).read_text(encoding='utf-8'))
+ root=Path(root);text=session_predecessor_text(root,text);approved_measurement(root);p=json.loads((root/PIN).read_text(encoding='utf-8'))
  for name,e in p['files'].items():
   if e['existed_at_base'] and digest(text.encode())==e['sha256']:return historical(str(root),name).decode()
  return text

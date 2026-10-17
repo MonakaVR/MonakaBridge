@@ -1,0 +1,85 @@
+{
+  "base_commit": "7ac9ed9fe4a19391a1f88ed4d00adaefbdbbd64c",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "ba09606e31a1057db89681d15d45ab9870c2c040cf8c1635473dda91e3c4f8f1",
+      "existed_at_base": true,
+      "base_sha256": "1c7caace6d5b8325c5c75f24ede7135adeaee9ee78283f84bc2af170ad8bcc88"
+    },
+    "docs/calibration-session-contract.md": {
+      "sha256": "62e0df7713a4473db7a065b11811fb8a9478c23888f7ea9233e4c3b0228bd4e5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/calibration_session.hpp": {
+      "sha256": "3353d37036c79fcbeaa53f8ff07957b12bf19e0487e88b9e6042e6446809a132",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "src/calibration/calibration_drafts.cpp": {
+      "sha256": "82ddb9d7a31fb172cd56d194480636dce7b83f068ae542a59711e2015570b071",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "src/calibration/calibration_session.cpp": {
+      "sha256": "5f9305a6707e0498bd8a33b6859bbc722ccb9b3dafc55e47805a7250edd47622",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_fixture_provider.hpp": {
+      "sha256": "43f35a13c79db62983c6c90f20aa81ed763ad40072186d8ebb1c5ff3416a5a3d",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_session_process.py": {
+      "sha256": "af30365ebb00c549409eb626e7bf6000c7c286a283edf68dc02a01690d0ec5a9",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_session_process_fixture.cpp": {
+      "sha256": "02deb9465e02219a8e503640b532170a055605d8158662a6204a8fcceebe3020",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_session_scope.py": {
+      "sha256": "10a60838ef6fd4017bf577d856adfb0be22353e5be2bb2725b6d5f667c9c017b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_session_scope_tests.py": {
+      "sha256": "462619c7247497cdc24861125961d8c7afed39dd20bdaebda1663e2a2484f6a0",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/calibration_session_tests.cpp": {
+      "sha256": "3fcadb80dca8556b46b5880e98c21d632f38759648ce1bff98fce2d2b97df209",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/measurement_target_scope.py": {
+      "sha256": "b83cb60d00006429e3f0a120af3f16e1b9c3a2895e563426353f2fd73d1b9c66",
+      "existed_at_base": true,
+      "base_sha256": "e7a087d436c9f7cc54eac59fcc9eef289f4ca55a37ef9a8262e675f7c2c11ec5"
+    },
+    "tests/measurement_target_scope_tests.py": {
+      "sha256": "72c59939b5fc2e1be6059e3baf2a4f74c05244a8d70f7e4c57d254a014bd905e",
+      "existed_at_base": true,
+      "base_sha256": "0944b51ad104d7c318a069ff2113c1e7ef1601ffae055e813116d7f670d41c31"
+    },
+    "tests/openvr_bootstrap_sentinel.cpp": {
+      "sha256": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tools/calibration_local_api.cpp": {
+      "sha256": "38f1a6520628238ec443f3b905e4992caf4fa724a9dd26ba039b7621f401c1f4",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tools/steamvr_calibrator.cpp": {
+      "sha256": "6720f3990b3b0ddd1daf6b79ab555264152b574d116356f6f12b5f1ffd156359",
+      "existed_at_base": true,
+      "base_sha256": "c97a86c136f031ab2f2048b1f71b5833310925414a6f9606f09fa663b0673bc0"
+    }
+  }
+}
