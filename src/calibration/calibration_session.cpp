@@ -113,7 +113,7 @@ struct CalibrationSession::Impl {
      bool valid=fresh&&p.modality=="full"&&p.tracking_state=="tracked"&&p.validity.position&&p.validity.orientation;
      if(valid&&lastValidPose>=0&&f.receiptNs-lastValidPose>=second)invalidate("SOURCE_LIVENESS_GAP");
      poseValid=valid;if(valid)lastValidPose=f.receiptNs;
-     if(recording)recorder->observation(p,f.receiptNs);
+     if(recording){auto recorded=p;if(!valid){recorded.validity.position=false;recorded.validity.orientation=false;}recorder->observation(recorded,f.receiptNs);}
     }else{
      if(p.presence=="absent")invalidate("EXPLICIT_ABSENCE");
      if(recording)recorder->deviceState(p);
@@ -122,7 +122,7 @@ struct CalibrationSession::Impl {
    if(auto p=std::get_if<c1::TrackerObservation>(&f.envelope))handle(*p,true);
    else if(auto p=std::get_if<c1::ObservationDeviceState>(&f.envelope))handle(*p,false);
   }
-  if(recording)for(const auto& r:b.references)recorder->reference(r,input->referenceSerial);
+  if(recording)for(auto r:b.references){auto t=now();need(r.timeNs>=0&&r.timeNs<=t,"INVALID_REFERENCE_SAMPLE_TIME");r.valid=r.valid&&t-r.timeNs<=50000000;recorder->reference(r,input->referenceSerial);}
   live(false);
  }
  void live(bool fresh){
@@ -206,7 +206,7 @@ struct CalibrationSession::Impl {
     auto proposed=worldCalibrationCandidate(config,frozen->target(),result->world,true);
     const auto& s=frozen->target().binding;
     for(auto& [key,b]:proposed.bindings)if(b.source==s.source&&b.inputSpace==s.inputSpace&&b.inputRevision==s.inputRevision)b.spaceApproved=false;
-    proposed.sourcePath.clear();saveConfig(drafts.path("candidate.json"),proposed);drafts.adopt("candidate.json");drafts.adopt("candidate.json.config-write.lock");
+    proposed.sourcePath.clear();drafts.publishCandidate(proposed,env.draftPublishHook);
     candidate=readConfigBytes(drafts.path("candidate.json"));candidateHash=sha256(candidate);
    }
    review=opaqueId();reviewDeadline=now()+30*second;state=PREPARED;
@@ -234,6 +234,12 @@ CalibrationSession::CalibrationSession(CaptureProvider& p,SessionEnvironment e):
 CalibrationSession::~CalibrationSession()=default;
 Json CalibrationSession::execute(const Json& j){
  auto& x=*impl_;schema(j);const auto id=text(j,"request_id"),canonical=j.dump(),op=text(j,"op");
+ bool expired=false;try{expired=x.now()-x.created>=20*60*second;}catch(const std::exception& e){return {{"status","REJECTED"},{"reason",diagnostic(e)},{"phase",phase()},{"eligible",false}};}
+ const bool savedOutcome=x.state==SAVED||x.state==SAVED_STALE||x.state==UNKNOWN;
+ if(expired&&!savedOutcome){
+  bool warning=false;if(!terminalPhase(x.state)){try{x.invalidate("WORKER_TTL_EXPIRED");}catch(...){}if(x.createdDraft)try{x.drafts.terminal(name(x.state));}catch(...){warning=true;}}
+  Json out={{"status","REJECTED"},{"reason","WORKER_TTL_EXPIRED"},{"phase",phase()},{"eligible",false}};if(warning)out["artifact_warning"]="TERMINAL_IO_FAILED";return out;
+ }
  std::unique_lock<std::mutex> cacheLock(x.cacheMutex);
  auto hit=x.cache.find(id);
  if(hit!=x.cache.end()){
@@ -241,8 +247,9 @@ Json CalibrationSession::execute(const Json& j){
   if(hit->second.outcome.is_null())return {{"status","IN_PROGRESS"},{"phase",phase()},{"replayed",true}};
   auto cached=hit->second.outcome;cacheLock.unlock();
   bool eligible=false;if(x.state>=DISCOVERED&&x.state<=PREPARED)try{x.guards(true);eligible=x.state==PREPARED&&x.now()<x.reviewDeadline&&!x.cancel;}catch(...){}
-  auto out=cached;out["replayed"]=true;out["current_phase"]=phase();out["eligible"]=eligible;return out;
+  auto out=cached;out["replayed"]=true;out["current_phase"]=phase();out["eligible"]=eligible;if(expired)out["worker_lifetime_expired"]=true;return out;
  }
+ if(expired)return {{"status","REJECTED"},{"reason","WORKER_TTL_EXPIRED"},{"phase",phase()},{"eligible",false}};
  bool reserved=op=="cancel"||op=="close";
  if((reserved?x.reservedIds>=2:x.ordinaryIds>=126)||canonical.size()>64*KiB||x.cacheBytes+canonical.size()+16*KiB>10*MiB)return {{"status","REJECTED"},{"reason","REQUEST_CACHE_LIMIT"},{"phase",phase()}};
  if(reserved)++x.reservedIds;else ++x.ordinaryIds;

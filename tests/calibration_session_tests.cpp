@@ -2,9 +2,73 @@
 #include "monaka_bridge/config_transaction.hpp"
 #include <iostream>
 #include <limits>
+#include <thread>
+#include <condition_variable>
 namespace lc=mb::local_calibration;
 template<class F>void rejects(F f){bool thrown=false;try{f();}catch(const std::exception&){thrown=true;}CHECK(thrown);}
+
+void reviewCase(const std::filesystem::path& base,const std::string& which){
+ if(which=="source-stale"||which=="reference-stale"){
+  fixture::Run r(base);
+  r.provider.captureHook=[&](int i){
+   if(which=="source-stale"&&i%2){r.time+=80000000;r.provider.latest.referenceReceiptNs=r.time;}
+   if(which=="reference-stale"){
+    auto old=r.provider.latest.references.front();r.time+=80000000;
+    auto& f=r.provider.latest.frames.front();f.receiptNs=r.time;
+    auto& p=std::get<mb::c1::TrackerObservation>(f.envelope);p.timestamp_ns=r.time-2000000;p.sent_at_ns=r.time;
+    auto fresh=old;fresh.timeNs=r.time-2000000;r.provider.latest.references={old,fresh};r.provider.latest.referenceReceiptNs=r.time;
+    r.provider.latest.referenceValid=i%2==0||i==500;
+   }
+  };
+  auto c=r.confirmed(),j=r.command("begin");j["confirmation_token"]=c["confirmation_token"];auto outcome=r.execute(j);
+  auto raw=lc::Json::parse(mb::readConfigBytes(r.env.draftRoot/r.session->runId()/"raw.json"));
+  const auto& samples=raw[which=="source-stale"?"source":"reference"];int invalid=0;for(const auto& x:samples)if(x["valid"]==false)++invalid;
+  if(which=="source-stale")CHECK(samples.size()==501&&invalid==250);
+  else {CHECK(samples.size()==1002&&invalid==501);for(std::size_t i=0;i<samples.size();i+=2)CHECK(samples[i]["valid"]==false&&samples[i+1]["valid"]==true);}
+  CHECK(outcome["status"]=="REJECTED"&&r.session->solveCalls()==1&&r.session->commitCalls()==0);
+  std::cout<<"PASS "<<which<<" invalid="<<invalid<<" samples="<<samples.size()<<" solve="<<outcome.dump()<<'\n';return;
+ }
+ if(which=="ttl-replay"){
+  fixture::Run r(base);auto j=r.open();CHECK(r.execute(j)["status"]=="OPEN");r.time+=20*60*lc::second-1;
+  CHECK(r.execute(j)["status"]=="OPEN");++r.time;
+  for(int i=0;i<32;++i){auto out=r.execute(j);CHECK(out["reason"]=="WORKER_TTL_EXPIRED"&&r.session->phase()=="INSPECT_ONLY");r.time+=lc::second;}
+  CHECK(!std::filesystem::exists(r.env.draftRoot));std::cout<<"PASS ttl-replay equal deadline and32 continuous replays\n";return;
+ }
+ if(which=="draft-publish"){
+  std::mutex m;std::condition_variable cv;bool paused=false,resume=false;std::string reason,inventoryReason;lc::Json prepared;
+  // Reconstruct session before capture to install a native-only publish barrier.
+  fixture::Run p(base);p.env.draftPublishHook=[&]{std::unique_lock<std::mutex> l(m);paused=true;cv.notify_all();cv.wait(l,[&]{return resume;});};p.reset();auto result2=p.result();
+  auto j=p.command("prepare_commit");j["result_id"]=result2["result"]["result_id"];
+  std::thread worker([&]{prepared=p.execute(j);});{std::unique_lock<std::mutex> l(m);cv.wait(l,[&]{return paused;});}
+  lc::DraftStore other(p.env.draftRoot);try{other.begin(lc::opaqueId());}catch(const std::exception& e){reason=e.what();}
+  try{other.inventory();}catch(const std::exception& e){inventoryReason=e.what();}
+  {std::lock_guard<std::mutex> l(m);resume=true;}cv.notify_all();worker.join();
+  CHECK(reason=="DRAFT_QUOTA_BUSY"&&inventoryReason=="DRAFT_QUOTA_BUSY"&&prepared["status"]=="PREPARED");
+  lc::DraftStore retry(p.env.draftRoot);retry.begin(lc::opaqueId());CHECK(retry.inventory()["runs"].size()==2);
+  std::cout<<"PASS draft-publish concurrent begin sees bounded busy, retry sees complete candidate/lock manifest\n";return;
+ }
+ if(which=="staging-peak"){
+  lc::DraftStore d(base/("peak-"+lc::opaqueId()));d.begin(lc::opaqueId());std::string raw(48*lc::MiB,'x');d.write("raw.json",raw);
+  bool rejected=false;try{d.write("raw.json",raw);}catch(const std::exception& e){rejected=std::string(e.what())=="DRAFT_STAGING_QUOTA_EXCEEDED";}
+  CHECK(rejected&&std::filesystem::file_size(d.path("raw.json"))==raw.size());std::ifstream f(d.path("raw.json"),std::ios::binary);std::string actual((std::istreambuf_iterator<char>(f)),{});CHECK(actual==raw&&!std::filesystem::exists(d.path("raw.json").wstring()+L".writing"));d.verify();std::cout<<"PASS staging-peak48MiB rewrite rejects before temporary allocation\n";return;
+ }
+ if(which=="freshness-boundary"){
+  for(auto delay:{50000000LL,50000001LL}){fixture::Run r(base);r.provider.captureHook=[&](int i){if(i==250){r.time+=delay;r.provider.latest.referenceReceiptNs=r.time;r.provider.latest.references.front().timeNs+=2000000;}};
+   auto result=r.result();auto raw=lc::Json::parse(mb::readConfigBytes(r.env.draftRoot/r.session->runId()/"raw.json"));int source=0,reference=0;
+   for(const auto& s:raw["source"])if(s["valid"]==false)++source;for(const auto& s:raw["reference"])if(s["valid"]==false)++reference;
+   CHECK(source==(delay>50000000?1:0)&&reference==source&&result["status"]=="RESULT_READY");
+  }std::cout<<"PASS freshness-boundary50ms inclusive;50ms+1ns invalid for individual source/reference, fresh controls solve\n";return;
+ }
+ if(which=="ttl-saved"){
+  fixture::Run r(base);auto p=r.prepared(),j=r.commit(p);CHECK(r.execute(j)["status"]=="SAVED");r.time+=20*60*lc::second;
+  auto replay=r.execute(j);CHECK(replay["status"]=="SAVED"&&replay["eligible"]==false&&replay["worker_lifetime_expired"]==true&&r.session->commitCalls()==1);
+  CHECK(r.execute(r.commit(p))["reason"]=="WORKER_TTL_EXPIRED");std::cout<<"PASS ttl-saved historical saved outcome survives absolute expiry; new work denied\n";return;
+ }
+ throw std::runtime_error("unknown review case");
+}
+
 int main(int argc,char** argv)try{
+ if(argc==3){reviewCase(std::filesystem::absolute(std::filesystem::u8path(argv[1])),argv[2]);return 0;}
  CHECK(argc==2);auto base=std::filesystem::absolute(std::filesystem::u8path(argv[1]));std::filesystem::create_directories(base);int cases=0;
  auto pass=[&](const char* s){++cases;std::cout<<"PASS "<<s<<'\n';};
  for(auto raw:{"{\"api_version\":1,\"api_version\":1,\"request_id\":\"x\",\"op\":\"open\"}","{\"api_version\":2}","[1]","{\"api_version\":NaN}"})rejects([&]{lc::parseRequest(raw);});

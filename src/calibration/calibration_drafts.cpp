@@ -88,12 +88,22 @@ void DraftStore::manifest(const std::string& status){
  if(fs::exists(p))created=Json::parse(readConfigBytes(p)).at("created_utc_seconds").get<std::int64_t>();
  manifestBytes_=Json{{"version",1},{"status",status},{"created_utc_seconds",created},{"files",files}}.dump();atomic(p,manifestBytes_);
 }
-void DraftStore::write(const std::string& name,const std::string& bytes){need(bytes.size()<=limit(name),"DRAFT_FILE_QUOTA_EXCEEDED");auto p=path(name);QuotaLock lock(root_);if(!hashes_.empty())verify();std::uintmax_t total=bytes.size();for(const auto& [other,h]:hashes_)if(other!=name)total+=fs::file_size(path(other));need(total<=62*MiB&&hashes_.size()+(hashes_.count(name)?0:1)+2<=32,"DRAFT_QUOTA_EXCEEDED");atomic(p,bytes);hashes_[name]=sha256(bytes);manifest("ACTIVE");}
+void DraftStore::write(const std::string& name,const std::string& bytes){need(bytes.size()<=limit(name),"DRAFT_FILE_QUOTA_EXCEEDED");auto p=path(name);QuotaLock lock(root_);if(!hashes_.empty())verify();std::uintmax_t total=bytes.size();for(const auto& [other,h]:hashes_)total+=fs::file_size(path(other));need(total<=62*MiB,"DRAFT_STAGING_QUOTA_EXCEEDED");need(total<=62*MiB&&hashes_.size()+(hashes_.count(name)?0:1)+2<=32,"DRAFT_QUOTA_EXCEEDED");atomic(p,bytes);hashes_[name]=sha256(bytes);manifest("ACTIVE");}
+void DraftStore::publishCandidate(const Config& proposed,const std::function<void()>& afterWrite){
+ QuotaLock lock(root_);verify();
+ need(!hashes_.count("candidate.json")&&!fs::exists(path("candidate.json"))&&!fs::exists(path("candidate.json.config-write.lock")),"DRAFT_CANDIDATE_EXISTS");
+ std::uintmax_t total=0;for(const auto& [n,h]:hashes_)total+=fs::file_size(path(n));
+ // Existing serializer rejects >2MiB before staging. Reserve candidate, manifest
+ // double-publication and transient lock/pending paths before touching disk.
+ need(total+2*MiB<=62*MiB&&hashes_.size()+4<=32,"DRAFT_STAGING_QUOTA_EXCEEDED");
+ saveConfig(path("candidate.json"),proposed);if(afterWrite)afterWrite();
+ adopt("candidate.json");adopt("candidate.json.config-write.lock");
+}
 void DraftStore::adopt(const std::string& name){auto p=path(name);need(fs::file_size(p)<=limit(name),"DRAFT_FILE_QUOTA_EXCEEDED");hashes_[name]=sha256(readDraft(p,limit(name)));manifest("ACTIVE");}
 void DraftStore::terminal(const std::string& status){if(run_.empty())return;QuotaLock lock(root_);manifest(status);}
 void DraftStore::verify()const{need(!run_.empty(),"DRAFT_NOT_OWNED");requirePlainPath(run_);need(readConfigBytes(run_/"manifest.json")==manifestBytes_,"DRAFT_MANIFEST_CHANGED");std::size_t count=0;for(const auto& item:fs::directory_iterator(run_)){requirePlainPath(item.path());auto name=item.path().filename().u8string();if(name=="manifest.json")continue;need(item.is_regular_file()&&hashes_.count(name),"DRAFT_UNKNOWN_FILE");need(sha256(readDraft(item.path(),limit(name)))==hashes_.at(name),"DRAFT_ARTIFACT_CHANGED");++count;}need(count==hashes_.size(),"DRAFT_PARTIAL_INSPECT_ONLY");}
 void DraftStore::journal(const Json& event){auto p=path("journal.ndjson");std::string old;if(fs::exists(p))old=readDraft(p,4*MiB);auto line=event.dump()+"\n";need(old.size()+line.size()<=4*MiB,"JOURNAL_QUOTA_EXCEEDED");write("journal.ndjson",old+line);}
-Json DraftStore::inventory()const{return scan(root_);}
+Json DraftStore::inventory()const{if(!fs::exists(root_))return scan(root_);QuotaLock lock(root_);return scan(root_);}
 Json DraftStore::prepareCleanup(const std::vector<std::string>& ids){
  cleanupToken_.clear();cleanupHashes_.clear();cleanupDirs_.clear();
  need(!ids.empty()&&ids.size()<=4,"CLEANUP_BATCH_LIMIT");requirePlainPath(root_);QuotaLock lock(root_);

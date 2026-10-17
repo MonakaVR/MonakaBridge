@@ -53,6 +53,58 @@ class Client:
   p=self.execute(self.command('prepare_commit',result_id=r['result']['result_id']));check(p['status']=='PREPARED',str(p));return opened,p
  def close(self):self.execute(self.command('close'));self.finish()
 
+
+def review_process(before=False):
+ results=[]
+ def wait_mark(p,d,n):
+  deadline=time.monotonic()+6
+  while time.monotonic()<deadline:
+   if (d/(n+'.fixture')).exists():return
+   if p.poll() is not None:raise RuntimeError('child exited before barrier '+n+': '+str(p.returncode))
+   time.sleep(.002)
+  raise RuntimeError('barrier timeout '+n)
+ for mode in ['reader-failure','reader-ttl','reader-backpressure','writer-race','ttl-busy']+([] if before else ['writer-deadline']):
+  started=time.monotonic()
+  p=subprocess.Popen([str(fixture),str(root/('review-'+mode)),'review-'+mode],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+  seed=json.loads(p.stdout.readline())['test_only_fixture_open'];d=Path(seed['config_path']).parent;original=Path(seed['config_path']).read_bytes();events=[];timeout=False;reason=None
+  def send(j):p.stdin.write((json.dumps(j)+'\n').encode('utf-8'));p.stdin.flush()
+  def release(n):(d/(n+'.fixture')).write_text('release')
+  try:
+   if mode in ('reader-failure','reader-ttl'):
+    p.stdin.write((json.dumps(seed)+'\n{').encode());p.stdin.flush();wait_mark(p,d,'reader-paused')
+    if mode=='reader-failure':p.stdout.close();release('trigger-write');wait_mark(p,d,'writer-failed')
+    else:wait_mark(p,d,'worker-stopped')
+    release('release-reader')
+   elif mode=='reader-backpressure':
+    send(seed);opened=json.loads(p.stdout.readline());events.append(opened);ids={k:opened[k] for k in ('session_id','run_id')}
+    for i in range(8):send(dict(api_version=1,request_id='b'+str(i),op='capture_point',**ids))
+    p.stdin.write(b'{');p.stdin.flush();wait_mark(p,d,'reader-paused');wait_mark(p,d,'worker-stopped');release('release-writer');release('release-reader')
+   elif mode in ('writer-race','writer-deadline'):
+    send(seed);wait_mark(p,d,'writer-paused');p.stdin.close();wait_mark(p,d,'writer-stop-requested')
+    if mode=='writer-race':release('release-writer')
+   else:
+    send(seed);events.append(json.loads(p.stdout.readline()));send(seed);events.append(json.loads(p.stdout.readline()));reason=events[-1].get('reason')
+   try:exit_code=p.wait(timeout=3)
+   except subprocess.TimeoutExpired:timeout=True;p.kill();exit_code=p.wait(timeout=3)
+   correct=(not timeout and reason=='WORKER_TTL_EXPIRED') if mode=='ttl-busy' else (not timeout and exit_code in (0,3))
+   if not before:
+    correct=correct and time.monotonic()-started<2.8
+    if mode=='writer-race':correct=correct and (d/'writer-finished.fixture').exists() and not (d/'writer-deadline-expired.fixture').exists()
+    if mode=='writer-deadline':correct=correct and (d/'writer-deadline-expired.fixture').exists() and exit_code==3
+   results.append(dict(mode=mode,elapsed_seconds=time.monotonic()-started,observed_timeout=timeout,exit_code=exit_code,events=events,meets_fixed_acceptance=correct,fixture_root=str(d),config_unchanged=Path(seed['config_path']).read_bytes()==original))
+   check(results[-1]['config_unchanged'],'review fixture changed config')
+  finally:
+   if p.poll() is None:p.kill();p.wait(timeout=3)
+   for pipe in (p.stdin,p.stdout,p.stderr):
+    if not pipe.closed:pipe.close()
+ (root/'review-process.json').write_text(json.dumps(dict(before=before,results=results),indent=2),encoding='utf-8');print(json.dumps(dict(before=before,results=results,evidence=str(root)),indent=2),flush=True)
+ check(all(not x['meets_fixed_acceptance'] if before else x['meets_fixed_acceptance'] for x in results),'review process before/after expectation mismatch')
+ return len(results)
+
+if len(sys.argv)>4 and sys.argv[4] in ('--review-only','--review-before'):
+ n=review_process(sys.argv[4]=='--review-before');print('PASS B2 review process',n,'cases',flush=True);sys.exit(0)
+
+
 # Fixture-only bootstrap produces a synthetic config and the explicit open DTO.
 c=Client(fixture,[root/'seed']);seed=c.read()['test_only_fixture_open'];c.finish()
 testtool=root/'actual-executable';testtool.mkdir();actual=testtool/production.name;shutil.copyfile(production,actual);shutil.copyfile(sentinel,testtool/'openvr_api.dll')

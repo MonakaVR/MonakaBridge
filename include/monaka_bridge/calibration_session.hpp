@@ -63,6 +63,9 @@ struct SessionEnvironment {
     std::function<void(const char*)> transactionHook;
     std::function<void()> afterReplace;
     std::function<void(Json)> progress;
+    // Native-only deterministic fault barriers; never populated by JSON/CLI.
+    std::function<void(const char*)> ioHook;
+    std::function<void()> draftPublishHook;
 };
 
 class DraftStore {
@@ -71,7 +74,7 @@ public:
         std::function<std::uintmax_t(const std::filesystem::path&)> freeBytes={});
     void begin(const std::string& runId);
     void write(const std::string& name,const std::string& bytes);
-    void adopt(const std::string& name);
+    void publishCandidate(const Config&,const std::function<void()>& afterWrite={});
     std::filesystem::path path(const std::string& name)const;
     void terminal(const std::string& status);
     void verify()const;
@@ -88,6 +91,7 @@ private:
     std::vector<std::filesystem::path> cleanupDirs_;
     std::function<std::uintmax_t(const std::filesystem::path&)> freeBytes_;
     void manifest(const std::string& status);
+    void adopt(const std::string& name); // Caller owns root quota lock.
 };
 
 class CalibrationSession {

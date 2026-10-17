@@ -94,3 +94,41 @@ UNSUPPORTED + inherited legacy math (full static B4); T26 exact source/pin/provi
 link separation and actual executable bootstrap (product packaging B3); T27 saved
 config vs runtime/output remains explicit. R07-R17, native portions R18/R22 apply.
 Actual mirror/OpenVR/WPF/v2 profile, OS visual, C01, physical/HIL remain unconnected.
+
+## B2 independent-review corrections
+
+The B2 recording boundary records locally stale (>50ms receipt age) source
+samples as invalid quality attempts, even when the wire observation says tracked.
+Each historical reference sample independently requires a nonfuture local sample
+time and age<=50ms; the latest batch reference flag governs current liveness,
+never blanket validity of historical samples. Legacy recorder/solver unchanged.
+
+Absolute worker20min expiry is checked before cache replay and on every stdio
+worker iteration, including a nonempty queue. Cached outcomes cannot renew it.
+A known SAVED/SAVED_CONFIG_EVIDENCE_STALE/UNKNOWN historical response remains
+historical after expiry, with eligible=false and worker_lifetime_expired=true;
+new work is rejected. Actual entered commit keeps its actual-save/UNKNOWN rules.
+
+The machine API is one dedicated process with owned inherited byte pipes (not a
+console/file transport). There is exactly one reader and no other pending IO on
+its input handle. It peeks and reads only available bytes in <=4096-byte chunks,
+checking stop even while draining partial/oversized lines. No std::cin buffering.
+Pipe mode is not mutated: mode changes can fail while parent reads are pending.
+Writer cancellation is latched and repeated during the existing2s shutdown grace,
+closing cancellation-before-WriteFile races. Join occurs only after the actual
+thread handle is signalled. If the writer cannot finish by that absolute deadline,
+the dedicated worker terminates itself with exit3; no detached IO or unbounded
+join. An undelivered commit response remains UNKNOWN to the parent; no rollback
+or automatic retry is implied. Other processes are never terminated by this API.
+
+Private candidate serializer staging, both candidate/lock hashes and manifest
+publication share the root quota lock. All cooperating root scans use that lock.
+Contention returns DRAFT_QUOTA_BUSY and can be retried; it does not classify a
+cooperating writer's incomplete publication as corruption. Live config CAS lock
+is not held. A crashed partial draft remains inspect-only. Draft replacements
+charge old+staging bytes and transient file count, with2MiB manifest reserve;
+oversized48MiB raw rewrite rejects before temporary allocation.
+
+Native-only ioHook/draftPublishHook barriers are library test injection only,
+never CLI/JSON features of the production calibrator. Test process provider and
+fault flags remain linked only into calibration_session_process_fixture.

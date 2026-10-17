@@ -2,27 +2,27 @@
   "base_commit": "7ac9ed9fe4a19391a1f88ed4d00adaefbdbbd64c",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "ba09606e31a1057db89681d15d45ab9870c2c040cf8c1635473dda91e3c4f8f1",
+      "sha256": "aa73e0ced15d85ca2813466ab95aa55c59a86d3a0f24223423d2872a5616f811",
       "existed_at_base": true,
       "base_sha256": "1c7caace6d5b8325c5c75f24ede7135adeaee9ee78283f84bc2af170ad8bcc88"
     },
     "docs/calibration-session-contract.md": {
-      "sha256": "62e0df7713a4473db7a065b11811fb8a9478c23888f7ea9233e4c3b0228bd4e5",
+      "sha256": "5c1cfa3ab05daf5549647dfdb85eedc868df0dd966ab012e063e570011d4e7c2",
       "existed_at_base": false,
       "base_sha256": null
     },
     "include/monaka_bridge/calibration_session.hpp": {
-      "sha256": "3353d37036c79fcbeaa53f8ff07957b12bf19e0487e88b9e6042e6446809a132",
+      "sha256": "ef2edd5c3de75d71ba25d55238a48ecf938302ce47b306fc691d1bab90f88a42",
       "existed_at_base": false,
       "base_sha256": null
     },
     "src/calibration/calibration_drafts.cpp": {
-      "sha256": "82ddb9d7a31fb172cd56d194480636dce7b83f068ae542a59711e2015570b071",
+      "sha256": "80bc67f54f72d16491bbd9cc3f66656a5bd518eeebee88f689b0ebe8c0f70973",
       "existed_at_base": false,
       "base_sha256": null
     },
     "src/calibration/calibration_session.cpp": {
-      "sha256": "5f9305a6707e0498bd8a33b6859bbc722ccb9b3dafc55e47805a7250edd47622",
+      "sha256": "737208c4ee6aacc345609702fad7febd91878c5765e146d2863c7be87379d6fe",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -32,12 +32,12 @@
       "base_sha256": null
     },
     "tests/calibration_session_process.py": {
-      "sha256": "af30365ebb00c549409eb626e7bf6000c7c286a283edf68dc02a01690d0ec5a9",
+      "sha256": "910f10b04828177f748278982032b7e78f5a245e3de2ee0c8501ddd594ed86f6",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/calibration_session_process_fixture.cpp": {
-      "sha256": "02deb9465e02219a8e503640b532170a055605d8158662a6204a8fcceebe3020",
+      "sha256": "ff406952126d6cee92986d8e30b0ba60fb64b76f6d54825e918bd71c78be4340",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -52,7 +52,7 @@
       "base_sha256": null
     },
     "tests/calibration_session_tests.cpp": {
-      "sha256": "3fcadb80dca8556b46b5880e98c21d632f38759648ce1bff98fce2d2b97df209",
+      "sha256": "5da3d1d1f8def0239cb4e0122520f92f231fa956a51273128b939d86d274b3ae",
       "existed_at_base": false,
       "base_sha256": null
     },
@@ -72,7 +72,7 @@
       "base_sha256": null
     },
     "tools/calibration_local_api.cpp": {
-      "sha256": "38f1a6520628238ec443f3b905e4992caf4fa724a9dd26ba039b7621f401c1f4",
+      "sha256": "e9d09c22b6a5728964a4fec71798fbc4151d3ce59f411482d901cd33eb3431d8",
       "existed_at_base": false,
       "base_sha256": null
     },
