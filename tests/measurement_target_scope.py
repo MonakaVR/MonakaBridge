@@ -3,6 +3,7 @@ from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
 from calibration_session_scope import approved_session,predecessor as session_predecessor,predecessor_text as session_predecessor_text
+from world_approval_scope import world_project
 BASE='279a01363f47ad3564b5cd8b9346180c49ee41d3'
 PIN='dependencies/measurement-target-baseline.json'
 FILES={
@@ -30,7 +31,7 @@ def approved_measurement(root,git_root=None):
  extra=approved_session(root,git_root)
  if p['base_commit']!=BASE or set(p['files'])!=FILES:raise RuntimeError('B1 scope/base mismatch')
  for name in OLD_PINS|UNCHANGED:
-  if digest((root/name).read_bytes())!=digest(historical(repo,name)):raise RuntimeError('B1 protected input changed: '+name)
+  if digest(world_project(root,name,(root/name).read_bytes(),git_root))!=digest(historical(repo,name)):raise RuntimeError('B1 protected input changed: '+name)
  for name,e in p['files'].items():
   if digest(session_predecessor(root,name,(root/name).read_bytes(),git_root))!=e['sha256']:raise RuntimeError('unreviewed B1 drift: '+name)
   if existed(repo,name)!=e['existed_at_base']:raise RuntimeError('B1 predecessor presence drift: '+name)

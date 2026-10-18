@@ -61,3 +61,6 @@ native bytes must equal the two narrowly reviewed patches before any historical
 source view is offered to predecessor scope tests. Rehashing a removed
 invalidation statement cannot authorize it. Build/test evidence for the old head
 is retained as history, not reused as PASS for the new source.
+The older B1 protected-input comparison uses this validated parent view too;
+its unchanged-field list and historical receipt remain intact. Mutation of the
+actual World implementation is rejected before that comparison.
