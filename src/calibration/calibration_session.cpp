@@ -111,12 +111,13 @@ struct CalibrationSession::Impl {
   }
   for(std::size_t i=0;i<b.references.size();++i){auto value=b.references[i];value.valid=delivery.referenceEligible[i];recorder->reference(value,input->referenceSerial);}
  }
+ void abandonOutputReview(){review.clear();if(state==PREPARED)state=APPROVAL_REVIEW;}
  void live(bool fresh){
   auto t=now();checkCancel();
   if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
   if((result||staticResult||!approvalFingerprint.empty())&&t>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
   if(staticMeasurement&&!staticResult){if(t-staticStart>=5*60*second)invalidate("STATIC_RUN_TIMEOUT");if(state==WAITING_POINT&&t>=pointWaitDeadline)invalidate("STATIC_POINT_WAIT_TIMEOUT");}
-  if(owner)try{owner->check(t,fresh);}catch(const std::exception& e){if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
+  if(owner)try{owner->check(t,fresh);}catch(const std::exception& e){if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}if(approvalPurpose)abandonOutputReview();throw;}
  }
  void guards(bool fresh,bool scope=true,std::int64_t confirmationLimit=0){
   if(scope)try{current();}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
@@ -154,16 +155,18 @@ struct CalibrationSession::Impl {
  Json outputAction(const Json& j){
   const auto op=text(j,"op");need(approvalPurpose,"OUTPUT_APPROVAL_SESSION_REQUIRED");
   if(op=="review_output"){
-   need(state==CONFIRMED||state==APPROVAL_REVIEW,"STATE_REJECTED");if(state==CONFIRMED)beginReady();guards(true);
+   need(state==CONFIRMED||state==APPROVAL_REVIEW,"STATE_REJECTED");const bool confirming=state==CONFIRMED;if(confirming)beginReady();guards(true,true,confirming?confirmationDeadline:0);
    std::optional<OutputApprovalCriteria> adopted;std::string reason;
    try{adopted=criteria();}catch(const std::exception& e){reason=diagnostic(e);}
+   if(confirming)beginReady();
    need(candidate.empty(),"APPROVAL_CANDIDATE_FIXED_REPREPARE_OR_NEW_SESSION");approvalFingerprint=adopted?fingerprint(*adopted):"UNADOPTED";resultId=opaqueId();resultDeadline=now()+10*60*second;state=APPROVAL_REVIEW;
    const auto& b=frozen->target().binding;Json members=Json::array();
    for(const auto& [k,v]:config.bindings)if(v.source==b.source&&v.inputSpace==b.inputSpace&&v.inputRevision==b.inputRevision)members.push_back({{"device",v.device},{"tracker",v.tracker},{"approved",v.spaceApproved},{"eligible",bool(adopted)&&adopted->eligible.count(k)!=0&&!v.spaceApproved&&!providerOptions->readOnly()},{"selected",false},{"mount_existing",rigid(v.mount)},{"world",rigid(v.world)},{"profile",v.profile},{"reason",providerOptions->readOnly()?"READONLY_APPROVAL_REJECTED":(!reason.empty()?reason:(v.spaceApproved?"ALREADY_APPROVED":(adopted&&adopted->eligible.count(k)?"ELIGIBLE_UNSELECTED":"MEMBER_PHYSICAL_EVIDENCE_MISSING")))}});
    return {{"status","APPROVAL_REVIEW"},{"approval_id",resultId},{"members",members},{"world",rigid(b.world)},{"mount_existing",rigid(b.mount)},{"extrinsic_not_mount",nullptr},{"config_sha256",providerOptions->configSha256()},{"source",b.source},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"standing_witness",input->standing},{"criteria",adopted?adopted->policyId:"NOT_ADOPTED"},{"evidence",adopted?adopted->evidenceId:"MISSING"},{"evidence_sha256",adopted?adopted->evidenceSha256:""},{"reason",reason},{"runtime","UNCONFIRMED"}};
   }
   need((state==APPROVAL_REVIEW||state==PREPARED)&&text(j,"approval_id")==resultId,"APPROVAL_REVIEW_REQUIRED");
-  need(!providerOptions->readOnly(),"READONLY_APPROVAL_REJECTED");guards(true);auto adopted=criteria();need(fingerprint(adopted)==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED_REVIEW_REQUIRED");
+  need(!providerOptions->readOnly(),"READONLY_APPROVAL_REJECTED");OutputApprovalCriteria adopted;
+  try{guards(true);adopted=criteria();need(fingerprint(adopted)==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED_REVIEW_REQUIRED");}catch(...){abandonOutputReview();throw;}
   if(op=="prepare_output"){
    need(!j.at("members").empty(),"APPROVAL_SELECTION_REQUIRED");
    auto proposed=config;std::set<Key> selected;Json newDiff=Json::array();const auto& b=frozen->target().binding;
@@ -178,9 +181,19 @@ struct CalibrationSession::Impl {
   }
   need(op=="commit_output"&&state==PREPARED&&!review.empty()&&text(j,"review_token")==review&&text(j,"candidate_sha256")==candidateHash,"OUTPUT_COMMIT_NOT_PREPARED");
   if(now()>=reviewDeadline){review.clear();state=APPROVAL_REVIEW;throw std::runtime_error("APPROVAL_REVIEW_TOKEN_EXPIRED");}drafts.verify();need(readConfigBytes(drafts.path("expected.json"))==original&&readConfigBytes(drafts.path("candidate.json"))==candidate,"APPROVAL_ARTIFACT_CHANGED");
-  auto barrier=owner->barrier(text(j,"request_id"),std::min(10*second,reviewDeadline-now()));
-  current();need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");
-  {auto admission=owner->admit(barrier,now());need(now()<reviewDeadline&&now()<adopted.expiresAt,"APPROVAL_REVIEW_TOKEN_EXPIRED");state=COMMITTING;}
+  try{
+   checkCancel();const auto beforeBarrier=now();
+   const auto remaining=std::min({10*second,reviewDeadline-beforeBarrier,resultDeadline-beforeBarrier,created+20*60*second-beforeBarrier});
+   need(remaining>0,"APPROVAL_REVIEW_TOKEN_EXPIRED");
+   auto barrier=owner->barrier(text(j,"request_id"),remaining);
+   current();need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");
+   checkCancel();const auto admissionAt=now();
+   if(admissionAt-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
+   if(admissionAt>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
+   need(admissionAt<reviewDeadline,"APPROVAL_REVIEW_TOKEN_EXPIRED");
+   need(admissionAt<adopted.expiresAt,"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
+   auto admission=owner->admit(barrier,admissionAt);state=COMMITTING;
+  }catch(const std::exception& e){abandonOutputReview();if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
   review.clear();++commits;auto started=now();
   try{commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{guards(false,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}});if(env.afterReplace)env.afterReplace();try{guards(true,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}if(cancel||readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;state=now()-started>=15*second?UNKNOWN:(evidenceStale?SAVED_STALE:SAVED);}catch(const std::exception& e){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"action","OUTPUT_APPROVAL"},{"reason",diagnostic(e)}};}
   Json saved={{"status",name(state)},{"action","OUTPUT_APPROVAL"},{"config_sha256",candidateHash},{"runtime","UNCONFIRMED"},{"message","OUTPUT APPROVAL CONFIG SAVED / RUNTIME UNCONFIRMED"}};try{drafts.write("terminal.json",saved.dump());drafts.terminal(name(state));}catch(...){saved["artifact_warning"]="TERMINAL_ARTIFACT_IO_FAILED";}return saved;
@@ -193,15 +206,17 @@ struct CalibrationSession::Impl {
    auto path=std::filesystem::u8path(text(j,"config_path"));requirePlainPath(path);auto installation=std::filesystem::u8path(text(j,"installation_path"));requirePlainPath(installation);need(std::filesystem::is_directory(installation),"INSTALLATION_UNAVAILABLE");
    need(j.at("association")=="operator_declared_process_owner_unverified"&&j.at("mirror_address")=="127.0.0.1"&&j.at("mirror_port").get<std::uint64_t>()>0&&j.at("mirror_port").get<std::uint64_t>()<=65535,"ASSOCIATION_UNSUPPORTED");
    need(j.at("reference_role")=="left"||j.at("reference_role")=="right"||j.at("reference_role")=="hmd","REFERENCE_ROLE_UNSUPPORTED");
-   auto mode=j.value("mode",std::string("trajectory"));need(mode=="trajectory"||mode=="static","CAPTURE_MODE_UNSUPPORTED");staticMode=mode=="static";
-   auto purpose=j.value("purpose",std::string("measurement"));need(purpose=="measurement"||purpose=="output_approval","PURPOSE_UNSUPPORTED");approvalPurpose=purpose=="output_approval";need(!approvalPurpose||!staticMode,"APPROVAL_MEASUREMENT_MODE_CONFLICT");
-   if(j.contains("static_points"))staticOptions.points=j.at("static_points").get<std::size_t>();if(j.contains("static_samples"))staticOptions.samples=j.at("static_samples").get<std::size_t>();staticOptions.validate();need(staticMode||(!j.contains("static_points")&&!j.contains("static_samples")),"STATIC_OPTIONS_REQUIRE_STATIC_MODE");
+   auto mode=j.value("mode",std::string("trajectory"));need(mode=="trajectory"||mode=="static","CAPTURE_MODE_UNSUPPORTED");const bool nextStaticMode=mode=="static";
+   auto purpose=j.value("purpose",std::string("measurement"));need(purpose=="measurement"||purpose=="output_approval","PURPOSE_UNSUPPORTED");const bool nextApprovalPurpose=purpose=="output_approval";need(!nextApprovalPurpose||!nextStaticMode,"APPROVAL_MEASUREMENT_MODE_CONFLICT");
+   StaticOptions nextStaticOptions;
+   if(j.contains("static_points"))nextStaticOptions.points=j.at("static_points").get<std::size_t>();if(j.contains("static_samples"))nextStaticOptions.samples=j.at("static_samples").get<std::size_t>();nextStaticOptions.validate();need(nextStaticMode||(!j.contains("static_points")&&!j.contains("static_samples")),"STATIC_OPTIONS_REQUIRE_STATIC_MODE");
    auto nextOriginal=readConfigBytes(path);auto nextConfig=parseConfigDocument(nextOriginal);nextConfig.sourcePath=std::filesystem::weakly_canonical(path);
    need(j.at("bridge_id")==nextConfig.bridgeId&&j.at("input_revision").get<std::uint64_t>()<=UINT32_MAX,"TARGET_OWNER_REVISION_MISMATCH");
    auto target=freezeMeasurementTarget(nextConfig,text(j,"source"),text(j,"device"),text(j,"tracker"),text(j,"input_space"),j.at("input_revision").get<std::uint32_t>());
-   auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>(),staticMode});
+   auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>(),nextStaticMode});
    Json reply={{"status","OPEN"},{"config_sha256",options->configSha256()},{"capture_supported",provider.supported()},{"readonly",options->readOnly()},{"association",options->association()}};
    try{provider.configure(options);}catch(...){state=FAILED;throw;}
+   staticMode=nextStaticMode;approvalPurpose=nextApprovalPurpose;staticOptions=nextStaticOptions;
    original=std::move(nextOriginal);config=std::move(nextConfig);providerOptions=std::move(options);frozen=&providerOptions->measurementTarget();state=OPEN;
    return reply;
   }

@@ -77,3 +77,15 @@ neither production writer nor long-path policy is changed by this test harness.
 Historical projection returns unrelated file names/text unchanged without a
 historical rewrite or approval grant. Actual-source approval still rereads/hashes all declared fields at
 every boundary; no current approval cache, removed mutant or increased timeout.
+
+Independent review corrections: open builds mode/purpose/static options from
+fresh local defaults for every request and publishes them only after successful
+provider configuration. Failed validation leaves NEW retry options unpublished.
+Transient output-review staleness, including cached preparation and final owner
+admission, consumes the old token; recovery requires explicit preparation of the
+same fixed candidate with a new token. Commit barrier wait is bounded by token,
+approval-result and worker lifetime budgets, rechecked after scope/criteria work
+at final owner admission. Review creation also bounds confirmation wait and
+rechecks confirmation/cancel/worker lifetime after waiting and criteria review.
+These boundaries use deterministic test clocks and continuously fresh synthetic
+input; no physical criteria or production authority is added.
