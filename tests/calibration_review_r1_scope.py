@@ -66,9 +66,12 @@ def approved_r1(root,git_root=None):
  return FILES|PINS|PROTECTED|{PIN}|extra
 def r1_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
- predecessor=json.loads((root/PIN).read_bytes())["files"].get(name) if (root/PIN).exists() else None
+ predecessor=json.loads((root/PIN).read_bytes())["files"].get(name) if name in FILES and (root/PIN).exists() else None
  known_parent=bool(predecessor and predecessor["parent"]["existed"] and digest(raw)==predecessor["parent"]["sha256"])
  raw=b4_project(root,name,raw,git_root,allow_older or known_parent)
+ # An unrelated name has no R1 predecessor projection. The B4 child above still
+ # handles its own names; actual-source approval is unchanged and uncached.
+ if name not in FILES:return raw
  if not (root/PIN).exists():return raw
  e=json.loads(read(root,PIN))['files'].get(name)
  if not e:return raw
@@ -80,6 +83,6 @@ def r1_project_text(root,text):
  root=Path(root)
  text=b4_project_text(root,text)
  if not (root/PIN).exists():return text
- approved_r1(root);matches={historical(str(root),name).decode() for name,e in json.loads(read(root,PIN))['files'].items() if e['parent']['existed'] and digest(text.encode())==e['sha256']}
+ approved_r1(root);text_digest=digest(text.encode());matches={historical(str(root),name).decode() for name,e in json.loads(read(root,PIN))['files'].items() if e['parent']['existed'] and text_digest==e['sha256']}
  if len(matches)>1:raise RuntimeError('R1 ambiguous text projection')
  return next(iter(matches)) if matches else text

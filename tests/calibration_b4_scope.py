@@ -80,6 +80,9 @@ def approved_b4(root,git_root=None):
  return FILES|PINS|PROTECTED|{PIN}
 def b4_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
+ # Projection-only no-op for unrelated files. Approval still reads/hashes every
+ # actual declared input on every boundary; no current approval is cached.
+ if name not in FILES:return raw
  if not (root/PIN).exists():return raw
  e=json.loads(read(root,PIN))['files'].get(name)
  if not e:return raw
@@ -90,6 +93,11 @@ def b4_project(root,name,raw,git_root=None,allow_older=False):
 def b4_project_text(root,text):
  root=Path(root)
  if not (root/PIN).exists():return text
- approved_b4(root);matches={historical(str(root),name).decode() for name,e in json.loads(read(root,PIN))['files'].items() if e['parent']['existed'] and digest(text.encode())==e['sha256']}
+ # Unrelated text is a no-op, not an approval grant. The parent's admission
+ # still validates every actual byte. Validate before any historical rewrite.
+ text_digest=digest(text.encode()) # local common subexpression, never cached across calls
+ candidates=[name for name,e in json.loads(read(root,PIN))['files'].items() if e['parent']['existed'] and text_digest==e['sha256']]
+ if not candidates:return text
+ approved_b4(root);matches={historical(str(root),name).decode() for name in candidates}
  if len(matches)>1:raise RuntimeError('B4 ambiguous text projection')
  return next(iter(matches)) if matches else text

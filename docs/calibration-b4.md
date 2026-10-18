@@ -69,3 +69,11 @@ R23-R25 validation uses test-only public-SDK seams and normal WPF controls witho
 showing windows. Real SDK/SteamVR/practical UDP/hardware/HIL/OS visual remain
 NOT_RUN; PICO same-tracker IMU authenticity: NOT VERIFIED / DEFERRED.
 Physical criteria/thresholds, evidence authority and HIL remain separate gates.
+
+Native fixtures use a unique short owned temporary root and publish its path in
+the build evidence directory. A deeply nested build path can exceed Windows
+MAX_PATH when the unchanged transaction writer appends its staging suffix;
+neither production writer nor long-path policy is changed by this test harness.
+Historical projection returns unrelated file names/text unchanged without a
+historical rewrite or approval grant. Actual-source approval still rereads/hashes all declared fields at
+every boundary; no current approval cache, removed mutant or increased timeout.

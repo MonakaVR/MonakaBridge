@@ -1,6 +1,7 @@
 from pathlib import Path
 import json,shutil,uuid
-from calibration_b4_scope import FILES,PINS,PROTECTED,PIN,approved_b4,digest,b4_project,historical
+from calibration_b4_scope import FILES,PINS,PROTECTED,PIN,approved_b4,digest,b4_project,b4_project_text,historical
+from calibration_review_r1_scope import approved_r1
 def verify_b4(root):
  root=Path(root);approved=approved_b4(root);scratch=root/'build/b4-scope-mutants'/str(uuid.uuid4());scratch.mkdir(parents=True);count=0
  for name in approved:
@@ -31,5 +32,14 @@ def verify_b4(root):
   try:b4_project(root,name,current+b'foreign')
   except RuntimeError:count+=1
   else:raise RuntimeError('B4 foreign projection')
+ # No-op views cannot grant admission to changed actual inputs.
+ name='src/calibration/calibration_runtime_provider.cpp';p=scratch/name;original=p.read_bytes();p.write_bytes(original+b'\n// drift\n')
+ assert b4_project(scratch,'unrelated-file',b'unrelated-view',root)==b'unrelated-view'
+ assert b4_project_text(scratch,'unrelated-view')=='unrelated-view'
+ reject('no-op projection did not approve actual drift')
+ try:approved_r1(scratch,root)
+ except RuntimeError:count+=1
+ else:raise RuntimeError('parent admitted actual drift after no-op view')
+ p.write_bytes(original)
  approved_b4(scratch,root);print(f'PASS B4 exact scope {len(FILES)} files, {len(PINS)} immutable accepted pins, {len(PROTECTED)} protected sources, {count} mutants; actual source uncached')
 if __name__=='__main__':verify_b4(Path(__file__).resolve().parents[1])
