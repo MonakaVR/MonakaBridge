@@ -30,6 +30,7 @@ def connections(root,git_root=None):
   functions=[n for n in module.body if isinstance(n,ast.FunctionDef) and n.name==name]
   if len(functions)!=1 or not any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id==call for n in ast.walk(functions[0])):raise RuntimeError('HIL missing outer validation/view hook: '+name)
  model=read(root,'ui/discovery_models.cs').decode();window=read(root,'ui/discovery_window.cs').decode();native=read(root,'src/observation/discovery.cpp').decode()
+ if 'if(Text(b,"profile")!=profile)' not in model:raise RuntimeError('HIL lost exact shared-group profile guard')
  for token in ['RequireOffline(snapshot,old)','ConfiguredReceipts.TryGetValue','RequireContract(contract,current)','space_approved",false','binding["mount"]=Identity()','MappingEditor.Candidate(baseDoc,-1,edit)','row.SeenAge<3000','Foreign publisher health','Runtime/config revision differs','if(!selected.Same(current)||!current.Fresh)','old["mount"]']:
   if token not in model:raise RuntimeError('HIL lost explicit guard: '+token)
  for token in ['new ConfigHelperClient(target).Commit(expected,candidate,cancel,delegate','DiscoveryModel.Recheck(loaded,health.Value','calibration.Active','Bridge restart required','object.ReferenceEquals(target,options)']:

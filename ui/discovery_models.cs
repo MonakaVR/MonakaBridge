@@ -104,6 +104,9 @@ namespace MonakaBridge {
    // No approval or physical-device Mount/evidence is inherited by a rebind.
    string shared=null;Dictionary<string,object> sharedBinding=null;
    foreach(Dictionary<string,object> b in mappings)if(Text(b,"source_id")==current.Source&&Text(b,"input_space")==current.Space&&Convert.ToUInt32(b["input_revision"])==current.Revision){
+    // Native measurement groups require the exact profile ID, not just the
+    // same convention or axes. Never reuse another profile's calibrated W.
+    if(Text(b,"profile")!=profile)throw new InvalidOperationException("Shared W group profile mismatch; select the existing group profile");
     string value=Json(new object[]{b["world"],b["world_space"],b["world_revision"]});if(shared!=null&&shared!=value)throw new InvalidOperationException("Shared W group inconsistent; review alignment separately");shared=value;sharedBinding=b;
    }
    if(sharedBinding!=null){binding["world"]=MappingEditor.Clone((Dictionary<string,object>)sharedBinding["world"]);binding["world_space"]=sharedBinding["world_space"];binding["world_revision"]=sharedBinding["world_revision"];}

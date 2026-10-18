@@ -1,5 +1,6 @@
 #include "monaka_bridge/discovery.hpp"
 #include "monaka_bridge/health.hpp"
+#include "monaka_bridge/measurement_target.hpp"
 #include "helpers.hpp"
 #include <fstream>
 #include <iostream>
@@ -13,6 +14,14 @@ mb::c1::TrackerObservation observation(const std::string& device="unknown",std::
 const J& row(const J& j,const std::string& device){for(const auto& value:j.at("observations"))if(value.at("device")==device)return value;throw std::runtime_error("missing discovery row "+device);}
 const J& receipt(const J& j,const std::string& device){for(const auto& value:j.at("recent_configured_receipts"))if(value.at("device")==device)return value;throw std::runtime_error("missing receipt "+device);}
 void test(const std::string& input){
+ {auto base=fixtureConfig();auto second=base.profiles.at("synthetic-pico");second.positionAxes={3,2,-1};second.quaternionAxes={3,2,-1,4};base.profiles["synthetic-pico-B"]=second;
+  CHECK(second.approved&&second.convention==base.profiles.at("synthetic-pico").convention&&second.positionAxes!=base.profiles.at("synthetic-pico").positionAxes);
+  const mb::Key old{"synthetic-pico-source","HIL-SYNTH-OLD-00001"},peer{"synthetic-pico-source","HIL-SYNTH-OLD-00002"};
+  for(bool replace:{false,true}){auto c=base;auto binding=c.bindings.at(old);auto contract=c.contracts.at(old);if(replace){c.bindings.erase(old);c.contracts.erase(old);}binding.device="HIL-SYNTH-NEW-00005";binding.tracker=replace?"slot-1":"slot-new";binding.profile="synthetic-pico-B";binding.spaceApproved=false;const mb::Key added{binding.source,binding.device};c.bindings[added]=binding;c.contracts[added]=contract;
+   mb::validateConfig(c); // Structural validity is not measurement-group compatibility.
+   for(const auto& key:{added,peer}){const auto& b=c.bindings.at(key);bool refused=false;try{(void)mb::freezeMeasurementTarget(c,b.source,b.device,b.tracker,b.inputSpace,b.inputRevision);}catch(const std::invalid_argument& e){refused=std::string(e.what())=="measurement group has incompatible profile/world space";}CHECK(refused);}
+   c.bindings.at(added).profile="synthetic-pico";mb::validateConfig(c);const auto& b=c.bindings.at(added);auto frozen=mb::freezeMeasurementTarget(c,b.source,b.device,b.tracker,b.inputSpace,b.inputRevision);mb::validateFrozenMeasurementTarget(c,frozen);
+  }pass("H05 native Create/Replace same-convention different-profile fixtures remain structurally valid but measurement group rejects both selected sides; exact-profile controls pass");}
  {auto c=fixtureConfig();mb::Bridge b(c,SB);mb::DiscoveryCache d;std::ifstream f(input);std::string line;unsigned admitted=0;std::int64_t now=2000000000;
   while(std::getline(f,line))if(d.receive(b,line,"synthetic-loopback",++now))++admitted;
   auto view=d.snapshot(b,now);CHECK(admitted==4&&view["observations"].size()==5);unsigned unknown=0;for(const auto& v:view["observations"])if(v["configured"]==false){++unknown;CHECK(v["device"]=="HIL-SYNTH-NEW-00005"&&v["reason"]=="UNMAPPED"&&v["fresh"]==true);}
