@@ -3,6 +3,7 @@ from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
 from writer_fixture_scope import approved_writer_fixture,predecessor as writer_predecessor,predecessor_text as writer_predecessor_text
+from world_approval_scope import approved_world_approval,world_project
 BASE='7ac9ed9fe4a19391a1f88ed4d00adaefbdbbd64c'
 PIN='dependencies/calibration-session-baseline.json'
 FILES={'include/monaka_bridge/calibration_session.hpp','src/calibration/calibration_session.cpp',
@@ -47,9 +48,9 @@ def verify_diff_scope(root):
  names+=subprocess.check_output(['git','-C',str(root),'ls-files','--others','--exclude-standard']).decode().splitlines()
  if set(names)-FILES-{PIN}-_extra(root):raise RuntimeError('outside B2 scope: '+','.join(sorted(set(names)-FILES-{PIN}-_extra(root))))
 def verify_legacy_bytes(root):
- root=Path(root);proof={}
+ root=Path(root);approved_world_approval(root);proof={}
  for n in ['include/monaka_bridge/measurement_target.hpp','src/calibration/measurement_target.cpp','include/monaka_bridge/trajectory_calibration.hpp','src/calibration/trajectory_calibration.cpp','src/calibration/world_calibration.cpp','src/calibration/calibration.cpp','src/mapping/config.cpp','src/mapping/config_transaction.cpp','src/routing/bridge.cpp','src/routing/runtime_normalization.cpp']:
-  b=(root/n).read_bytes().replace(b'\r\n',b'\n');old=historical(str(root),n).replace(b'\r\n',b'\n')
+  b=world_project(root,n,(root/n).read_bytes()).replace(b'\r\n',b'\n');old=historical(str(root),n).replace(b'\r\n',b'\n')
   if b!=old:raise RuntimeError('B2 changed protected source: '+n)
   proof[n]=dict(bytes=len(b),sha256=digest(b),equal=True)
  n='tools/steamvr_calibrator.cpp';raw=(root/n).read_bytes().replace(b'\r\n',b'\n')
