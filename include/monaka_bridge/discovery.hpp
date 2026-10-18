@@ -15,13 +15,13 @@ class DiscoveryCache {
  };
  std::map<std::string,Lifetime> sources_;
  std::map<Key,Entry> entries_;
- struct Receipt {std::string session,clock,peer;std::int64_t poseSequence=-1,stateSequence=-1,last=-1;};
  // Configured-device liveness is independent of unknown diagnostic sessions.
- // Session transitions must never erase the recent online-slot refusal fact.
- std::map<Key,Receipt> receipts_;
+ // Only original Registry acceptance updates it: no diagnostic sequence state.
+ std::map<Key,std::int64_t> receipts_;
  std::uint64_t dropped_=0,ignored_=0,errors_=0;
  std::int64_t lastDrop_=-1;
  void observe(const c1::Envelope&,std::string_view,std::int64_t,const Bridge&);
+ void received(const c1::Envelope&,std::int64_t,const Bridge&);
  void drop(std::int64_t now){++dropped_;lastDrop_=now;}
 public:
  static constexpr std::size_t maxSources=8,maxDevices=32,maxRetired=16;

@@ -15,8 +15,19 @@ std::optional<Metadata> metadata(const c1::Envelope& e){return std::visit([](con
 },e);}
 }
 bool DiscoveryCache::receive(Bridge& bridge,std::string_view raw,std::string_view peer,std::int64_t now){
- try{c1::Envelope e;c1::Error error;if(now>=0&&raw.size()<=4096&&c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(raw.data()),raw.size(),e,error))observe(e,peer,now,bridge);}catch(...){++errors_;}
- return bridge.receive(raw,peer,now);
+ c1::Envelope e;bool decoded=false;
+ try{c1::Error error;if(now>=0&&raw.size()<=4096&&c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(raw.data()),raw.size(),e,error)){decoded=true;observe(e,peer,now,bridge);}}catch(...){++errors_;drop(now);}
+ const bool accepted=bridge.receive(raw,peer,now);
+ // All admission/normalization/sequence/revision/peer/session decisions belong
+ // to the original Registry. Rejected packets cannot poison liveness highwater.
+ if(accepted)try{if(decoded)received(e,now,bridge);else drop(now);}catch(...){++errors_;drop(now);}
+ return accepted;
+}
+void DiscoveryCache::received(const c1::Envelope& e,std::int64_t now,const Bridge& bridge){
+ auto m=metadata(e);if(!m)return;const Key key{m->source,m->device};
+ if(!bridge.config().bindings.count(key))return;
+ if(!receipts_.count(key)&&receipts_.size()>=maxDevices){for(auto i=receipts_.begin();i!=receipts_.end();)if(now>=i->second&&now-i->second>10*recentNs)i=receipts_.erase(i);else ++i;}
+ if(receipts_.count(key)||receipts_.size()<maxDevices)receipts_[key]=now;else drop(now);
 }
 void DiscoveryCache::observe(const c1::Envelope& e,std::string_view peer,std::int64_t now,const Bridge& bridge){
  auto value=metadata(e);if(!value)return;const auto& m=*value;
@@ -32,21 +43,6 @@ void DiscoveryCache::observe(const c1::Envelope& e,std::string_view peer,std::in
      (s.session==m.session&&(s.clock!=m.clock||s.peer!=peer))){++ignored_;return;}
  }
  const Key key{m.source,m.device};
- if(bridge.config().bindings.count(key)){
-  // Record only bounded canonical receipt metadata for a configured identity.
-  // The accepted Registry's peer/clock/retirement and sequence facts guard it;
-  // an unadmitted unknown session cannot delete or stop these liveness facts.
-  const auto* device=bridge.registry.find(key);
-  const bool duplicate=active!=bridge.registry.sources.end()&&active->second.session==m.session&&device&&m.sequence<=(m.pose?device->poseSequence:device->stateSequence);
-  if(!duplicate){
-   if(!receipts_.count(key)&&receipts_.size()>=maxDevices){for(auto i=receipts_.begin();i!=receipts_.end();)if(now>=i->second.last&&now-i->second.last>10*recentNs)i=receipts_.erase(i);else ++i;}
-   if(receipts_.count(key)||receipts_.size()<maxDevices){auto& receipt=receipts_[key];
-    if(receipt.session!=m.session){receipt=Receipt{};receipt.session=m.session;receipt.clock=m.clock;receipt.peer=std::string(peer);}
-    auto& sequence=m.pose?receipt.poseSequence:receipt.stateSequence;
-    if(receipt.clock==m.clock&&receipt.peer==peer&&m.sequence>sequence&&now>=receipt.last){sequence=m.sequence;receipt.last=now;}
-   }else drop(now);
-  }
- }
  if(!sources_.count(m.source)&&sources_.size()>=maxSources){drop(now);return;}
  auto& source=sources_[m.source];
  if(source.retired.count(m.session)||source.last>now){++ignored_;return;}
@@ -70,7 +66,7 @@ void DiscoveryCache::observe(const c1::Envelope& e,std::string_view peer,std::in
 }
 nlohmann::json DiscoveryCache::snapshot(const Bridge& bridge,std::int64_t now)const{
  using J=nlohmann::json;J rows=J::array(),receipts=J::array();
- for(const auto& [key,r]:receipts_)receipts.push_back({{"source",key.first},{"device",key.second},{"seen_age_ms",now>=r.last?double(now-r.last)/1000000.0:-1.0}});
+ for(const auto& [key,r]:receipts_)receipts.push_back({{"source",key.first},{"device",key.second},{"seen_age_ms",now>=r?double(now-r)/1000000.0:-1.0}});
  for(const auto& [key,e]:entries_){
   auto source=sources_.find(key.first);if(source==sources_.end()||source->second.session!=e.session)continue;
   const auto active=bridge.registry.sources.find(key.first);

@@ -34,9 +34,12 @@ def connections(root):
   if token not in model:raise RuntimeError('HIL lost explicit guard: '+token)
  for token in ['new ConfigHelperClient(target).Commit(expected,candidate,cancel,delegate','DiscoveryModel.Recheck(loaded,health.Value','calibration.Active','Bridge restart required','object.ReferenceEquals(target,options)']:
   if token not in window:raise RuntimeError('HIL lost final commit/ownership guard: '+token)
- for token in ['return bridge.receive(raw,peer,now);','entries_.size()>=maxDevices','sources_.size()>=maxSources','s.retired.count(m.session)','m.sequence<=sequence','raw.size()<=4096']:
+ for token in ['const bool accepted=bridge.receive(raw,peer,now);','if(accepted)try{if(decoded)received(e,now,bridge)','return accepted;','entries_.size()>=maxDevices','sources_.size()>=maxSources','s.retired.count(m.session)','m.sequence<=sequence','raw.size()<=4096']:
   if token not in native:raise RuntimeError('HIL lost diagnostic bound/lifetime: '+token)
  if 'config.bindings[' in native or 'sourceAuthorized=' in native or 'validity' in native:raise RuntimeError('HIL diagnostics acquire tracking authority or infer validity')
+ observe=native.split('void DiscoveryCache::observe(',1)[1].split('nlohmann::json DiscoveryCache::snapshot(',1)[0]
+ if 'receipts_' in observe:raise RuntimeError('HIL pre-admission diagnostics mutate accepted liveness')
+ if 'std::map<Key,std::int64_t> receipts_' not in read(root,'include/monaka_bridge/discovery.hpp').decode():raise RuntimeError('HIL liveness duplicates Registry sequence/lifetime authority')
 def approved_hil(root,git_root=None):
  root=Path(root)
  if not (root/PIN).exists():return set()
