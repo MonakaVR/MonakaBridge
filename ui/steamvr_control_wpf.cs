@@ -45,8 +45,8 @@ namespace MonakaBridge {
    readonly ListBox devices=new ListBox{Height=160};readonly ListBox mappings=new ListBox{Height=130};
    readonly TextBox source=new TextBox(),device=new TextBox(),tracker=new TextBox(),space=new TextBox(),revision=new TextBox(),world=new TextBox();
    readonly ComboBox profile=new ComboBox{IsEditable=false};
-   readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="This input space/revision has been approved"};
-   readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","both","disabled"}};
+   readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content="Existing space approval (new approval requires separate native review)"};
+   readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","disabled"}};
    byte[] configBytes;Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
    public ControlWindow(string root):this(GuiLaunchOptions.FromRoot(root)){}
    public ControlWindow(GuiLaunchOptions target){options=target;Title="Monaka Bridge";Width=900;Height=820;
@@ -106,6 +106,7 @@ namespace MonakaBridge {
    void RefreshAvailability(){
     string reason=closing||switching?"Owned shutdown / target change in progress":busy?"Save in progress":calibration.Active?"Calibration session owns this window; close it before config edits":needsReload?"Reload/review required":options.ValidateEditing();
     foreach(Control control in editControls){control.IsEnabled=reason==null;control.ToolTip=reason;}
+    approved.IsEnabled=false;
     foreach(Button button in serviceControls){button.IsEnabled=false;button.ToolTip=options.ServiceBlockReason();}
     cancelSave.IsEnabled=busy&&!closing;openInstallation.IsEnabled=!busy&&!closing&&!switching;createCalibration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&!needsReload;reloadConfiguration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active;
     Title="Monaka Bridge | "+options.InstallationName+(options.ReadOnly?" | READ ONLY":"");
@@ -124,6 +125,7 @@ namespace MonakaBridge {
      mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);
      var names=new List<string>(((Dictionary<string,object>)config["profiles"]).Keys);names.Sort(StringComparer.Ordinal);profile.ItemsSource=names;
      routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);
+     if(Convert.ToString(config["policy"],CultureInfo.InvariantCulture)=="both")status.Text+=" Legacy both is saved; select one destination explicitly to migrate. No automatic change.";
      editor.Restore(map,restoreKey,RenderMapping);
     });
     Health();

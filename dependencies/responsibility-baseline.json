@@ -1,0 +1,84 @@
+{
+  "parent": "a03557d242c7d0588b3e3012d69a6de737e79715",
+  "files": {
+    "scripts/operator_gui_launcher.py": {
+      "sha256": "6de87b6a345726007571b1b047209866db39b5bba34a28a571c29e357737e00a",
+      "parent": null
+    },
+    "tests/calibration_b4_gui_tests.cs": {
+      "sha256": "9c95276d920b32d78da35fa5c7525ea74ad7018030cf0d63e15afb582b97ac80",
+      "parent": "78b3d016c5af61142f262f3b7a7b11768dcf4a438fa4d048b53812f723fdbfd4"
+    },
+    "tests/hil_discovery_scope.py": {
+      "sha256": "631364398db822943793b1dea97ba26c7f3014a01574785eaf17754c19711564",
+      "parent": "a281aa3fb68be4d546bb5bb26d26124375873cbaa289944810f57f1af49541ff"
+    },
+    "tests/operator_gui_launcher_tests.py": {
+      "sha256": "ef67d0ee1ede2269eb0b44f165d396abcd59c9bccb764bcff77a393d72ec7ebe",
+      "parent": null
+    },
+    "tests/responsibility_scope.py": {
+      "sha256": "2501919f26ca862dbb1e8d2676d403bafafb9c0499fafa920dc864c865d17358",
+      "parent": null
+    },
+    "tests/responsibility_scope_tests.py": {
+      "sha256": "d430234a1d6306bdac84008e4827a459ca4063906fd5ea3422c742b7592ffafe",
+      "parent": null
+    },
+    "tests/ui_production_tests.cs": {
+      "sha256": "1df263dec6d332f73aa1edf272d8aa6a3595202976a49885e76a67056f2d8905",
+      "parent": "2da6fc57afc024adc2dd00190803e6f0bb1df327bb58bd7858d5d599b3ee6d5a"
+    },
+    "ui/calibration_panel.cs": {
+      "sha256": "f3459ce7ff85e466e6e6af94a4be29429887d4f16d3808c97b5a8001e894885d",
+      "parent": "6b19254ed14b68413ed36f4357850bf63ec5f6efee0bcf383101039061348b15"
+    },
+    "ui/control_models.cs": {
+      "sha256": "0fe0c2dfb7da33c485f266a9714e030bb5df054d0916af8901768144462dbae3",
+      "parent": "e5251813c0af152f609a2b581a8f7529e3487a8a944eeae9c0a99cae9f9a751d"
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "36795cd3bd80d3d327146ad4c07d40f7d19878d4aefb4d9ea3477b6ddfbf8af4",
+      "parent": "56c87d0e422cc27926c59476e745d2269c832749360f9d11eae4cab18f73574d"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "bca5ff39b43c0597f202f8269e448ab2ca9629f3b315c094fdf30dd40b3e0a3e",
+      "parent": "8cb242e0fc0b6daf340a7ef2f3d49964b3113452ad8c56577d9a344b792a99ec"
+    }
+  },
+  "protected": {
+    "CMakeLists.txt": "fe18c1817f36efa39a72ef715f97cf974533a417182341ad060041dce3e4f078",
+    "dependencies/calibration-b4-baseline.json": "a6cbd63ddaa50e5a27894b21ed797143b4af9365be5c95bd59bb963f99d58312",
+    "dependencies/calibration-gui-baseline.json": "2cc8ea0b0ea96f923f46925a9c7d3623cd313f2336a97f0aa029b769da2858b1",
+    "dependencies/calibration-review-r1-baseline.json": "0ca0a183bf610096b23e3d70a1f79a1fa4e9620dd24db73484d0ad81d231f545",
+    "dependencies/calibration-session-baseline.json": "016bdfdb9b1abca71e5da32b4ec64908abc660f7609690df882047152e467fe5",
+    "dependencies/capabilities-runtime-baseline.json": "013564518ab325eb0287057f74e30a9e2d7d2cfc5c7953bc69fb78a4d5339ee3",
+    "dependencies/config-write-baseline.json": "0397c02b43ba597e08d57e9ed57175875e7d2b6b1a9c275d0c8dcf8f6c6b42b0",
+    "dependencies/continuous-monitor-baseline.json": "23814f3e1d951046dff15ba87ca51f19335ccafb31078b0d12a85819e347c145",
+    "dependencies/control-foundation-baseline.json": "49fdd0618292962dfd02728afe60159ee0a440e81aacd501df13caa7d2c9cd60",
+    "dependencies/hil-discovery-baseline.json": "48983ce27a07e8314aa62f96edfafc6396941c925e0c508abd6a76434a1288c7",
+    "dependencies/measurement-target-baseline.json": "7e00289c15ff00a4355be53e2e200d65e66f7171de41c2ed96f4604eaf8d7455",
+    "dependencies/native-capture-baseline.json": "db97ee504c0ea93013f52bc1442656e22dc11d42321475b120558be105d2d23d",
+    "dependencies/native-control-integration-baseline.json": "66dc2744024559a556a96a4886eaa2bbe9e0571ee08eaadc36794bcf9d232cd0",
+    "dependencies/p2r-runtime-baseline.json": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b",
+    "dependencies/provider-options-baseline.json": "6641132824045162c2c636b3cb8b48dbd17f6a10b661c3a4b1837bf6fd3e8d66",
+    "dependencies/writer-fixture-baseline.json": "ead212b9ffee6641547d19660ac03bc766cd9b161bbabc31c60397a7fec44050",
+    "dependencies/writer-fixture-n0a-baseline.json": "8b9d96146ce1843cb5b1db5c1ff280d2571bdf9911e7e5807e6a96ac1f7b852c",
+    "scripts/build_control_toolset.py": "1924973e4e64e7d307160aa7b2dc13394429efb11a2d6e309ff688d030de1839",
+    "scripts/control_gui.cmake": "7e5a189cc4142b151a9076b8e09113f0dff742936856c70942393bdc8648587f",
+    "src/calibration/calibration_production_entry.cpp": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f",
+    "src/calibration/calibration_runtime_provider.cpp": "eebb57c070dccb8c36c1e0efe965050dd1fa8fea7cdd4dce77f69d49bd2ed6ce",
+    "src/calibration/calibration_session.cpp": "222beb6159661169c19e3922c04c9eefcefc3f32d5fb042a261a0951739539f4",
+    "src/calibration/measurement_target.cpp": "313cb5c34ad8250f11cb1def557a8e0a96bf84d7cebcb1c2a3d6200d6bf75a51",
+    "src/calibration/trajectory_calibration.cpp": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9",
+    "src/calibration/world_calibration.cpp": "525f197472940c4afd20612949bd4510c23bd8476122662c2491d1ddf02d3795",
+    "src/mapping/config.cpp": "1e4225341b809899ab3b156959671aed7d9918f57dcc8aba2c23411641e01814",
+    "src/mapping/config_transaction.cpp": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1",
+    "src/observation/registry.cpp": "be5ed0e40a2e0c221a128d4e13da0345e1b7fc7b997510f9b26d9ee1c272b826",
+    "src/routing/bridge.cpp": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0",
+    "src/routing/health.cpp": "66b5575ceb7e1d154d247e0bbe1285ebf13f624eaced9fd85bf26da63ec159b7",
+    "src/routing/runtime_normalization.cpp": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58",
+    "ui/calibration_process_client.cs": "07ec80fc68868421ccb67f2b89b57add12ae39e99daf64b1f1b975c26863f56a",
+    "ui/calibration_profile.cs": "a5edd376663680d85807679f16731334fb7fdc7f4a00f30d98fc8989722097c7"
+  }
+}
