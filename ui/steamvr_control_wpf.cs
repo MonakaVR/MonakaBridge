@@ -12,7 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 namespace MonakaBridge {
- public static class SteamVrControlWpf {
+ public static partial class SteamVrControlWpf {
   public static void Run(string root){Run(GuiLaunchOptions.FromRoot(root));}
   internal static void Run(GuiLaunchOptions target){new Application().Run(new ControlWindow(target));}
   internal static string ConfigPath(string root){return Path.Combine(root,"config","bridge.json");}
@@ -33,7 +33,7 @@ namespace MonakaBridge {
    finally {if(File.Exists(file))File.Delete(file);}
   }
   internal static Dictionary<string,object> Read(string path){return new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(path,Encoding.UTF8));}
-  private sealed class ControlWindow:Window {
+  private sealed partial class ControlWindow:Window {
    GuiLaunchOptions options;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly TextBlock accessStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly List<Control> editControls=new List<Control>();readonly List<Button> serviceControls=new List<Button>();
@@ -54,6 +54,7 @@ namespace MonakaBridge {
     openInstallation=Add(panel,"Open installation profile...",OpenInstallation);createCalibration=Add(panel,"Create calibration profile (Save As)...",CreateCalibrationProfile);panel.Children.Add(accessStatus);
     panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(healthStatus);panel.Children.Add(devices);panel.Children.Add(livePose);
     devices.SelectionChanged+=delegate{UpdateLivePose();};
+    InitializeDiscovery(panel);
     reloadConfiguration=Add(panel,"Refresh / load configuration",delegate{if(busy||calibration.Active)throw new InvalidOperationException("Finish the pending save or close calibration first");Reload();});AddEdit(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text="Persistent tracker mapping and profile",FontSize=18});panel.Children.Add(mappingStatus);panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{if(!editor.Updating)SelectMapping();};
     AddEdit(panel,"New mapping / clear selection",delegate{editor.Select(map,-1,RenderMapping);status.Text="No mapping selected; select a profile explicitly. Save updates the exact source/device or creates a new mapping.";});
@@ -93,7 +94,7 @@ namespace MonakaBridge {
    }
    async void SwitchInstallation(GuiLaunchOptions next){
     if(switching||closing)return;switching=true;RefreshAvailability();
-    try{await calibration.StopAsync();if(closed||closing)return;calibration.SetTarget(next);options=next;config=null;configBytes=null;map=null;healthAvailable=false;observations.Clear();devices.Items.Clear();editor.Select(null,-1,RenderMapping);Reload();}
+    try{await calibration.StopAsync();if(closed||closing)return;calibration.SetTarget(next);options=next;config=null;configBytes=null;map=null;healthAvailable=false;DiscoveryTargetChanged();observations.Clear();devices.Items.Clear();editor.Select(null,-1,RenderMapping);Reload();}
     catch(Exception e){if(!closed){needsReload=true;status.Text="Target change stopped: "+e.Message;}}
     finally{switching=false;if(!closed)RefreshAvailability();}
    }
@@ -109,6 +110,7 @@ namespace MonakaBridge {
     cancelSave.IsEnabled=busy&&!closing;openInstallation.IsEnabled=!busy&&!closing&&!switching;createCalibration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&!needsReload;reloadConfiguration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active;
     Title="Monaka Bridge | "+options.InstallationName+(options.ReadOnly?" | READ ONLY":"");
     accessStatus.Text="Installation: "+options.InstallationName+"\nConfig: "+options.ConfigFile+"\nHealth: "+options.HealthFile+"\nHelper: "+options.ConfigHelper+"\n"+(reason??"Writable; compatible transaction helper. Native commit checks directory permission, lock and exact snapshot.")+"\n"+options.ServiceBlockReason();
+    RefreshDiscovery();
    }
    void Safe(Action a){try{a();}catch(Exception e){status.Text=e.Message;MessageBox.Show(this,e.Message,"Monaka Bridge",MessageBoxButton.OK,MessageBoxImage.Error);}}
    static void Field(Panel p,string label,Control field){var row=new DockPanel();var text=new TextBlock{Text=label,Width=140};row.Children.Add(text);field.Margin=new Thickness(2);row.Children.Add(field);p.Children.Add(row);}
@@ -116,7 +118,7 @@ namespace MonakaBridge {
    void Reload(Tuple<string,string> restoreKey){
     if(calibration.Active)throw new InvalidOperationException("Close calibration before loading another config snapshot");needsReload=true;RefreshAvailability();if(!File.Exists(options.ConfigFile)||new FileInfo(options.ConfigFile).Length>2*1024*1024)throw new InvalidOperationException("Configuration unavailable or exceeds size bound: "+options.ConfigFile);
     var loadedBytes=File.ReadAllBytes(options.ConfigFile);var persisted=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(Encoding.UTF8.GetString(loadedBytes).TrimStart('\uFEFF'));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
-    configBytes=loadedBytes;config=persisted;map=nextMap;needsReload=false;RefreshAvailability();
+    configBytes=loadedBytes;config=persisted;map=nextMap;DiscoveryConfigurationLoaded();needsReload=false;RefreshAvailability();
     status.Text="Loaded revision "+config["mapping_revision"]+"; profile approval is required independently of space approval.";
     editor.Programmatic(delegate{
      mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);
@@ -134,7 +136,7 @@ namespace MonakaBridge {
     if(result.Error!=null){healthAvailable=false;healthStatus.Text="Bridge health unavailable; previous values retained. "+result.Error;UpdateLivePose();return;}
     string selectedSource=null,selectedDevice=null,selectedPublisher=null;
     if(devices.SelectedIndex>=0&&devices.SelectedIndex<observations.Count){var selected=(Dictionary<string,object>)observations[devices.SelectedIndex];selectedSource=(string)selected["source"];selectedDevice=(string)selected["device"];selectedPublisher=selected.ContainsKey("publisher_id")?(string)selected["publisher_id"]:null;}
-    var h=result.Value;var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
+    var h=result.Value;discoveryHealth=h;var next=new ArrayList((ICollection)h["devices"]);devices.Items.Clear();observations=next;int restore=-1;int index=0;
     healthSnapshotUtc=result.SnapshotUtc;healthAvailable=true;currentPolicy=Convert.ToString(h["policy"],CultureInfo.InvariantCulture);
     healthRevision=h.ContainsKey("mapping_revision")?h["mapping_revision"]:null;healthPublisher=h.ContainsKey("publisher_id")?Convert.ToString(h["publisher_id"],CultureInfo.InvariantCulture):null;
     poseTimeoutMs=h.ContainsKey("pose_timeout_ms")?Convert.ToDouble(h["pose_timeout_ms"],CultureInfo.InvariantCulture):500;
@@ -150,6 +152,7 @@ namespace MonakaBridge {
     UpdateLivePose();
    }catch(Exception e){healthAvailable=false;healthStatus.Text="Bridge health unavailable: "+e.Message;UpdateLivePose();}}
    void UpdateLivePose(){
+    RefreshDiscovery();
     bool same=config!=null&&healthPublisher==Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture);
     bool current=healthAvailable&&same&&HealthPresentation.Current(healthSnapshotUtc,DateTime.UtcNow);
     if(config!=null)mappingStatus.Text=HealthPresentation.MappingRevision(config["mapping_revision"],healthRevision,current,same);
@@ -185,14 +188,14 @@ namespace MonakaBridge {
     RequireSave();if(configBytes==null)throw new InvalidOperationException("Load the configuration first");
     var target=options;var expected=(byte[])configBytes.Clone();RunSave(delegate(CancellationToken cancel){new ConfigHelperClient(target).TransformAndCommit(expected,arguments,migration,cancel);},editor.SelectedKey);
    }
-   void RunSave(Action<CancellationToken> operation,Tuple<string,string> selection){
+   void RunSave(Action<CancellationToken> operation,Tuple<string,string> selection,Action onSaved=null){
     RequireSave();busy=true;cancellation=new CancellationTokenSource();var pending=cancellation;RefreshAvailability();status.Text="Saving; cancellation is checked before native commit.";
     pendingSave=Task.Run(delegate{operation(pending.Token);});pendingSave.ContinueWith(delegate(Task task){
      if(closed){pending.Dispose();return;}
      Dispatcher.BeginInvoke((Action)delegate{
       pending.Dispose();cancellation=null;if(closed)return;busy=false;
       if(task.IsFaulted){needsReload=true;RefreshAvailability();var error=task.Exception.GetBaseException();status.Text=error is OperationCanceledException?"Cancelled before native commit. Reload and review.":"Save rejected or outcome unconfirmed: "+error.Message+" Reload/review before retry. No automatic rollback.";}
-      else {try{Reload(selection);status.Text="SAVED. Runtime application unconfirmed; Core/IK/SteamVR output unverified. Review matching-instance health separately. Rebinding may require an owned runtime restart (unsupported here).";}catch(Exception e){needsReload=true;RefreshAvailability();status.Text="SAVED; reload failed: "+e.Message+". Runtime application unconfirmed.";}}
+      else {try{if(onSaved!=null)onSaved();Reload(selection);status.Text="SAVED. Runtime application unconfirmed; Core/IK/SteamVR output unverified. Review matching-instance health separately. Rebinding may require an owned runtime restart (unsupported here).";}catch(Exception e){needsReload=true;RefreshAvailability();status.Text="SAVED; reload failed: "+e.Message+". Runtime application unconfirmed.";}}
      });
     });
    }

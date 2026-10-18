@@ -165,6 +165,9 @@ namespace MonakaBridge {
    }
   }
   internal void Commit(byte[] expected,string candidate,CancellationToken cancel){
+   Commit(expected,candidate,cancel,null);
+  }
+  internal void Commit(byte[] expected,string candidate,CancellationToken cancel,Action beforeNativeCommit){
    options.RequireEdit();cancel.ThrowIfCancellationRequested();CheckCompatibility();cancel.ThrowIfCancellationRequested();
    Run(candidate,"validate",5000);cancel.ThrowIfCancellationRequested();
    // An older transaction-capable helper may ignore runtime_contract. Prove the
@@ -184,6 +187,7 @@ namespace MonakaBridge {
    try{File.WriteAllBytes(snapshot,expected);cancel.ThrowIfCancellationRequested();
     // Cancellation is checked before commit. Once native commit starts, its
     // actual result decides SAVED/REJECTED/UNKNOWN; no rollback or fake cancel.
+    if(beforeNativeCommit!=null)beforeNativeCommit();cancel.ThrowIfCancellationRequested();
     Run(options.ConfigFile,"commit "+GuiLaunchOptions.Quote(snapshot)+" "+GuiLaunchOptions.Quote(candidate),15000);
    }finally{if(File.Exists(snapshot))File.Delete(snapshot);}
   }

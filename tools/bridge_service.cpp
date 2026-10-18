@@ -1,6 +1,7 @@
 #include "monaka_bridge/bridge.hpp"
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/health.hpp"
+#include "monaka_bridge/discovery.hpp"
 #include "monaka_bridge/runtime_replay.hpp"
 #include "p1_runtime_identity.hpp"
 #include <nlohmann/json.hpp>
@@ -28,7 +29,7 @@ int main(int argc,char** argv)try{
  std::filesystem::path path=argv[1];auto config=mb::loadConfig(path);std::uint16_t ports[4]={29810,29811,29812,29813};int next=2;
  if(argc>=6&&std::string(argv[2])!="--duration-ms"){for(int i=0;i<4;++i){auto p=std::stoul(argv[i+2]);if(!p||p>65535)throw std::invalid_argument("invalid port");ports[i]=static_cast<std::uint16_t>(p);}next=6;}
  std::int64_t duration=0;if(argc>next){if(argc!=next+2||std::string(argv[next])!="--duration-ms")throw std::invalid_argument("invalid arguments");duration=std::stoll(argv[next+1])*1000000;}
- mb::Udp input(ports[0]);mb::Udp output;const auto epoch=mb::monotonicNs();mb::Bridge bridge(config,mb::uuid());
+ mb::Udp input(ports[0]);mb::Udp output;const auto epoch=mb::monotonicNs();mb::Bridge bridge(config,mb::uuid());mb::DiscoveryCache discovery;
  std::unique_ptr<mb::HealthWriter> healthWriter;
  try{auto health=path;health+=L".status.json";healthWriter=std::make_unique<mb::HealthWriter>(health);}catch(...){/* Diagnostic failure cannot disable tracking. */}
  std::signal(SIGINT,stop);std::signal(SIGTERM,stop);
@@ -41,7 +42,7 @@ int main(int argc,char** argv)try{
 #ifdef _WIN32
  if(WaitForSingleObject(stopEvent,0)==WAIT_OBJECT_0)break;
 #endif
- for(int i=0;i<128;++i){auto d=input.receive();if(!d)break;bridge.receive(d->bytes,d->peer,mb::monotonicNs()-epoch);}
+ for(int i=0;i<128;++i){auto d=input.receive();if(!d)break;discovery.receive(bridge,d->bytes,d->peer,mb::monotonicNs()-epoch);}
  now=mb::monotonicNs()-epoch;bridge.tick(now);
  bridge.fanout.flush([&](mb::Channel c,std::string_view bytes){return output.send(ports[c==mb::Channel::Monaka?1:c==mb::Channel::Steamvr?2:3],bytes);},now);
  if(now-lastStatus>=500000000){
@@ -50,6 +51,7 @@ int main(int argc,char** argv)try{
   if(healthWriter)try{
    const auto unixMs=std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
    auto snapshot=mb::healthSnapshot(bridge,now,unixMs);
+   snapshot["discovery"]=discovery.snapshot(bridge,now);
    snapshot["health_write_failures"]=healthWriter->writeFailures();
    snapshot["health_replace_failures"]=healthWriter->replaceFailures();
    snapshot["health_dropped"]=healthWriter->dropped();

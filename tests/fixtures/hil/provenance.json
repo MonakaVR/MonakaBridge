@@ -1,0 +1,7 @@
+{
+  "source": "PicoMotionTrackerBridge",
+  "commit": "c0f2f92d145688387b2f5b917672024096736139",
+  "generator": "external H01 actual Receiver/ObservationAdapter synthetic POTB probe; no hardware",
+  "fixture_sha256": "3483b660a1e34b74f0428ca9cb7b3cf52127cb2a3a72af3081c1c940e52a1d81",
+  "identities": "HIL-SYNTH-* synthetic only"
+}
