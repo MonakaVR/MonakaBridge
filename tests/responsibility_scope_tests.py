@@ -1,6 +1,6 @@
 from pathlib import Path
 import tempfile,shutil,json
-from responsibility_scope import approved_responsibility,FILES,PIN,responsibility_project
+from responsibility_scope import approved_responsibility,FILES,PIN,responsibility_project,historical
 root=Path(__file__).resolve().parents[1]
 approved=approved_responsibility(root)
 with tempfile.TemporaryDirectory(dir=root/'build') as directory:
@@ -17,7 +17,11 @@ with tempfile.TemporaryDirectory(dir=root/'build') as directory:
   target.write_bytes(before)
  # An explicitly older view must not approve later current-source drift.
  name='ui/calibration_panel.cs';target=scratch/name;before=target.read_bytes();target.write_bytes(before+b'\n// actual drift\n')
- assert responsibility_project(scratch,name,b'historical view only',root,True)==b'historical view only'
+ old_view=historical(str(root),name)
+ assert responsibility_project(scratch,name,old_view,root,True)==old_view
+ try:responsibility_project(scratch,name,b'arbitrary foreign view',root,True)
+ except RuntimeError:count+=1
+ else:raise AssertionError('allow_older accepted arbitrary source')
  try:approved_responsibility(scratch,root)
  except RuntimeError:count+=1
  else:raise AssertionError('Historical view approved actual drift')

@@ -11,6 +11,20 @@ PROTECTED={'dependencies/hil-discovery-baseline.json', 'src/observation/registry
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 @lru_cache(maxsize=None)
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',str(repo),'show',PARENT+':'+name])
+@lru_cache(maxsize=None)
+def historical_versions(repo,name):
+ # Only exact hashes from immutable predecessor receipts, never current metadata.
+ values=set()
+ for pin in PROTECTED:
+  if not pin.endswith('-baseline.json'):continue
+  entry=json.loads(historical(repo,pin)).get('files',{}).get(name)
+  if isinstance(entry,str):values.add(entry)
+  elif isinstance(entry,dict):
+   for key in ['sha256','base_sha256']:
+    if isinstance(entry.get(key),str):values.add(entry[key])
+   parent=entry.get('parent',{})
+   if isinstance(parent,dict) and isinstance(parent.get('sha256'),str):values.add(parent['sha256'])
+ return values
 def approved_responsibility(root,git_root=None):
  root=Path(root)
  if not (root/PIN).exists():return set()
@@ -41,10 +55,10 @@ def responsibility_project(root,name,raw,git_root=None,allow_older=False):
   if e['parent'] is not None:return historical(git_root or root,name)
   return raw
  if sha==e['parent']:return raw
- # Predecessor layers explicitly identify older historical views. This is a
- # view-only pass-through, never approval of current on-disk bytes; admission
- # still validates all current files through approved_responsibility.
- if allow_older and e['parent'] is not None:return raw
+ # Older layers may receive an already-projected view. Accept only exact,
+ # immutable predecessor hashes; even allow_older cannot admit arbitrary bytes.
+ # Current on-disk admission remains a separate uncached full-source check.
+ if sha in historical_versions(str(git_root or root),name):return raw
  raise RuntimeError('Responsibility foreign projection: '+name)
 def responsibility_project_text(root,text):
  root=Path(root)
