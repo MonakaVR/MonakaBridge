@@ -2,6 +2,7 @@ from pathlib import Path
 import json,shutil,tempfile
 from world_approval_scope import FILES,FROZEN,PIN,approved_world_approval,digest,world_project,historical
 from responsibility_scope import approved_responsibility
+from calibration_session_scope import verify_legacy_bytes
 root=Path(__file__).resolve().parents[1];approved=approved_responsibility(root);count=0
 with tempfile.TemporaryDirectory(dir=root/'build') as directory:
  scratch=Path(directory)
@@ -27,7 +28,11 @@ with tempfile.TemporaryDirectory(dir=root/'build') as directory:
   value=json.loads(receipt);value['files'][name]['parent']=None if value['files'][name]['parent'] is not None else '0'*64;pin.write_text(json.dumps(value));rejects();pin.write_bytes(receipt)
  name='src/calibration/world_calibration.cpp';target=scratch/name;before=target.read_bytes();target.unlink();rejects();target.write_bytes(before)
  # A permitted historical view never admits a changed actual native source.
- target.write_bytes(before+b'\n// actual native drift\n');view=historical(root,name);assert world_project(scratch,name,view,root)==view;rejects();target.write_bytes(before)
+ target.write_bytes(before+b'\n// actual native drift\n');view=historical(root,name);assert world_project(scratch,name,view,root)==view;rejects()
+ try:verify_legacy_bytes(scratch)
+ except RuntimeError:count+=1
+ else:raise AssertionError('B2 legacy view accepted changed actual native source')
+ target.write_bytes(before)
  try:world_project(scratch,name,b'foreign arbitrary source',root)
  except RuntimeError:count+=1
  else:raise AssertionError('Foreign projection accepted')
