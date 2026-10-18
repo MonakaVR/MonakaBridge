@@ -1,6 +1,18 @@
 {
   "parent": "a03557d242c7d0588b3e3012d69a6de737e79715",
   "files": {
+    "AGENTS.md": {
+      "sha256": "069c5e49ec3225481ef8d743c9964b9ed453d5931c68c376e41999df86321159",
+      "parent": "36b123e4a3fd57b28b9a79dae8c82a3a1c1272458ad7b010de127b76faf1d09c"
+    },
+    "README.md": {
+      "sha256": "3a41b77cdccaed14e97f668f3b7cd578bcf0d6b59990f59c6224eb34efcae19d",
+      "parent": "3b28beae7f6b3beefc58d4f754be0c9436b1906f246dc4a3bdd616048ee4ba75"
+    },
+    "docs/responsibility-refactor.md": {
+      "sha256": "e5c18a145febce6054b99270764c888836662756e2b838564c25874edbc9d6c2",
+      "parent": null
+    },
     "scripts/operator_gui_launcher.py": {
       "sha256": "6de87b6a345726007571b1b047209866db39b5bba34a28a571c29e357737e00a",
       "parent": null
@@ -10,7 +22,7 @@
       "parent": "78b3d016c5af61142f262f3b7a7b11768dcf4a438fa4d048b53812f723fdbfd4"
     },
     "tests/hil_discovery_scope.py": {
-      "sha256": "631364398db822943793b1dea97ba26c7f3014a01574785eaf17754c19711564",
+      "sha256": "1adf332dd1066be1e8d9b377cdaca7038b98ace58983b0c169bd5d5d3dc8e9cc",
       "parent": "a281aa3fb68be4d546bb5bb26d26124375873cbaa289944810f57f1af49541ff"
     },
     "tests/operator_gui_launcher_tests.py": {
@@ -18,11 +30,11 @@
       "parent": null
     },
     "tests/responsibility_scope.py": {
-      "sha256": "2501919f26ca862dbb1e8d2676d403bafafb9c0499fafa920dc864c865d17358",
+      "sha256": "2aa4410c94797281f6a44cf1229479d6b9582a02c79e261576de214882da6e7b",
       "parent": null
     },
     "tests/responsibility_scope_tests.py": {
-      "sha256": "d430234a1d6306bdac84008e4827a459ca4063906fd5ea3422c742b7592ffafe",
+      "sha256": "2ae9518623aeba00254ec2d64f43d69dbe314adfbfc78ed54d114b9ffbab75db",
       "parent": null
     },
     "tests/ui_production_tests.cs": {

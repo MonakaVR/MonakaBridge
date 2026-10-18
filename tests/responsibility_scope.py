@@ -4,7 +4,7 @@ from functools import lru_cache
 import hashlib,json,subprocess
 PARENT='a03557d242c7d0588b3e3012d69a6de737e79715'
 PIN='dependencies/responsibility-baseline.json'
-FILES={'ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/control_models.cs','ui/calibration_panel.cs',
+FILES={'AGENTS.md','README.md','docs/responsibility-refactor.md','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/control_models.cs','ui/calibration_panel.cs',
  'tests/ui_production_tests.cs','tests/calibration_b4_gui_tests.cs','tests/hil_discovery_scope.py',
  'tests/responsibility_scope.py','tests/responsibility_scope_tests.py','scripts/operator_gui_launcher.py','tests/operator_gui_launcher_tests.py'}
 PROTECTED={'dependencies/hil-discovery-baseline.json', 'src/observation/registry.cpp', 'src/routing/bridge.cpp', 'src/mapping/config.cpp', 'dependencies/measurement-target-baseline.json', 'src/mapping/config_transaction.cpp', 'dependencies/calibration-b4-baseline.json', 'dependencies/p2r-runtime-baseline.json', 'CMakeLists.txt', 'dependencies/native-control-integration-baseline.json', 'scripts/build_control_toolset.py', 'scripts/control_gui.cmake', 'src/calibration/trajectory_calibration.cpp', 'src/calibration/calibration_session.cpp', 'dependencies/control-foundation-baseline.json', 'src/routing/health.cpp', 'dependencies/writer-fixture-n0a-baseline.json', 'dependencies/writer-fixture-baseline.json', 'dependencies/native-capture-baseline.json', 'src/routing/runtime_normalization.cpp', 'dependencies/continuous-monitor-baseline.json', 'dependencies/calibration-review-r1-baseline.json', 'dependencies/calibration-gui-baseline.json', 'dependencies/config-write-baseline.json', 'src/calibration/calibration_production_entry.cpp', 'ui/calibration_process_client.cs', 'dependencies/provider-options-baseline.json', 'dependencies/calibration-session-baseline.json', 'src/calibration/measurement_target.cpp', 'ui/calibration_profile.cs', 'src/calibration/world_calibration.cpp', 'dependencies/capabilities-runtime-baseline.json', 'src/calibration/calibration_runtime_provider.cpp'}
@@ -33,7 +33,7 @@ def approved_responsibility(root,git_root=None):
  if 'MEASURED (NOT SAVED)' not in panel or 'PREPARED (NOT SAVED)' not in panel or 's.ActualOutcome' not in panel:raise RuntimeError('Responsibility result/save stage regression')
  if "raise ValueError('The configured PICO mapping/publisher changed" in launcher or "p['selection_matches']" not in launcher:raise RuntimeError('Responsibility GUI entry selection gate')
  return FILES|set(p['protected'])|{PIN}
-def responsibility_project(root,name,raw,git_root=None):
+def responsibility_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
  if name not in FILES or not (root/PIN).exists():return raw
  p=json.loads((root/PIN).read_bytes());e=p['files'][name];sha=digest(raw)
@@ -41,6 +41,10 @@ def responsibility_project(root,name,raw,git_root=None):
   if e['parent'] is not None:return historical(git_root or root,name)
   return raw
  if sha==e['parent']:return raw
+ # Predecessor layers explicitly identify older historical views. This is a
+ # view-only pass-through, never approval of current on-disk bytes; admission
+ # still validates all current files through approved_responsibility.
+ if allow_older and e['parent'] is not None:return raw
  raise RuntimeError('Responsibility foreign projection: '+name)
 def responsibility_project_text(root,text):
  root=Path(root)

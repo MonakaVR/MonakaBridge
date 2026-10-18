@@ -68,7 +68,7 @@ def approved_hil(root,git_root=None):
  connections(root,git_root);return FILES|PINS|PROTECTED|{PIN}|extra
 def hil_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
- raw=responsibility_project(root,name,raw,git_root)
+ raw=responsibility_project(root,name,raw,git_root,allow_older)
  if name not in FILES or not (root/PIN).exists():return raw
  e=json.loads(read(root,PIN))['files'].get(name)
  if not e:return raw

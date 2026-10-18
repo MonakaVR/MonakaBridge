@@ -1,6 +1,6 @@
 from pathlib import Path
 import tempfile,shutil,json
-from responsibility_scope import approved_responsibility,FILES,PIN
+from responsibility_scope import approved_responsibility,FILES,PIN,responsibility_project
 root=Path(__file__).resolve().parents[1]
 approved=approved_responsibility(root)
 with tempfile.TemporaryDirectory(dir=root/'build') as directory:
@@ -15,6 +15,13 @@ with tempfile.TemporaryDirectory(dir=root/'build') as directory:
   except (RuntimeError,ValueError):count+=1
   else:raise AssertionError('Accepted unexpected change: '+name)
   target.write_bytes(before)
+ # An explicitly older view must not approve later current-source drift.
+ name='ui/calibration_panel.cs';target=scratch/name;before=target.read_bytes();target.write_bytes(before+b'\n// actual drift\n')
+ assert responsibility_project(scratch,name,b'historical view only',root,True)==b'historical view only'
+ try:approved_responsibility(scratch,root)
+ except RuntimeError:count+=1
+ else:raise AssertionError('Historical view approved actual drift')
+ target.write_bytes(before)
  # A rehashed UI approval bypass must still be refused.
  target=scratch/'ui/control_models.cs';before=target.read_bytes();target.write_bytes(before.replace(b'&&!sameApproval',b'&&false'))
  p=json.loads((scratch/PIN).read_bytes())
