@@ -12,7 +12,7 @@ class Tests {
  static void Check(bool condition,string message){if(!condition)throw new Exception(message);}
  static Dictionary<string,object> Edit(string source,string device,string tracker){return new Dictionary<string,object>{
   {"source_id",source},{"device_id",device},{"tracker_id",tracker},{"profile","vive-hil-v1"},
-  {"input_space","test-native"},{"input_revision",1},{"world_space","test-world"},{"space_approved",true}};}
+  {"input_space","test-native"},{"input_revision",1},{"world_space","test-world"},{"space_approved",false}};}
  static IList Rows(Dictionary<string,object> c){return (IList)c["mappings"];}
  static Dictionary<string,object> Row(Dictionary<string,object> c,int i){return (Dictionary<string,object>)Rows(c)[i];}
  static void Reject(Action action){bool failed=false;try{action();}catch(InvalidOperationException){failed=true;}Check(failed,"Expected mapping collision/rejection");}
@@ -58,7 +58,7 @@ class Tests {
   state.Approved=false; // UI state cannot be the authority after a save.
   var disk=SteamVrControlWpf.Read(target);
   state.Restore(Rows(disk),MappingEditorState.Key(edit),render);
-  Check(state.SelectedIndex==1&&state.Approved&&checkbox&&(string)rendered["device_id"]=="device-new","Save/reload restores the saved mapping and persisted true approval");
+  Check(state.SelectedIndex==1&&!state.Approved&&!checkbox&&(string)rendered["device_id"]=="device-new","Rebound mapping is saved without inheriting approval");
   Row(disk,1)["space_approved"]=false;File.WriteAllText(target,json.Serialize(disk),new UTF8Encoding(false));
   state.Approved=true;
   state.Restore(Rows(SteamVrControlWpf.Read(target)),MappingEditorState.Key(edit),render);
@@ -123,12 +123,13 @@ class Tests {
    try{Invoke(window,"SaveMapping");throw new Exception("Missing profile saved");}
    catch(TargetInvocationException e){Check(e.InnerException is InvalidOperationException&&e.InnerException.Message.Contains("Select an existing profile"),"WPF save has a controlled profile error");}
    Set(profile,"SelectedItem","vive-hil-v1");Set(Field(window,"source"),"Text","rebound-source");Set(approval,"IsChecked",true);
-   Invoke(window,"SaveMapping");
+   try{Invoke(window,"SaveMapping");throw new Exception("Approval bypass saved");}catch(TargetInvocationException e){Check(e.InnerException is InvalidOperationException,"Native review required");}
+   Set(approval,"IsChecked",false);Invoke(window,"SaveMapping");
    WaitSave(window);
    Check(((string)Property(Field(window,"status"),"Text")).Contains("SAVED. Runtime application unconfirmed"),"Saved config cannot imply downstream application");
    var disk=SteamVrControlWpf.Read(target);
-   Check(Rows(disk).Count==1&&(string)Row(disk,0)["source_id"]=="rebound-source"&&(bool)Row(disk,0)["space_approved"],"WPF atomic save persists rebound mapping");
-   Check((int)Property(mappings,"SelectedIndex")==0&&(bool)Property(approval,"IsChecked")&&(string)Property(Field(window,"source"),"Text")=="rebound-source","WPF save reload reselects new key and persisted approval");
+   Check(Rows(disk).Count==1&&(string)Row(disk,0)["source_id"]=="rebound-source"&&!(bool)Row(disk,0)["space_approved"],"WPF atomic save persists rebound mapping");
+   Check((int)Property(mappings,"SelectedIndex")==0&&!(bool)Property(approval,"IsChecked")&&(string)Property(Field(window,"source"),"Text")=="rebound-source","WPF save reload reselects new key and persisted approval");
    var observations=(ArrayList)Field(window,"observations");observations.Add(new Dictionary<string,object>{{"source","rebound-source"},{"device","device-a"},{"space","test-native"},{"revision",1},{"convention","test"}});
    var devices=Field(window,"devices");var items=(IList)Property(devices,"Items");items.Add("synthetic observation");Set(devices,"SelectedIndex",0);
    foreach(var entry in new Dictionary<string,object>{{"healthAvailable",true},{"healthSnapshotUtc",DateTime.UtcNow},{"healthPublisher",createdPublisher(initial)}})type.GetField(entry.Key,BindingFlags.Instance|BindingFlags.NonPublic).SetValue(window,entry.Value);
@@ -146,6 +147,15 @@ class Tests {
  static int Main(string[] args){try{
   var original=SteamVrControlWpf.Read(args[2]);original["bridge_id"]="test-publisher";
   var created=MappingEditor.Candidate(original,-1,Edit("source-a","device-a","tracker"));
+  var illegal=Edit("new-source","new-device","new-tracker");illegal["space_approved"]=true;
+  Reject(delegate{MappingEditor.Candidate(original,-1,illegal);});
+  Row(created,0)["space_approved"]=true; // Existing legacy approval fixture, never granted by editor.
+  var keep=Edit("source-a","device-a","tracker");keep["space_approved"]=true;
+  Check((bool)Row(MappingEditor.Candidate(created,0,keep),0)["space_approved"],"Existing unchanged approval lost");
+  foreach(string field in new[]{"source_id","device_id","profile","input_space","input_revision","world_space"}){
+   var bypass=MappingEditor.Clone(keep);bypass[field]=field=="input_revision"?(object)2:field=="profile"?"vive-unverified":"changed";
+   Reject(delegate{MappingEditor.Candidate(created,0,bypass);});
+  }
   StateSync(created,args[0],args[1]);
   WpfEvents(created,args[0],args[1]);
   Check(Rows(original).Count==0&&Rows(created).Count==1,"New mapping must not mutate loaded config");

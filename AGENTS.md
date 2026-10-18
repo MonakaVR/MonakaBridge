@@ -1,4 +1,8 @@
 # MonakaBridge repository instructions
+## Current contract ownership (2026-10-18)
+
+MVIP (MonakaVR/MonakaVRInputProtocol) owns the wire/model/schema/codec and capability vocabulary. MBIP (MonakaVR/MonakaBridgeInputProtocol) owns the pure normalization adapter over its fixed MVIP kit. Broader input DLL hosting is a later phase. Older MonakaProtocol ownership and fixed-v1 handoffs below are historical; use the actual hash-pinned kits in this tree and docs/responsibility-refactor.md. Do not change wire/ports or vendor/solver boundaries for this UI repair.
+
 
 This repository owns the common MonakaVR bridge/router layer between device-specific backends and downstream tracking consumers. It receives shared TrackerObservation / ObservationDeviceState messages, manages source/device identity, coordinate profiles, calibration, logical tracker mapping, output policy, and emits normalized MTP / SteamVR Direct output through one common pipeline.
 

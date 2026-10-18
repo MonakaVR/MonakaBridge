@@ -57,6 +57,11 @@ namespace MonakaBridge {
    Dictionary<string,object> selected=selectedIndex<0?null:(Dictionary<string,object>)list[selectedIndex];
    if(selected==null)foreach(Dictionary<string,object> b in list)
     if(Text(b,"source_id")==Text(edit,"source_id")&&Text(b,"device_id")==Text(edit,"device_id"))selected=b;
+   bool sameApproval=selected!=null&&Convert.ToBoolean(selected["space_approved"],CultureInfo.InvariantCulture);
+   foreach(string field in new[]{"source_id","device_id","profile","input_space","input_revision","world_space"})
+    sameApproval=sameApproval&&selected!=null&&Text(selected,field)==Text(edit,field);
+   if(Convert.ToBoolean(edit["space_approved"],CultureInfo.InvariantCulture)&&!sameApproval)
+    throw new InvalidOperationException("New output approval requires separate native output review; existing approvals are preserved only for unchanged physical/coordinate identity.");
    if(selected==null){selected=new Dictionary<string,object>{{"world",Rigid()},{"mount",Rigid()},{"world_revision",0}};list.Add(selected);}
    foreach(var name in new[]{"source_id","device_id","tracker_id","profile","input_space","input_revision","world_space","space_approved"})selected[name]=edit[name];
    var inputs=new HashSet<Tuple<string,string>>();var outputs=new HashSet<Tuple<string,string,string>>();

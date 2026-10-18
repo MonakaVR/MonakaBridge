@@ -1,6 +1,6 @@
 # MonakaBridge
 
-Common C1 Observation router and thin SteamVR output. Software validation and hardware cutover are separate: **hardware cutover pending**. The fixed Task1 contract is wire 1.0 candidate, master reconciliation pending.
+Common Observation router and thin SteamVR output. The active MVIP contract kit preserves message-specific wire 2.0/2.1/2.2 semantics; MBIP provides the fixed pure normalization adapter. Software validation and hardware cutover are separate: **hardware cutover pending**. See [responsibility repair](docs/responsibility-refactor.md).
 
 Bridge receives multiple backend sources on loopback 29810, resolves persistent identities and approved profiles, applies shared calibration and explicit mount transforms once, and supplies the same calibrated sample to MTP 29811 and the common Direct driver 29812. Utility Observation mirror 29813 stays active independently of output policy. Default policy is `steamvr`.
 

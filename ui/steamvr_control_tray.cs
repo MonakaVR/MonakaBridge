@@ -25,7 +25,7 @@ namespace MonakaBridge {
    options=target;dispatcher.CreateControl();var menu=new Forms.ContextMenuStrip();
    menu.Items.Add(new Forms.ToolStripMenuItem(options.InstallationName){Enabled=false});menu.Items.Add(statusItem);
    var output=new Forms.ToolStripMenuItem("Save output policy");
-   foreach(string value in new[]{"steamvr","monaka","both","disabled"}){
+   foreach(string value in new[]{"steamvr","monaka","disabled"}){
     string selected=value;var item=new Forms.ToolStripMenuItem(value);
     item.Click+=delegate{SetRoute(selected);};policies.Add(value,item);output.DropDownItems.Add(item);
    }
@@ -62,7 +62,7 @@ namespace MonakaBridge {
     object id;bool same=health.Value.TryGetValue("publisher_id",out id)&&id is string&&publisher!=null&&publisher==(string)id;
     diagnostic=!same?"INSTANCE MISMATCH":!HealthPresentation.Current(health.SnapshotUtc,DateTime.UtcNow)?"stale / historical":"policy="+observedPolicy+" (diagnostic only)";
    }
-   statusItem.Text="Saved: "+requested+" | health: "+diagnostic+" | runtime ownership unverified";
+   statusItem.Text="Saved: "+requested+(requested=="both"?" (legacy; select one destination to migrate)":"")+" | health: "+diagnostic+" | runtime ownership unverified";
    statusItem.ToolTipText=options.ConfigFile+"\n"+options.HealthFile+"\n"+(reason??"Writable; native commit checks directory permission/lock/CAS");
   }
   void SetRoute(string policy){

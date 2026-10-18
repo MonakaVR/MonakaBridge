@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import ast,hashlib,json,subprocess
+from responsibility_scope import approved_responsibility, responsibility_project, responsibility_project_text
 PARENT='db338fa21467417987bc8f2e99f68027ca387f33'
 PIN='dependencies/hil-discovery-baseline.json'
 FILES={'CMakeLists.txt','tools/bridge_service.cpp','include/monaka_bridge/discovery.hpp','src/observation/discovery.cpp',
@@ -16,7 +17,7 @@ PROTECTED={'src/routing/bridge.cpp','src/routing/runtime_normalization.cpp','src
  'scripts/build_control_toolset.py','scripts/package_calibration_control.py','scripts/verify_control_toolset.py','tools/steamvr_calibrator.cpp','tools/calibration_local_api.cpp'}
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def read(root,name):
- try:return (Path(root)/name).read_bytes()
+ try:return responsibility_project(root,name,(Path(root)/name).read_bytes())
  except OSError as e:raise RuntimeError('HIL missing actual source: '+name) from e
 @lru_cache(maxsize=None)
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
@@ -50,7 +51,8 @@ def connections(root,git_root=None):
  if digest(read(root,'tools/bridge_service.cpp'))!=digest(service.encode()):raise RuntimeError('HIL service differs outside four reviewed diagnostic hooks')
 def approved_hil(root,git_root=None):
  root=Path(root)
- if not (root/PIN).exists():return set()
+ extra=approved_responsibility(root,git_root)
+ if not (root/PIN).exists():return extra
  repo=str(git_root or root);p=json.loads(read(root,PIN))
  if set(p)!={'parent','files','pins','protected'} or p['parent']!=PARENT or set(p['files'])!=FILES or set(p['pins'])!=PINS or set(p['protected'])!=PROTECTED:raise RuntimeError('HIL exact scope/parent mismatch')
  for name,sha in p['pins'].items():
@@ -63,9 +65,10 @@ def approved_hil(root,git_root=None):
   if exists and digest(historical(repo,name))!=parent['sha256']:raise RuntimeError('HIL predecessor hash: '+name)
  for name,sha in p['protected'].items():
   if digest(read(root,name))!=sha or digest(historical(repo,name))!=sha:raise RuntimeError('HIL protected source changed: '+name)
- connections(root,git_root);return FILES|PINS|PROTECTED|{PIN}
+ connections(root,git_root);return FILES|PINS|PROTECTED|{PIN}|extra
 def hil_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
+ raw=responsibility_project(root,name,raw,git_root)
  if name not in FILES or not (root/PIN).exists():return raw
  e=json.loads(read(root,PIN))['files'].get(name)
  if not e:return raw
@@ -75,6 +78,7 @@ def hil_project(root,name,raw,git_root=None,allow_older=False):
  raise RuntimeError('HIL foreign projection: '+name)
 def hil_project_text(root,text):
  root=Path(root)
+ text=responsibility_project_text(root,text)
  if not (root/PIN).exists():return text
  sha=digest(text.encode());candidates=[n for n,e in json.loads(read(root,PIN))['files'].items() if e['parent']['existed'] and sha==e['sha256']]
  if not candidates:return text
