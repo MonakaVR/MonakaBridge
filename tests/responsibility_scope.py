@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from world_approval_scope import approved_world_approval,world_project,world_project_text
 PARENT='a03557d242c7d0588b3e3012d69a6de737e79715'
 PIN='dependencies/responsibility-baseline.json'
 FILES={'AGENTS.md','README.md','docs/responsibility-refactor.md','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/control_models.cs','ui/calibration_panel.cs',
@@ -10,7 +11,7 @@ FILES={'AGENTS.md','README.md','docs/responsibility-refactor.md','ui/steamvr_con
 PROTECTED={'dependencies/hil-discovery-baseline.json', 'src/observation/registry.cpp', 'src/routing/bridge.cpp', 'src/mapping/config.cpp', 'dependencies/measurement-target-baseline.json', 'src/mapping/config_transaction.cpp', 'dependencies/calibration-b4-baseline.json', 'dependencies/p2r-runtime-baseline.json', 'CMakeLists.txt', 'dependencies/native-control-integration-baseline.json', 'scripts/build_control_toolset.py', 'scripts/control_gui.cmake', 'src/calibration/trajectory_calibration.cpp', 'src/calibration/calibration_session.cpp', 'dependencies/control-foundation-baseline.json', 'src/routing/health.cpp', 'dependencies/writer-fixture-n0a-baseline.json', 'dependencies/writer-fixture-baseline.json', 'dependencies/native-capture-baseline.json', 'src/routing/runtime_normalization.cpp', 'dependencies/continuous-monitor-baseline.json', 'dependencies/calibration-review-r1-baseline.json', 'dependencies/calibration-gui-baseline.json', 'dependencies/config-write-baseline.json', 'src/calibration/calibration_production_entry.cpp', 'ui/calibration_process_client.cs', 'dependencies/provider-options-baseline.json', 'dependencies/calibration-session-baseline.json', 'src/calibration/measurement_target.cpp', 'ui/calibration_profile.cs', 'src/calibration/world_calibration.cpp', 'dependencies/capabilities-runtime-baseline.json', 'src/calibration/calibration_runtime_provider.cpp'}
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def actual(root,name):
- try:return (Path(root)/name).read_bytes()
+ try:return world_project(root,name,(Path(root)/name).read_bytes())
  except OSError as error:raise RuntimeError('Responsibility missing actual source: '+name) from error
 @lru_cache(maxsize=None)
 def immutable_historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
@@ -39,7 +40,8 @@ def historical_versions(repo,name):
  return values
 def approved_responsibility(root,git_root=None):
  root=Path(root)
- if not (root/PIN).exists():return set()
+ extra=approved_world_approval(root,git_root)
+ if not (root/PIN).exists():return extra
  p=json.loads((root/PIN).read_bytes())
  if p['parent']!=PARENT or set(p['files'])!=FILES or set(p['protected'])!=PROTECTED:raise RuntimeError('Responsibility exact source scope mismatch')
  for name,entry in p['files'].items():
@@ -58,9 +60,10 @@ def approved_responsibility(root,git_root=None):
   if 'new[]{"steamvr","monaka","both","disabled"}' in source or 'legacy' not in source.lower():raise RuntimeError('Responsibility normal Both or missing migration notice')
  if 'MEASURED (NOT SAVED)' not in panel or 'PREPARED (NOT SAVED)' not in panel or 's.ActualOutcome' not in panel:raise RuntimeError('Responsibility result/save stage regression')
  if "raise ValueError('The configured PICO mapping/publisher changed" in launcher or "p['selection_matches']" not in launcher:raise RuntimeError('Responsibility GUI entry selection gate')
- return FILES|set(p['protected'])|{PIN}
+ return FILES|set(p['protected'])|{PIN}|extra
 def responsibility_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
+ raw=world_project(root,name,raw,git_root)
  if name not in FILES or not (root/PIN).exists():return raw
  p=json.loads((root/PIN).read_bytes());e=p['files'][name];sha=digest(raw)
  if sha==e['sha256']:
@@ -74,6 +77,7 @@ def responsibility_project(root,name,raw,git_root=None,allow_older=False):
  raise RuntimeError('Responsibility foreign projection: '+name)
 def responsibility_project_text(root,text):
  root=Path(root)
+ text=world_project_text(root,text)
  if not (root/PIN).exists():return text
  p=json.loads((root/PIN).read_bytes());sha=digest(text.encode())
  candidates=[n for n,e in p['files'].items() if e['parent'] is not None and sha==e['sha256']]
