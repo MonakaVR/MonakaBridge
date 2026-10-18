@@ -10,7 +10,7 @@
       "parent": "cc1e90480d4bd9b410fa379a981fd8d2e5c1d5dab3dfbfd1a48586e175852ed3"
     },
     "docs/world-approval-invalidation.md": {
-      "sha256": "d9745aa4bd7f9d8d693f824fbf9241c615d5534a4877400f7d5a9a3a928dac90",
+      "sha256": "0772f4a9a76fcda7e6a72ef3078b29b8b137f5331865e1f7c5b8b2de61c77183",
       "parent": null
     },
     "include/monaka_bridge/world_calibration.hpp": {
@@ -50,7 +50,7 @@
       "parent": null
     },
     "tests/world_approval_scope.py": {
-      "sha256": "d52152a7d42f79c9f77e6890143ed58004cc9b3485f3d12817059846fa7fdc9e",
+      "sha256": "c7478a978aaf4d5775c735da88f21030b4ce7b7c117d57ddad4c4e8592675725",
       "parent": null
     },
     "tests/world_approval_scope_tests.py": {
@@ -68,6 +68,10 @@
     "tests/world_approval_b4_tests.cpp": {
       "sha256": "195923357deac46c37d1b7aeafcfc614e3ec719004fd8e10c910891afc17befb",
       "parent": null
+    },
+    "tests/measurement_target_scope.py": {
+      "sha256": "20dc9ecdb06277283a185f6895b258b27232c11d2514c150e2a385e70682e3b3",
+      "parent": "b83cb60d00006429e3f0a120af3f16e1b9c3a2895e563426353f2fd73d1b9c66"
     }
   },
   "frozen": {
