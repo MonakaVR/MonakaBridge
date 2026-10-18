@@ -15,6 +15,11 @@ with tempfile.TemporaryDirectory(dir=root/'build') as directory:
   except (RuntimeError,ValueError):count+=1
   else:raise AssertionError('Accepted unexpected change: '+name)
   target.write_bytes(before)
+ name='ui/calibration_panel.cs';target=scratch/name;before=target.read_bytes();target.unlink()
+ try:approved_responsibility(scratch,root)
+ except RuntimeError:count+=1
+ else:raise AssertionError('Missing actual source accepted')
+ target.write_bytes(before)
  # An explicitly older view must not approve later current-source drift.
  name='ui/calibration_panel.cs';target=scratch/name;before=target.read_bytes();target.write_bytes(before+b'\n// actual drift\n')
  old_view=historical(str(root),name)
