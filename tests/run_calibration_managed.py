@@ -7,7 +7,7 @@ for name in ['root','out','compiler','references','native','config']:p.add_argum
 a=p.parse_args();root=Path(a.root).resolve();out=Path(a.out).resolve();out.mkdir(parents=True,exist_ok=True)
 base=['ui/control_models.cs','ui/installation_control.cs','ui/calibration_json.cs','ui/calibration_profile.cs']
 process=base+['ui/calibration_models.cs','ui/calibration_owned_process.cs','ui/calibration_pipe_frames.cs','ui/calibration_process_client.cs']
-wpf=process+['ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/calibration_panel.cs','ui/calibration_profile_dialog.cs']
+wpf=process+['ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/calibration_panel.cs','ui/calibration_profile_dialog.cs','ui/discovery_models.cs','ui/discovery_panel.cs','ui/discovery_window.cs']
 refs=['System.dll','System.Core.dll','System.Web.Extensions.dll'];records=[]
 def build(name,main,sources,gui=False):
  executable=out/(name+'.exe');references=refs+(['System.Drawing.dll','System.Windows.Forms.dll']+[str(Path(a.references)/(n+'.dll')) for n in ['WindowsBase','PresentationCore','PresentationFramework','System.Xaml']] if gui else [])

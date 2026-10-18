@@ -2,6 +2,7 @@
 set(MB_CONTROL_SOURCES
  ui/control_models.cs ui/installation_control.cs ui/steamvr_control_gui_main.cs
  ui/steamvr_control_wpf.cs ui/steamvr_control_tray.cs
+ ui/discovery_models.cs ui/discovery_panel.cs ui/discovery_window.cs
  ui/calibration_json.cs ui/calibration_profile.cs ui/calibration_models.cs
  ui/calibration_owned_process.cs ui/calibration_pipe_frames.cs
  ui/calibration_process_client.cs ui/calibration_panel.cs ui/calibration_profile_dialog.cs)
