@@ -8,7 +8,7 @@ FILES={'CMakeLists.txt','tools/bridge_service.cpp','include/monaka_bridge/discov
  'ui/discovery_models.cs','ui/discovery_panel.cs','ui/discovery_window.cs','ui/installation_control.cs','ui/steamvr_control_wpf.cs',
  'scripts/control_gui.cmake','scripts/build_gui.ps1','tests/run_calibration_managed.py','tests/hil_discovery_tests.cpp','tests/hil_discovery_process.py',
  'tests/run_hil_discovery_managed.py','tests/hil_discovery_gui_tests.cs','tests/hil_discovery_scope.py','tests/hil_discovery_scope_tests.py',
- 'tests/calibration_b4_scope.py','tests/calibration_b4_scope_tests.py','tests/fixtures/hil/pico-five.jsonl','tests/fixtures/hil/provenance.json','docs/hil-minimal-discovery.md'}
+ 'tests/calibration_b4_scope.py','tests/calibration_b4_scope_tests.py','tests/writer_fixture_scope_tests.py','tests/fixtures/hil/pico-five.jsonl','tests/fixtures/hil/provenance.json','docs/hil-minimal-discovery.md'}
 PINS={'dependencies/'+name+'-baseline.json' for name in ['native-control-integration','calibration-session','measurement-target','capabilities-runtime','config-write','p2r-runtime','provider-options','writer-fixture','writer-fixture-n0a','continuous-monitor','native-capture','control-foundation','calibration-gui','calibration-review-r1','calibration-b4']}
 PROTECTED={'src/routing/bridge.cpp','src/routing/runtime_normalization.cpp','src/routing/health.cpp','src/observation/registry.cpp',
  'src/mapping/config.cpp','src/mapping/config_transaction.cpp','ui/control_models.cs','ui/calibration_profile.cs','ui/calibration_models.cs','ui/calibration_panel.cs','ui/calibration_process_client.cs',
@@ -22,7 +22,7 @@ def read(root,name):
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
 @lru_cache(maxsize=None)
 def existed(repo,name):return subprocess.run(['git','--no-optional-locks','-C',repo,'cat-file','-e',PARENT+':'+name],capture_output=True).returncode==0
-def connections(root):
+def connections(root,git_root=None):
  module=ast.parse(read(root,'tests/calibration_b4_scope.py').decode())
  imports={a.name for n in module.body if isinstance(n,ast.ImportFrom) and n.module=='hil_discovery_scope' for a in n.names}
  if imports!={'approved_hil','hil_project','hil_project_text'}:raise RuntimeError('HIL missing B4 child import')
@@ -40,6 +40,13 @@ def connections(root):
  observe=native.split('void DiscoveryCache::observe(',1)[1].split('nlohmann::json DiscoveryCache::snapshot(',1)[0]
  if 'receipts_' in observe:raise RuntimeError('HIL pre-admission diagnostics mutate accepted liveness')
  if 'std::map<Key,std::int64_t> receipts_' not in read(root,'include/monaka_bridge/discovery.hpp').decode():raise RuntimeError('HIL liveness duplicates Registry sequence/lifetime authority')
+ # A composed test-only scope may include this reviewed production adapter,
+ # but cannot use a metadata rehash to authorize any other service change.
+ service=historical(str(git_root or root),'tools/bridge_service.cpp').decode().replace('\r\n','\n')
+ for old,new in [('#include "monaka_bridge/health.hpp"\n','#include "monaka_bridge/health.hpp"\n#include "monaka_bridge/discovery.hpp"\n'),('mb::Bridge bridge(config,mb::uuid());','mb::Bridge bridge(config,mb::uuid());mb::DiscoveryCache discovery;'),('bridge.receive(d->bytes,d->peer,','discovery.receive(bridge,d->bytes,d->peer,'),('auto snapshot=mb::healthSnapshot(bridge,now,unixMs);','auto snapshot=mb::healthSnapshot(bridge,now,unixMs);\n   snapshot["discovery"]=discovery.snapshot(bridge,now);')]:
+  if service.count(old)!=1:raise RuntimeError('HIL service predecessor hook is not unique')
+  service=service.replace(old,new)
+ if digest(read(root,'tools/bridge_service.cpp'))!=digest(service.encode()):raise RuntimeError('HIL service differs outside four reviewed diagnostic hooks')
 def approved_hil(root,git_root=None):
  root=Path(root)
  if not (root/PIN).exists():return set()
@@ -55,7 +62,7 @@ def approved_hil(root,git_root=None):
   if exists and digest(historical(repo,name))!=parent['sha256']:raise RuntimeError('HIL predecessor hash: '+name)
  for name,sha in p['protected'].items():
   if digest(read(root,name))!=sha or digest(historical(repo,name))!=sha:raise RuntimeError('HIL protected source changed: '+name)
- connections(root);return FILES|PINS|PROTECTED|{PIN}
+ connections(root,git_root);return FILES|PINS|PROTECTED|{PIN}
 def hil_project(root,name,raw,git_root=None,allow_older=False):
  root=Path(root)
  if name not in FILES or not (root/PIN).exists():return raw

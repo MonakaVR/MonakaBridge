@@ -9,7 +9,7 @@
       }
     },
     "docs/hil-minimal-discovery.md": {
-      "sha256": "6559fab5f963baf1685e1942d2f7420246b6d664bf2c5561e4715f380ae3a374",
+      "sha256": "eb90f0da73a9cbb11d8ad3dfad9930d1db18a2df4717da72e08a50e0d94dee22",
       "parent": {
         "existed": false
       }
@@ -79,7 +79,7 @@
       }
     },
     "tests/hil_discovery_scope.py": {
-      "sha256": "593106aaeaafe9e9f0a2f8cd3dfb4ecf66a6d457f15d923467ed9eb42ef32f56",
+      "sha256": "4de61bc38fce6f1fead02eeaaf0175062c344fa564a18d42d4fe85b76414e5d0",
       "parent": {
         "existed": false
       }
@@ -107,6 +107,13 @@
       "sha256": "ae65c5c69bed8ef3b4264856865cd55c41b09f6789018c8866fceef894e314a0",
       "parent": {
         "existed": false
+      }
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "771d2a09472ccc58e28d7004e149258e48ae22f76391470abfb50e4b0c42c2ea",
+      "parent": {
+        "existed": true,
+        "sha256": "f5c7d80f9f915316b03b81e1ed00afc148f5182d050de8c6951d847221e3a0ea"
       }
     },
     "tools/bridge_service.cpp": {
