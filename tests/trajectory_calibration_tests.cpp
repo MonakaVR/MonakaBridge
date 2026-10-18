@@ -61,7 +61,7 @@ int main()try{
     {mb::TrajectoryRecorder r(c,target,"controller-serial");reject([&]{r.reference({1,{},true},"changed-reference");});}
     {mb::TrajectoryRecorder r(c,target,"controller-serial");auto s=state(sample());s.coordinate_space.revision++;reject([&]{r.deviceState(s);});}
     {auto o=mb::TrajectoryOptions{};o.maxSamples=80;mb::TrajectoryRecorder r(c,target,"controller-serial",o);for(int i=0;i<80;++i)r.reference({i,{},true},"controller-serial");reject([&]{r.reference({81,{},true},"controller-serial");});}
-    auto candidate=mb::worldCalibrationCandidate(c,target,result.world,true);CHECK(candidate.revision==c.revision+1);CHECK(candidate.bindings.at({"pico","device"}).mount.translation==b.mount.translation);CHECK(candidate.bindings.at({"pico","device"}).spaceApproved==b.spaceApproved);
+    auto candidate=mb::worldCalibrationCandidate(c,target,result.world,true);CHECK(candidate.revision==c.revision+1);CHECK(candidate.bindings.at({"pico","device"}).mount.translation==b.mount.translation);CHECK(!candidate.bindings.at({"pico","device"}).spaceApproved);
     CHECK(mb::worldCalibrationCandidate(c,target,result.world,false).revision==c.revision);
     // Exercise the fixed codec -> recorder -> time pairing -> solver boundary,
     // with actual invalid/lost packets and a nonzero mount that must stay unused.
