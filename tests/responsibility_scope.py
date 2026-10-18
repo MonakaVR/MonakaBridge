@@ -9,6 +9,9 @@ FILES={'AGENTS.md','README.md','docs/responsibility-refactor.md','ui/steamvr_con
  'tests/responsibility_scope.py','tests/responsibility_scope_tests.py','scripts/operator_gui_launcher.py','tests/operator_gui_launcher_tests.py'}
 PROTECTED={'dependencies/hil-discovery-baseline.json', 'src/observation/registry.cpp', 'src/routing/bridge.cpp', 'src/mapping/config.cpp', 'dependencies/measurement-target-baseline.json', 'src/mapping/config_transaction.cpp', 'dependencies/calibration-b4-baseline.json', 'dependencies/p2r-runtime-baseline.json', 'CMakeLists.txt', 'dependencies/native-control-integration-baseline.json', 'scripts/build_control_toolset.py', 'scripts/control_gui.cmake', 'src/calibration/trajectory_calibration.cpp', 'src/calibration/calibration_session.cpp', 'dependencies/control-foundation-baseline.json', 'src/routing/health.cpp', 'dependencies/writer-fixture-n0a-baseline.json', 'dependencies/writer-fixture-baseline.json', 'dependencies/native-capture-baseline.json', 'src/routing/runtime_normalization.cpp', 'dependencies/continuous-monitor-baseline.json', 'dependencies/calibration-review-r1-baseline.json', 'dependencies/calibration-gui-baseline.json', 'dependencies/config-write-baseline.json', 'src/calibration/calibration_production_entry.cpp', 'ui/calibration_process_client.cs', 'dependencies/provider-options-baseline.json', 'dependencies/calibration-session-baseline.json', 'src/calibration/measurement_target.cpp', 'ui/calibration_profile.cs', 'src/calibration/world_calibration.cpp', 'dependencies/capabilities-runtime-baseline.json', 'src/calibration/calibration_runtime_provider.cpp'}
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
+def actual(root,name):
+ try:return (Path(root)/name).read_bytes()
+ except OSError as error:raise RuntimeError('Responsibility missing actual source: '+name) from error
 @lru_cache(maxsize=None)
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',str(repo),'show',PARENT+':'+name])
 @lru_cache(maxsize=None)
@@ -31,11 +34,11 @@ def approved_responsibility(root,git_root=None):
  p=json.loads((root/PIN).read_bytes())
  if p['parent']!=PARENT or set(p['files'])!=FILES or set(p['protected'])!=PROTECTED:raise RuntimeError('Responsibility exact source scope mismatch')
  for name,entry in p['files'].items():
-  if digest((root/name).read_bytes())!=entry['sha256']:raise RuntimeError('Responsibility source drift: '+name)
+  if digest(actual(root,name))!=entry['sha256']:raise RuntimeError('Responsibility source drift: '+name)
   if entry['parent'] is not None and digest(historical(git_root or root,name))!=entry['parent']:raise RuntimeError('Responsibility predecessor drift: '+name)
  # Preserve every frozen receipt and native safety/contract/solver surface.
  for name,sha in p['protected'].items():
-  raw=(root/name).read_bytes()
+  raw=actual(root,name)
   if digest(raw)!=sha or digest(historical(git_root or root,name))!=sha:raise RuntimeError('Responsibility protected drift: '+name)
  model=(root/'ui/control_models.cs').read_text();wpf=(root/'ui/steamvr_control_wpf.cs').read_text();tray=(root/'ui/steamvr_control_tray.cs').read_text();panel=(root/'ui/calibration_panel.cs').read_text();launcher=(root/'scripts/operator_gui_launcher.py').read_text()
  if '&& !sameApproval' not in model and '&&!sameApproval' not in model:raise RuntimeError('Responsibility missing approval guard')
