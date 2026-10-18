@@ -13,7 +13,16 @@ def actual(root,name):
  try:return (Path(root)/name).read_bytes()
  except OSError as error:raise RuntimeError('Responsibility missing actual source: '+name) from error
 @lru_cache(maxsize=None)
-def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',str(repo),'show',PARENT+':'+name])
+def immutable_historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
+def historical(repo,name):
+ # Mutant copies live below the same Git repository. Key only immutable history
+ # by that repository, not by thousands of distinct temporary source roots.
+ # Actual files are still read and hashed on every admission, without caching.
+ location=Path(repo).absolute()
+ while not (location/'.git').exists():
+  if location.parent==location:raise RuntimeError('Responsibility history repository unavailable')
+  location=location.parent
+ return immutable_historical(str(location),name)
 @lru_cache(maxsize=None)
 def historical_versions(repo,name):
  # Only exact hashes from immutable predecessor receipts, never current metadata.
