@@ -61,6 +61,8 @@ namespace MonakaBridge {
     Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);panel.Children.Add(approved);
     foreach(var identityField in new[]{source,device,space,revision})identityField.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
     approved.Checked+=delegate{if(!editor.Updating)editor.Approved=true;};approved.Unchecked+=delegate{if(!editor.Updating)editor.Approved=false;};
+    profile.SelectionChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};world.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
+    AddEdit(panel,"Clear existing space approval",delegate{editor.Approved=false;approved.IsChecked=false;});
     AddEdit(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",delegate{var p=MappingEditor.RequireProfile(config,profile.SelectedItem as string);status.Text="Profile approved: "+p["approved"]+"\nEvidence: "+p["evidence"]+"\nInput space approval is separate.";});
     AddEdit(panel,"Import legacy route / alignment",Migrate);
     panel.Children.Add(new TextBlock{Text="Shared alignment for the selected source map (metres)",FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
