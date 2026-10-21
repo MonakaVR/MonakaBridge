@@ -143,8 +143,9 @@ void validateTrajectoryTarget(const Config& current,const WorldCalibrationTarget
         ensure(b.profile==target.binding.profile&&b.worldSpace==target.binding.worldSpace&&b.worldRevision==target.binding.worldRevision,"shared calibration group has incompatible profile/world space");
 }
 TrajectoryRecorder::TrajectoryRecorder(const Config& c,const WorldCalibrationTarget& t,std::string ref,TrajectoryOptions o):target_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateTrajectoryTarget(c,t,publisher_);ensure(!referenceId_.empty(),"reference serial required");}
+TrajectoryRecorder::TrajectoryRecorder(const Config& c,const FrozenMeasurementTarget& t,std::string ref,TrajectoryOptions o):target_(t.target()),frozenTarget_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateFrozenMeasurementTarget(c,t);ensure(!referenceId_.empty(),"reference serial required");}
 void TrajectoryRecorder::require(bool ok,const char* reason){if(!failure_.empty())throw std::invalid_argument(failure_);if(!ok){failure_=reason;throw std::invalid_argument(failure_);}}
-void TrajectoryRecorder::checkConfig(const Config& c){try{require(true,"");validateTrajectoryTarget(c,target_,publisher_);}catch(const std::exception& e){failure_=e.what();throw;}}
+void TrajectoryRecorder::checkConfig(const Config& c){try{require(true,"");if(frozenTarget_)validateFrozenMeasurementTarget(c,*frozenTarget_);else validateTrajectoryTarget(c,target_,publisher_);}catch(const std::exception& e){failure_=e.what();throw;}}
 bool TrajectoryRecorder::observation(const c1::TrackerObservation& p,std::int64_t arrival){
     require(true,"");try{validateCalibrationObservationIdentity(p,target_,session_);}catch(const std::exception& e){failure_=e.what();throw;}
     if(clock_.empty())clock_=p.clock_id;require(clock_==p.clock_id,"observation clock changed");
