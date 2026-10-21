@@ -91,6 +91,7 @@ from types import SimpleNamespace
 import control_foundation_scope as control
 from p2r_runtime_scope import approved_runtime
 from receiver_scope import verify as verify_receiver
+import receiver_scope
 
 for name in approved_runtime(root):
  p=scratch/name;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/name,p)
@@ -158,20 +159,54 @@ for names in [['tests/unapproved_guard.py'],['docs/extra.md','src/extra.cpp']]:
 for name in ['src/mapping/config_transaction.cpp','tools/bridge_service.cpp']:
  mutate_legacy(name,(scratch/name).read_bytes()+b'\n// deliberate native drift\n',name+' native drift',lambda:approved_runtime(scratch))
 
-# Full receiver guard, real Git archive; only one worktree file-read is mocked.
-real_read=Path.read_bytes;target=root/'tests/bridge_tests.cpp'
-def changed_read(path):
- raw=real_read(path)
- return raw+b'\n// historical test drift\n' if path==target else raw
-with patch.object(Path,'read_bytes',changed_read):
- reject_legacy(lambda:verify_receiver(root),'full receiver historical test read-boundary mutant')
+def receiver_boundary(member,kind,message,archive_count,label,suffix):
+ target=root/member;original=target.read_bytes()
+ real_read=Path.read_bytes;real_check=subprocess.check_output
+ archive_command=['git','-C',str(root),'archive',receiver_scope.BASE]
+ archives=[];injected=[]
+ def changed_read(path):
+  raw=real_read(path)
+  if path==target:injected.append(str(path));return raw+suffix
+  return raw
+ def checked_output(args,**kwargs):
+  if isinstance(args,(list,tuple)) and list(args)==archive_command:archives.append(list(args))
+  return real_check(args,**kwargs)
+ with patch.object(Path,'read_bytes',changed_read),patch('receiver_scope.subprocess.check_output',side_effect=checked_output):
+  try:verify_receiver(root)
+  except kind as error:
+   if type(error) is not kind or str(error)!=message:raise RuntimeError('wrong receiver rejection boundary: '+label) from error
+   rejection={'type':type(error).__name__,'message':str(error)}
+  else:raise RuntimeError('receiver accepted drift: '+label)
+ if Path.read_bytes is not real_read or subprocess.check_output is not real_check:raise RuntimeError('receiver mocks not restored')
+ if target.read_bytes()!=original:raise RuntimeError('receiver fixture file changed')
+ if len(archives)!=archive_count or len(injected)!=1:raise RuntimeError('receiver archive/read counts differ: '+label)
+ legacy_rejected.append(label)
+ print('PASS RECEIVER_BOUNDARY '+json.dumps({'classification':label,'member':member,'archive_command':archive_command,'archive_calls':archives,'archive_count':len(archives),'injected_read_count':len(injected),'rejection':rejection,'mock_restored':True,'file_unchanged':True},sort_keys=True),flush=True)
+
+# Keep the existing file-read mutant, classified at its actual earlier SHA gate.
+receiver_boundary('tests/bridge_tests.cpp',RuntimeError,'unreviewed config write drift: tests/bridge_tests.cpp',0,'PRE_ARCHIVE_CONFIG_WRITE_SHA_REJECTION',b'\n// historical test drift\n')
+
+# This exact historical member is outside every earlier pin, so only the real
+# receiver archive comparison can reject this controlled read-boundary drift.
+member='tests/old_context_repro.cpp';target=root/member
+archived=subprocess.check_output(['git','--no-optional-locks','-C',str(root),'show',receiver_scope.BASE+':'+member])
+for ref in ['HEAD',receiver_scope.BASE]:
+ if subprocess.check_output(['git','--no-optional-locks','-C',str(root),'rev-parse',ref+':'+member]).decode().strip()!='93ff4bfe8d334c4ea402439ee9f67ed03af5036c':raise RuntimeError('receiver archive fixture blob differs')
+if target.read_bytes()!=archived:raise RuntimeError('receiver archive fixture raw bytes differ')
+for pin_name in control.OLD_PINS:
+ if member in json.loads((root/pin_name).read_text(encoding='utf-8'))['files']:raise RuntimeError('receiver archive fixture shadowed by earlier pin')
+print('BEGIN receiver unmutated before archive negative',flush=True)
+verify_receiver(root)
+receiver_boundary(member,AssertionError,'5AI-P production/test baseline changed: '+member,1,'FULL_RECEIVER_ARCHIVE_ASSERTION_REJECTION',b'\n// deliberate receiver archive comparison drift\n')
+print('BEGIN receiver unmutated after archive negative',flush=True)
+verify_receiver(root)
 entry=control.LEGACY_GUARDS[first]
 with patch.dict(entry,reason='unreviewed reason'):
  reject_legacy(lambda:approved_control(scratch,root),'legacy approval reason drift')
 with patch('control_foundation_scope.ARCHIVE_AGENTS_BLOB','0'*40):
  reject_legacy(lambda:compare_guard(first,old,current),'historical AGENTS signature pin drift')
-if len(legacy_rejected)!=32:raise RuntimeError('Missing legacy negative control: '+str(len(legacy_rejected)))
+if len(legacy_rejected)!=33:raise RuntimeError('Missing legacy negative control: '+str(len(legacy_rejected)))
 if {name for name,base in executed}!=set(control.LEGACY_GUARDS):raise RuntimeError('Current guard document branches not executed')
 if len(FILES)!=19:raise RuntimeError('Implementation allowlist broadened by legacy guards')
-print('PASS legacy integration: 32 additional negative controls; both current comparison branches executed; two marker reconstructions byte-exact; 19 implementation paths unchanged')
+print('PASS legacy integration: 33 additional negative controls; both current comparison branches executed; two marker reconstructions byte-exact; 19 implementation paths unchanged')
 for label in legacy_rejected:print('REJECTED '+label)
