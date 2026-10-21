@@ -6,7 +6,7 @@ approved_config_write(root)
 scratch=root/'build/config-scope-drift'/str(uuid.uuid4());scratch.mkdir(parents=True)
 pin=json.loads((root/'dependencies/config-write-baseline.json').read_text())
 from capability_runtime_scope import FILES,PIN
-for n in set(pin['files'])|FILES|{PIN,'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json','docs/dev-integration/phase2cp2r-20261015.md'}:
+for n in approved_config_write(root)|{'dependencies/config-write-baseline.json','dependencies/p2r-runtime-baseline.json','docs/dev-integration/phase2cp2r-20261015.md'}:
  p=scratch/n;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(root/n,p)
 approved_config_write(scratch,root)
 count=0

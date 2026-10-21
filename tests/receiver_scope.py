@@ -2,6 +2,9 @@
 from pathlib import Path
 import hashlib,io,json,re,subprocess,tarfile
 from p2r_runtime_scope import approved_runtime,runtime_bytes
+# BEGIN WS01A EXACT AGENTS IMPORT
+from control_foundation_scope import verify_archive_agents
+# END WS01A EXACT AGENTS IMPORT
 BASE='f2f0a46199af711f91c7e575c6f9229bdff51614'
 FILES={'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py','tests/receiver_ctest.py',
  'scripts/import_receiver_core.py','scripts/receiver_build.py','scripts/receiver_artifact.py',
@@ -45,7 +48,12 @@ def verify(root):
                 current=current.decode().replace('\r\n','\n')
                 current=strip(current,'    # BEGIN 5AI-R2 RECEIVER SCOPE\n','    # END 5AI-R2 RECEIVER SCOPE\n').replace('PATHS|approved_receiver(root)|','PATHS|').encode()
                 old=old.replace(b'\r\n',b'\n')
-            assert current==old,'5AI-P production/test baseline changed: '+member.name
+            # BEGIN WS01A EXACT AGENTS COMPARISON
+            if member.name=='AGENTS.md':
+                verify_archive_agents(root,BASE,old,current)
+            else:
+                assert current==old,'5AI-P production/test baseline changed: '+member.name
+            # END WS01A EXACT AGENTS COMPARISON
     provenance=json.loads((root/'receiver/provenance.json').read_text())
     for entry in provenance['files']:
         raw=(root/entry['path']).read_bytes().replace(b'\r\n',b'\n')

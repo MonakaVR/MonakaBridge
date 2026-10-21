@@ -1,0 +1,101 @@
+{
+  "base_commit": "279a01363f47ad3564b5cd8b9346180c49ee41d3",
+  "scope": "WS01a Bridge-owned installation/config/health foundation only; dot review pending",
+  "files": {
+    "docs/bridge-control-foundation.md": {
+      "sha256": "1ffe0b736f71484c0eaeb7a3fda71621834c4c321c0aa9aa9292f462c4abf082",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "docs/ws01a-audit-correction.md": {
+      "sha256": "28b0d81a6c2bbbe4a49be86e96b84ea36abf3e582b5003e0691179085b9dd0ac",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "scripts/build_gui.ps1": {
+      "sha256": "564b35edda507f29d420e9e77cb5f4f1964e0c64edd95d1512ef60fcf7aaa727",
+      "existed_at_base": true,
+      "base_sha256": "f93357b0edcfa209d29b7d9997cbf01b50aa22d8014cac72e2a21c585f6226c8"
+    },
+    "scripts/package_control.ps1": {
+      "sha256": "006ab6f51ce87bd40b50c1c43dabe435599b3aafaddc13d3abc63a3767d88b6c",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/capability_runtime_scope.py": {
+      "sha256": "cc28ffaef0afd58ca526c5ba8960efdac0af07af9681f86c65553dfa030847c2",
+      "existed_at_base": true,
+      "base_sha256": "2329916db7f0297a16be758a5f1569c609a81d62fda3023863e8afa7cfa524ff"
+    },
+    "tests/capability_runtime_scope_tests.py": {
+      "sha256": "c77db376a46dfd6e848c8325e002d18a8497834361306e0d1eea85b99c74d6fb",
+      "existed_at_base": true,
+      "base_sha256": "30a067aa26c89666ec85468cc4825b33cf41606b8ce88c5e896cf4937d260d9c"
+    },
+    "tests/config_write_scope_tests.py": {
+      "sha256": "c75db5d347bcbc51b0483cf2d55db38af2c529b39a3667c0c5c3f12cc8df495c",
+      "existed_at_base": true,
+      "base_sha256": "0bd565618e5f69d71f8878a002b0e807a109d0888237a09c1a9f718ab661e4e6"
+    },
+    "tests/control_foundation_scope.py": {
+      "sha256": "e17d5ee43813651f8e68be34e40624d23fe2e73300eaa5711c4f9de7ef8933a0",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/control_foundation_scope_tests.py": {
+      "sha256": "e0d5942ae6a1871f7f95007930d01aea154cebd32212330a080e6ddb365bbf14",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/control_foundation_tests.cs": {
+      "sha256": "764acdbeaabba4db7ae2951488a6fafa8a21c54e921fb9fddf5a9ea39ff9efdd",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/control_foundation_tests.ps1": {
+      "sha256": "64a0c0e182f37a6ba9c5a55d59c21448a03eff81958dc4bf258a17374157acd4",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/control_helper_fixture.cs": {
+      "sha256": "b3045cd15752aa71bee5a7f0b3ecd2da6f28a36cdaeb740b1d38b4c22d39fcbb",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/control_packaged_smoke.py": {
+      "sha256": "9e443474a74d820f4159e163e1a7621ea28fb70fcb17dfe8b100325c34f32cb5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/ui_production_tests.cs": {
+      "sha256": "2da6fc57afc024adc2dd00190803e6f0bb1df327bb58bd7858d5d599b3ee6d5a",
+      "existed_at_base": true,
+      "base_sha256": "075c6349171c3511a1c6b3c649f2a25aa77abdb5557672144ca9a8de72697943"
+    },
+    "ui/control_models.cs": {
+      "sha256": "e5251813c0af152f609a2b581a8f7529e3487a8a944eeae9c0a99cae9f9a751d",
+      "existed_at_base": true,
+      "base_sha256": "5922753b2062750316d1f24fcb45c58f764a07a259f688537de1b5ce67e6cf63"
+    },
+    "ui/installation_control.cs": {
+      "sha256": "00edae9a517d949e3531d4a6f98b3d42cc24aab62bed8a99e681071fd3f46e1b",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "aa7cfe5fb95671fa740ee495fcec5f69cd43244c813032b97c236b16893de4e0",
+      "existed_at_base": true,
+      "base_sha256": "e81541dc7511c0f064f522e1dfdb82a675e91cb4b33ed854a0f5193e06b0b194"
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "624c768d53bdad97194ce6e8a573206dc1e9c81bbfb5c12f2eba0f96ef5eae48",
+      "existed_at_base": true,
+      "base_sha256": "5dad8de6e3f097dd29a887cfcec337f234d07711aa3c5b1603b403b41c445c59"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "8df0ff143d97eb98d685df718f75af582c87f8720479630a7306d6b1d2ad052d",
+      "existed_at_base": true,
+      "base_sha256": "8f6f96809efd973678eea3b108a9588acf4ccae5a676dda3b53047f06e7b5ad3"
+    }
+  }
+}
