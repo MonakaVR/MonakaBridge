@@ -5,6 +5,9 @@ import subprocess
 import tarfile
 import re
 from p2r_runtime_scope import approved_runtime,runtime_bytes,runtime_text
+# BEGIN WS01A EXACT AGENTS IMPORT
+from control_foundation_scope import verify_archive_agents
+# END WS01A EXACT AGENTS IMPORT
 BASE='a2a5df9640ffff5dcfac67faf845cc880286142f'
 FILES={
  'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py',
@@ -31,7 +34,12 @@ def verify(root):
                 old=old.replace(b'\r\n',b'\n')
                 # Removing an appended block also removes its intentional separating newline.
                 if member.name=='CMakeLists.txt':current=current.rstrip()+b'\n';old=old.rstrip()+b'\n'
-            assert current==old,'R2 production/test baseline changed: '+member.name
+            # BEGIN WS01A EXACT AGENTS COMPARISON
+            if member.name=='AGENTS.md':
+                verify_archive_agents(root,BASE,old,current)
+            else:
+                assert current==old,'R2 production/test baseline changed: '+member.name
+            # END WS01A EXACT AGENTS COMPARISON
     core=(root/'src/source/trusted_live_source.cpp').read_text()
     adapter=(root/'scripts/trusted_live_source_adapter.py').read_text()
     assert 'w::EncodeEnvelope' in core and 'config_.sourcePublisherId' in core

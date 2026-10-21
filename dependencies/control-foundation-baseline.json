@@ -38,12 +38,12 @@
       "base_sha256": "0bd565618e5f69d71f8878a002b0e807a109d0888237a09c1a9f718ab661e4e6"
     },
     "tests/control_foundation_scope.py": {
-      "sha256": "8726825dad58d66637814fcb6ddd96785dc3d5da2fb28f901defcc4caa34f222",
+      "sha256": "e17d5ee43813651f8e68be34e40624d23fe2e73300eaa5711c4f9de7ef8933a0",
       "existed_at_base": false,
       "base_sha256": null
     },
     "tests/control_foundation_scope_tests.py": {
-      "sha256": "9a6ddc98d6da2d7c6ecada69ad327aa9af8dfbb11e82b20fcfc86c923c3af5f8",
+      "sha256": "ebb2da3e6c9eb2e82626eec88699da523709cf91d11130b458534ef8f9529bcb",
       "existed_at_base": false,
       "base_sha256": null
     },
