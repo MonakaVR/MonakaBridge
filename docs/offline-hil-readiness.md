@@ -75,6 +75,14 @@ mapping revision and approved config. Lost identity/expiry revokes appearance
 for that registered object's lifetime; a new explicit snapshot needs restart.
 Rev3 is an approximate mesh; physical mount alignment is not certified.
 
+After approval, `monaka_prepare_presentation config.json health.json source
+device new-folder` prepares the explicit selection and byte-identical config
+snapshot. Health exposes the current publisher/input session; the tool rejects
+stale health, mismatched revisions, unapproved mappings and invalid PQ. It never
+installs the files. The operator reviews and installs that presentation folder
+before loading the intended driver. After a Bridge restart, prepare it again for
+the new publisher session. No source edit or build is involved.
+
 `driver_monaka_bridge/input_port` is a driver setting, default 29812. Mock Hosts
 provide only an OS-assigned ephemeral port through IVRSettings and load the
 ordinary built DLL. No real runtime is loaded. Shared wire/default ports and
