@@ -3,7 +3,7 @@
   "authority": "MonakaVR_Astra_Autonomous_Offline_HIL_Readiness_Codex_20261023.md",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "95021557e61d5f50fd023bf3ed9e62ad8b5acc7c282fe48bf6ff6278f09cb66c",
+      "sha256": "aa7730ddff45ad3cee63095e44be5c2913904407c7fbddf979fec416d7a50117",
       "parent": "42d44827f455bee9fec4860aaa6f8edd91003136db886984d42a9c0af65c5775"
     },
     "README.md": {
@@ -59,8 +59,12 @@
       "parent": null
     },
     "docs/offline-hil-readiness.md": {
-      "sha256": "65db3e00ce910042a6d639e285097fe64f96dc3950e08067c4a722a85fd367ee",
+      "sha256": "ee25a2d5cbd68f49326a5be8118f0b22f2172fa5bc26ecef7767a9173f1ee0c1",
       "parent": null
+    },
+    "include/monaka_bridge/bridge.hpp": {
+      "sha256": "4f666319bfcaf655cdcf4ebe7fd40d3f834e60c93e11ee8d46110fa0eae0eac4",
+      "parent": "d8769afc2127a0c3d42f367b359b42dce7453bce6e04a42c8a7af4fbc0240032"
     },
     "include/monaka_bridge/calibration_session.hpp": {
       "sha256": "c6c69bcde02cd2da1c73c0e787225448dded0f1d1004f45a3c8e44d3eb2e5898",
@@ -182,6 +186,10 @@
       "sha256": "2605782720000359c6e6f177aaa4d42aa0d483ff16a7b499a65fce02806a9d2a",
       "parent": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1"
     },
+    "src/routing/health.cpp": {
+      "sha256": "1b56c36ef174b8527675c76e75c9acb6187f3589a6a00f5fc72ac411c725a978",
+      "parent": "66b5575ceb7e1d154d247e0bbe1285ebf13f624eaced9fd85bf26da63ec159b7"
+    },
     "tests/calibration_client_process_tests.cs": {
       "sha256": "10e7373fcc7bbcbbd7a240b28201c0057664072dd9768a3a14d5ac14c6f13bd2",
       "parent": "e713704422350675550620b28f7b68627425fd92f81fe489b6f6dbf4bcd143e0"
@@ -213,6 +221,10 @@
     "tests/openvr_bootstrap_sentinel.cpp": {
       "sha256": "11af0ee2e44465911b659c3d8aba81653def896d4810382019156e1718af30bb",
       "parent": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047"
+    },
+    "tests/presentation_prepare_tests.py": {
+      "sha256": "6994aca9292b47fc4e5f715e93efa9b95f58a4ce0bf5a77d02395bd441a796c6",
+      "parent": null
     },
     "tests/provider_host/provider_host.cpp": {
       "sha256": "a65274fb7a7a8b77fe7ff75057d7f472ab974cb82bac1f5ee0dec513bd9d8083",
@@ -269,6 +281,10 @@
     "tools/calibration_local_api.cpp": {
       "sha256": "bef4c10a6b08850f814052550c9f1f6dc47b40604a0ef616573d100b603ba3ab",
       "parent": "2e0ff3b9be4af7b0935fbfc0a8a60a146be3d2835b0dfe29fea6ff41befcdd61"
+    },
+    "tools/prepare_presentation.cpp": {
+      "sha256": "1bbc7091e4bf22cb078ef861559193ee71b1ae5dea35d2ee888a8083883828b1",
+      "parent": null
     },
     "tools/trajectory_replay.cpp": {
       "sha256": "d45bb3432a3eaba90f5899128e4802c0589bdd68630df44330f1f8d64b54e9bc",

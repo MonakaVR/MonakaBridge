@@ -6,7 +6,7 @@
 namespace mb {
 using J=nlohmann::json;
 J healthSnapshot(const Bridge& bridge,std::int64_t now,std::int64_t unixMs){
- J status={{"policy",policyName(bridge.config().policy)},{"publisher_id",bridge.config().bridgeId},
+ J status={{"policy",policyName(bridge.config().policy)},{"publisher_id",bridge.config().bridgeId},{"publisher_session",bridge.publisherSession()},
   {"snapshot_unix_ms",unixMs},{"pose_stage","native_observation"},{"is_final_output",false},
   {"mapping_revision",bridge.config().revision},{"pose_timeout_ms",bridge.config().timeoutNs/1000000},{"malformed",bridge.registry.malformed},
   {"rejected",bridge.registry.rejected},{"collisions",bridge.registry.collisions},
@@ -19,7 +19,7 @@ J healthSnapshot(const Bridge& bridge,std::int64_t now,std::int64_t unixMs){
   if(d.pose&&d.pose->position)position=*d.pose->position;
   if(d.pose&&d.pose->orientation)orientation=*d.pose->orientation;
   status["devices"].push_back({
-   {"publisher_id",bridge.config().bridgeId},{"source",source},{"device",device},
+   {"publisher_id",bridge.config().bridgeId},{"source",source},{"device",device},{"input_session",s.session},{"input_clock",s.clock},
    {"space",d.space},{"convention",d.convention},{"revision",d.revision},
    {"coordinate_space",{{"id",d.space},{"convention",d.convention},{"revision",d.revision}}},
    {"pose_stage","native_observation"},{"is_final_output",false},
