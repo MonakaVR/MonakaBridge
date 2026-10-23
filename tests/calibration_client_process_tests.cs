@@ -36,7 +36,7 @@ class CalibrationClientProcessTests {
   Check(args.Length==3,"fixture, fault fixture and evidence root required");fixture=Path.GetFullPath(args[0]);faultFixture=Path.GetFullPath(args[1]);root=Path.GetFullPath(args[2]);System.IO.Directory.CreateDirectory(root);
   using(var run=new Run("same-result",false,"")){
    run.Result();var result=run.Client.Snapshot().Result;var display=result.DisplayCopy();((Dictionary<string,object>)display["result"])["world"]=new[]{999,0,0};
-   Check(Await(run.Client.PrepareAsync())["status"].Equals("PREPARED"),"prepare");var candidate=run.Client.Snapshot().Prepared;byte[] bytes=File.ReadAllBytes(candidate.CandidatePath);bool truncated;candidate.ReadPreview(out truncated);Check(!truncated,"synthetic candidate preview");
+   var prepared=Await(run.Client.PrepareAsync());Check(prepared["status"].Equals("PREPARED"),"prepare: "+CalibrationJson.Utf8.GetString(CalibrationJson.Encode(prepared,65536)));var candidate=run.Client.Snapshot().Prepared;byte[] bytes=File.ReadAllBytes(candidate.CandidatePath);bool truncated;candidate.ReadPreview(out truncated);Check(!truncated,"synthetic candidate preview");
    var saved=Await(run.Client.CommitAsync());Check(saved["status"].Equals("SAVED")&&run.Client.Snapshot().ActualOutcome=="SAVED","commit outcome");Check(Convert.ToBase64String(File.ReadAllBytes(run.Config))==Convert.ToBase64String(bytes),"same native exact candidate bytes");Check(run.Client.Snapshot().CommitMayHaveStarted,"commit prewrite latch missing");Closed(run.Client);Check(run.Client.Snapshot().ActualOutcome=="SAVED","close lost native save outcome");cases++;
   }
   using(var run=new Run("readonly",true,"")){

@@ -1,7 +1,7 @@
 # Explicit normal product source/reference set. No PowerShell policy bypass.
 set(MB_CONTROL_SOURCES
  ui/control_models.cs ui/installation_control.cs ui/steamvr_control_gui_main.cs
- ui/steamvr_control_wpf.cs ui/steamvr_control_tray.cs
+ ui/steamvr_control_wpf.cs ui/steamvr_control_tray.cs ui/bridge_icons.cs ui/service_lifecycle_control.cs
  ui/discovery_models.cs ui/discovery_panel.cs ui/discovery_window.cs
  ui/calibration_json.cs ui/calibration_profile.cs ui/calibration_models.cs
  ui/calibration_owned_process.cs ui/calibration_pipe_frames.cs
@@ -22,10 +22,13 @@ foreach(assembly WindowsBase PresentationCore PresentationFramework System.Xaml)
  list(APPEND MB_CONTROL_REFERENCES "/reference:${MB_NET48_REFERENCES}/${assembly}.dll")
 endforeach()
 set(MB_CONTROL_EXE "${CMAKE_CURRENT_BINARY_DIR}/control/$<CONFIG>/monaka_bridge_control.exe")
+set(MB_CONTROL_ICONS "${CMAKE_CURRENT_SOURCE_DIR}/ui/assets/monaka-bridge-tray-black.ico" "${CMAKE_CURRENT_SOURCE_DIR}/ui/assets/monaka-bridge-tray-white.ico")
+file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ui/assets/monaka-bridge-tray-black.ico" MB_BLACK_ICON)
+file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/ui/assets/monaka-bridge-tray-white.ico" MB_WHITE_ICON)
 add_custom_command(OUTPUT "${MB_CONTROL_EXE}"
  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/control/$<CONFIG>"
- COMMAND "${MB_CSC}" /nologo /utf8output /target:winexe /optimize+ "/out:${MB_CONTROL_EXE}" ${MB_CONTROL_REFERENCES} ${MB_CONTROL_NATIVE_SOURCES}
- DEPENDS ${MB_CONTROL_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/control_gui.cmake" VERBATIM)
+ COMMAND "${MB_CSC}" /nologo /utf8output /target:winexe /optimize+ "/out:${MB_CONTROL_EXE}" "/win32icon:${MB_WHITE_ICON}" "/resource:${MB_BLACK_ICON},MonakaBridge.Icons.black.ico" "/resource:${MB_WHITE_ICON},MonakaBridge.Icons.white.ico" ${MB_CONTROL_REFERENCES} ${MB_CONTROL_NATIVE_SOURCES}
+ DEPENDS ${MB_CONTROL_SOURCES} ${MB_CONTROL_ICONS} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/control_gui.cmake" VERBATIM)
 add_custom_target(monaka_bridge_control ALL DEPENDS "${MB_CONTROL_EXE}")
 if(BUILD_TESTING AND TARGET calibration_runtime_process_fixture)
  foreach(group json profile models job launch client wpf b4)

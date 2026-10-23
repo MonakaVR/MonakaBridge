@@ -1,0 +1,10 @@
+{
+  "model": "pico_motion_tracker",
+  "property": "{monaka_bridge}pico_motion_tracker",
+  "source_step_sha256": "436509dd665aeca53d80fa33c35615d4d35834073a9481dcc876447dc65d55cd",
+  "files": {
+    "pico_motion_tracker.mtl": "52822006064a093cfcc9566cca66fb0df5a0d83b9276bafeaaad7ddf1f687869",
+    "pico_motion_tracker.obj": "bc7a72ad9c50cb7af3755acea19cb2ed97cf9c6785be07909abdc3eaa78fc768",
+    "pico_motion_tracker.png": "ff06f81844982198dc541dd286b282842071f4e56b8c7ce1631ac0becb354f59"
+  }
+}

@@ -1,5 +1,6 @@
 #include "helpers.hpp"
 #include "monaka_bridge/trajectory_calibration.hpp"
+#include "monaka_bridge/trajectory_result_json.hpp"
 #include <iostream>
 #include <random>
 
@@ -24,6 +25,9 @@ int main()try{
     auto sign=mb::solveTrajectory(synthetic(0,false,true),1);close(sign.world,W,1e-7);close(sign.extrinsic,E,1e-7);
     auto noisy=mb::solveTrajectory(synthetic(.0015),1);close(noisy.world,W,.015);close(noisy.extrinsic,E,.015);CHECK(noisy.residuals.rmsPosition<.01);
     auto robust=mb::solveTrajectory(synthetic(.001,true),1);close(robust.world,W,.02);close(robust.extrinsic,E,.02);CHECK(robust.inliers<robust.pairs&&robust.inliers>robust.pairs*.9);CHECK(robust.allResiduals.maxPosition>.1&&robust.residuals.maxPosition<.05);
+    auto singlePairs=exact;singlePairs[123].reference.pose.translation[0]+=.3;auto single=mb::solveTrajectory(singlePairs,1);CHECK(single.inliers==single.pairs-1&&single.allResiduals.maxPosition>.1);
+    for(const auto& output:{result,noisy,single,robust}){auto j=mb::trajectoryResultJson(output);CHECK(nlohmann::json::parse(j.dump())==j);CHECK(j.at("max_position").get<double>()==output.residuals.maxPosition);CHECK(j.at("all_residuals").at("max_position").get<double>()==output.allResiduals.maxPosition);}
+    for(double bad:{std::numeric_limits<double>::quiet_NaN(),std::numeric_limits<double>::infinity()}){auto invalid=result;invalid.residuals.maxPosition=bad;bool rejected=false;try{mb::trajectoryResultJson(invalid);}catch(const std::exception&){rejected=true;}CHECK(rejected);}
     for(int mode=0;mode<4;++mode){auto degenerate=exact;for(std::size_t i=0;i<degenerate.size();++i){auto& v=degenerate[i].source.pose;
         if(mode==0)v={mb::Quat{0,0,0,1},{std::sin(i*.02),0,0}};
         if(mode==1)v.rotation=axis(1,std::sin(i*.02));

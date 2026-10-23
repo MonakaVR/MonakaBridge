@@ -1,5 +1,6 @@
 #include "monaka_bridge/calibration_runtime_provider.hpp"
 #include "monaka_bridge/config_transaction.hpp"
+#include "monaka_bridge/output_approval_authority.hpp"
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -45,12 +46,20 @@ public:
 std::unique_ptr<CaptureProvider> makeProductionCaptureProvider(){return std::make_unique<RuntimeCaptureProvider>(std::make_unique<OpenVrReference>(),std::make_unique<MirrorUdp>());}
 int calibrationLocalDispatch(int argc,char** argv){
  if(argc!=2)return -1;std::string mode=argv[1];
+ if(mode=="--hil-runtime-path"){
+  std::array<char,32768> runtime{};std::uint32_t required=0;
+  bool available=vr::VR_GetRuntimePath(runtime.data(),static_cast<std::uint32_t>(runtime.size()),&required);
+  Json out={{"available",available&&required<=runtime.size()},{"runtime_path",available&&required<=runtime.size()?runtime.data():""},{"runtime_initialized",false}};
+  for(const char* key:{"USERPROFILE","LOCALAPPDATA","TEMP","HOME"}){char value[32768]{};auto n=GetEnvironmentVariableA(key,value,32768);out[key]=n&&n<32768?value:"";}
+  std::cout<<out.dump()<<'\n';return 0;
+ }
  if(mode=="--local-api-version"){std::cout<<productionCalibrationVersion().dump()<<'\n';return 0;}
  if(mode!="--local-api")return -1;
  try{
   wchar_t path[32768];DWORD length=GetModuleFileNameW(nullptr,path,32768);need(length&&length<32768,"HELPER_PATH_UNAVAILABLE");
   wchar_t local[32768];DWORD n=GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768);need(n&&n<32768,"OWNER_APPDATA_UNAVAILABLE");
   SessionEnvironment env;env.draftRoot=std::filesystem::path(local)/"MonakaBridge"/"CalibrationDrafts";env.helperPath=std::filesystem::path(path).u8string();env.helperSha256=sha256(readConfigBytes(std::filesystem::path(path)));
+  env.outputApprovalAuthority=makeProductionOutputApprovalAuthority(std::filesystem::path(path).parent_path()/"OutputApproval");
   auto provider=makeProductionCaptureProvider();return runLocalApi(*provider,std::move(env));
  }catch(const std::exception& e){std::cout<<Json{{"status","UNAVAILABLE"},{"reason",diagnostic(e)}}.dump()<<'\n';return 2;}
 }

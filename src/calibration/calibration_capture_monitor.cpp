@@ -29,7 +29,8 @@ void CaptureMonitor::tick(std::int64_t now){
 }
 void CaptureMonitor::checkLifetime(std::int64_t now){
  check(now-created_<20*60*second,"WORKER_TTL_EXPIRED");
- check(state_.lastValidPose>=0&&now-state_.lastValidPose<second&&state_.lastValidReference>=0&&now-state_.lastValidReference<second,"LIVENESS_GAP");
+ check(state_.lastValidPose>=0&&now-state_.lastValidPose<second,"SOURCE_LIVENESS_GAP");
+ check(state_.lastValidReference>=0&&now-state_.lastValidReference<second,"REFERENCE_LIVENESS_GAP");
 }
 void CaptureMonitor::requireLive(std::int64_t now,bool fresh){
  if(!state_.fault.empty())throw std::runtime_error(state_.fault);
@@ -39,6 +40,10 @@ RecordingDelivery CaptureMonitor::consume(const ProviderBatch& b,bool recording,
  if(!state_.fault.empty())throw std::runtime_error(state_.fault);
  check(now>=lastNow_,"MONOTONIC_CLOCK_ROLLBACK");lastNow_=now;
  check(b.frames.size()<=128&&b.references.size()<=128,"PROVIDER_BATCH_LIMIT");
+ check(input_.session==b.identity.session,"SOURCE_SESSION_CHANGED");
+ check(input_.clock==b.identity.clock,"SOURCE_CLOCK_CHANGED");
+ check(input_.revision==b.identity.revision,"INPUT_REVISION_CHANGED");
+ check(input_.referenceGeneration==b.identity.referenceGeneration,"REFERENCE_GENERATION_CHANGED");
  check(sameIdentity(input_,b.identity)&&!b.eventOverflow,"INPUT_REFERENCE_FRAME_CONFLICT");check(!b.absent,"EXPLICIT_ABSENCE");
  check(b.referenceReceiptNs<=now&&b.referenceReceiptNs>=0&&(state_.referenceAt<0||b.referenceReceiptNs>=state_.referenceAt),"REFERENCE_RECEIPT_CLOCK_CHANGED");
  state_.referenceAt=b.referenceReceiptNs;state_.referenceValid=b.referenceValid;
@@ -47,6 +52,9 @@ RecordingDelivery CaptureMonitor::consume(const ProviderBatch& b,bool recording,
  for(const auto& f:b.frames){
   auto handle=[&](const auto& p,bool pose){
    if(p.source_id!=input_.source||p.device_id!=input_.device)return;
+   check(p.session_id==input_.session,"SOURCE_SESSION_CHANGED");
+   check(p.clock_id==input_.clock,"SOURCE_CLOCK_CHANGED");
+   check(p.coordinate_space.revision==input_.revision,"INPUT_REVISION_CHANGED");
    check(p.session_id==input_.session&&p.clock_id==input_.clock&&p.coordinate_space.id==input_.space&&p.coordinate_space.convention==input_.convention&&p.coordinate_space.revision==input_.revision&&f.peer==input_.peer,"SELECTED_LIFETIME_PEER_SPACE_CONFLICT");
    std::string raw;c1::Error error;check(c1::EncodeEnvelope(f.envelope,raw,error),"INVALID_PROVIDER_ENVELOPE");check(raw.size()<=4096,"PROVIDER_ENVELOPE_LIMIT");
    check(monaka::input::CapabilitySet(p.capabilities)==monaka::input::CapabilitySet(declaration_),"DECLARATION_SCOPE_CHANGED");

@@ -111,7 +111,7 @@ struct SessionEnvironment {
     // Native-only deterministic fault barriers; never populated by JSON/CLI.
     std::function<void(const char*)> ioHook;
     std::function<void()> draftPublishHook;
-    // Native test injection only. Production never installs an unadopted policy.
+    // Production file authority or isolated native test implementation.
     std::shared_ptr<const OutputApprovalAuthority> outputApprovalAuthority;
 };
 
@@ -159,6 +159,7 @@ public:
     const InputWitness* frozenInput()const;
     std::pair<std::int64_t,std::optional<std::int64_t>> highwaters()const;
     CaptureSnapshot captureSnapshot()const;
+    Json invalidationDiagnostic()const;
     std::size_t solveCalls()const;
     std::size_t commitCalls()const;
 private:

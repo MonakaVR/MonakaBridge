@@ -15,7 +15,7 @@ namespace MonakaBridge {
    if(CalibrationJson.Text(value,"production_capture",128)!="OPENVR_BACKGROUND_MIRROR"||CalibrationJson.Text(value,"standing_policy",128)!="EXACT_FINITE_NUMERIC")throw new InvalidOperationException("Unsupported calibration provider/Standing policy");
    CalibrationJson.Text(value,"runtime_validation",128);
    var features=value["features"] as IList;if(features==null)throw new InvalidOperationException("Helper feature list required");
-    var known=new HashSet<string>(new[]{"idle_invalidation","phase_events","witness_details","immutable_result_commit","static_points_policy1","independent_output_review"},StringComparer.Ordinal);var actual=new HashSet<string>(StringComparer.Ordinal);
+    var known=new HashSet<string>(new[]{"idle_invalidation","phase_events","witness_details","immutable_result_commit","static_points_policy1","independent_output_review","max_residuals_v1","first_failure_v1","file_output_authority_v1"},StringComparer.Ordinal);var actual=new HashSet<string>(StringComparer.Ordinal);
    foreach(object feature in features){if(!(feature is string)||!known.Contains((string)feature)||!actual.Add((string)feature))throw new InvalidOperationException("Unsupported/duplicate calibration helper feature");}
     foreach(var required in new[]{"idle_invalidation","phase_events","witness_details","immutable_result_commit"})if(!actual.Contains(required))throw new InvalidOperationException("Required calibration helper features missing");
     if(actual.Contains("static_points_policy1")!=CalibrationJson.Boolean(value,"static_supported")||actual.Contains("independent_output_review")!=CalibrationJson.Boolean(value,"output_approval"))throw new InvalidOperationException("B4 feature/capability mismatch");
@@ -31,6 +31,8 @@ namespace MonakaBridge {
  // presentation are copies; C# never constructs a world/extrinsic for commit.
  internal sealed class CalibrationNativeResult {
    internal readonly string ResultId,ConfigSha256,NativeJson;internal readonly bool Static;
+   internal readonly double? MaxPosition,MaxOrientation,AllMaxPosition,AllMaxOrientation;
+   static double? Metric(Dictionary<string,object> value,string key){object raw;if(!value.TryGetValue(key,out raw)||raw==null)return null;double n=Convert.ToDouble(raw,System.Globalization.CultureInfo.InvariantCulture);if(Double.IsNaN(n)||Double.IsInfinity(n)||n<0)throw new InvalidOperationException("Invalid native residual");return n;}
   internal CalibrationNativeResult(byte[] line) {
    var response=CalibrationJson.Object(line,CalibrationContract.LineBytes,32768);
    if(CalibrationJson.Text(response,"status",128)!="RESULT_READY")throw new InvalidOperationException("Native result required");
@@ -40,6 +42,8 @@ namespace MonakaBridge {
     foreach(string key in new[]{"world","mount_existing"})if(!value.ContainsKey(key)||!(value[key] is Dictionary<string,object>))throw new InvalidOperationException("Native W/M display missing: "+key);
     if(!value.ContainsKey("extrinsic_not_mount")||(Static?value["extrinsic_not_mount"]!=null:!(value["extrinsic_not_mount"] is Dictionary<string,object>)))throw new InvalidOperationException("Native E display contract changed");
     if(Static&&(!value.ContainsKey("rms_orientation")||value["rms_orientation"]!=null))throw new InvalidOperationException("Static orientation residual must be not estimated");
+   MaxPosition=Metric(value,"max_position");MaxOrientation=Metric(value,"max_orientation");
+   object all;if(value.TryGetValue("all_residuals",out all)){var metrics=all as Dictionary<string,object>;if(metrics==null)throw new InvalidOperationException("Native all-pair residuals required");AllMaxPosition=Metric(metrics,"max_position");AllMaxOrientation=Metric(metrics,"max_orientation");}
    NativeJson=CalibrationJson.Utf8.GetString(line);
   }
   internal Dictionary<string,object> DisplayCopy(){return CalibrationJson.Object(CalibrationJson.Utf8.GetBytes(NativeJson),CalibrationContract.LineBytes,32768);}
