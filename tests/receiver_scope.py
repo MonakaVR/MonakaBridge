@@ -28,10 +28,12 @@ def verify(root):
     # END 5AI-S LIVE SOURCE SCOPE
     assert changes<=FILES|approved_runtime(root),('receiver scope',changes-FILES)
     assert all((root/n).is_file() for n in FILES)
+    from p2r_runtime_scope import RuntimeArchiveReview
+    projection=RuntimeArchiveReview(root)
     with tarfile.open(fileobj=io.BytesIO(git('archive',BASE))) as tree:
         for member in tree:
             if not member.isfile():continue
-            old=tree.extractfile(member).read();current=runtime_bytes(root,member.name,(root/member.name).read_bytes())
+            old=tree.extractfile(member).read();current=projection.project(member.name,(root/member.name).read_bytes())
             # BEGIN 5AI-S LIVE SOURCE SCOPE
             if member.name in {'CMakeLists.txt','tests/publisher_identity_scope.py'}:
                 current=historical_source(current.decode().replace('\r\n','\n')).encode()
@@ -46,6 +48,7 @@ def verify(root):
                 current=strip(current,'    # BEGIN 5AI-R2 RECEIVER SCOPE\n','    # END 5AI-R2 RECEIVER SCOPE\n').replace('PATHS|approved_receiver(root)|','PATHS|').encode()
                 old=old.replace(b'\r\n',b'\n')
             assert current==old,'5AI-P production/test baseline changed: '+member.name
+    projection.verify_current()
     provenance=json.loads((root/'receiver/provenance.json').read_text())
     for entry in provenance['files']:
         raw=(root/entry['path']).read_bytes().replace(b'\r\n',b'\n')

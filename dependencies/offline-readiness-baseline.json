@@ -222,6 +222,10 @@
       "sha256": "11af0ee2e44465911b659c3d8aba81653def896d4810382019156e1718af30bb",
       "parent": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047"
     },
+    "tests/p2r_runtime_scope.py": {
+      "sha256": "2b59db2a8659fc4861c9a67f884b0cd08370722e11050f3a14848796bb3b9398",
+      "parent": "3a3b59104a9202ecc101c09c7b85e693054af88af86d4fa42afec6b70a96c60d"
+    },
     "tests/presentation_prepare_tests.py": {
       "sha256": "6994aca9292b47fc4e5f715e93efa9b95f58a4ce0bf5a77d02395bd441a796c6",
       "parent": null
@@ -237,6 +241,10 @@
     "tests/provider_host/strict_host.hpp": {
       "sha256": "9b9280448b79252568667ab4e0945fe1116003307f48434d2de4f2db38afd38f",
       "parent": null
+    },
+    "tests/receiver_scope.py": {
+      "sha256": "cf4431d1acc68da9d85bf4afe01c8fced715404d5f13d9ce8cd251962e7cbb38",
+      "parent": "e9d544a9e626c32721ae4e37459c6852fab4a54a7078a1a8feeb05593f972b64"
     },
     "tests/render_model/asset_tests.py": {
       "sha256": "b8ecafe260479608264c6852b8851bc04251beee085bea49df906c683ee3a9f0",
@@ -269,6 +277,10 @@
     "tests/trajectory_calibration_tests.cpp": {
       "sha256": "6afd90ec4239af37ee0b89b2bdd79ccb8b2626ac5b54f959ca6c5d28db625851",
       "parent": "5389ef1e8068db560b3505ab42115218b38a37769f3f8b8ddbf83af7e004ffa3"
+    },
+    "tests/trusted_live_source_scope.py": {
+      "sha256": "a552c3b15f902f3d9985836e1bc0a08a188e67b0017b7d9edf76e5a9b963d8db",
+      "parent": "0908b4ef0de7b0ae8dbd6c36697367f4562fb05a3ff0f24a0a28824e5917252b"
     },
     "tests/verify_common_world_dormancy.py": {
       "sha256": "7c172b25da77ec757406d9e19642237510490d3249b92787817c3ba6afe66ce3",
