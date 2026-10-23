@@ -1,0 +1,15 @@
+from pathlib import Path
+import copy, importlib.util
+spec=importlib.util.spec_from_file_location('preflight',Path(__file__).resolve().parents[1]/'scripts/hil_preflight.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+normal={'USERPROFILE':'C:/Users/operator','LOCALAPPDATA':'C:/Users/operator/AppData/Local','TEMP':'C:/Users/operator/AppData/Local/Temp','HOME':'',
+ 'vrpaths_sha256':'registry','runtime_path':'C:/Steam/SteamVR','runtime_executable':'C:/Steam/SteamVR/bin/win64/vrserver.exe','runtime_exists':True,
+ 'helper_path':'C:/reviewed/helper.exe','helper_sha256':'helper','config_path':'C:/reviewed/config.json','config_sha256':'config','sdk_matches':True,
+ 'helper_runtime_path':'C:/Steam/SteamVR','drivers':[{'path':'C:/driver','exists':True,'manifest_sha256':'driver'}],'mirror_port_in_use':False,
+ 'services':[{'path':'C:/reviewed/service.exe','sha256':'service'}]}
+normal['helper_environment']={k:normal[k] for k in ('USERPROFILE','LOCALAPPDATA','TEMP','HOME')}
+assert module.evaluate_environment(normal,normal)==[]
+cases=[('TEMP','C:/isolated'),('HOME','C:/isolated'),('LOCALAPPDATA','C:/isolated'),('USERPROFILE','C:/isolated'),('vrpaths_sha256','other'),('runtime_exists',False),('sdk_matches',False),('helper_path','C:/copy/helper.exe'),('helper_sha256','modified'),('helper_runtime_path','C:/other'),('mirror_port_in_use',True),('config_sha256','changed'),('services',[]),('drivers',[{'path':'C:/stale','exists':False}])]
+for field,value in cases:
+    actual=copy.deepcopy(normal);actual[field]=value
+    assert module.evaluate_environment(actual,normal),(field,value)
+print('PASS normal profile/current expected environment and',len(cases),'read-only environment refusals; synthetic snapshots, no runtime started')

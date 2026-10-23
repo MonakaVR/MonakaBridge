@@ -12,6 +12,7 @@ namespace MonakaBridge {
   readonly GuiLaunchOptions options;
   readonly Forms.ApplicationContext context=new Forms.ApplicationContext();
   readonly Forms.NotifyIcon icon;
+  System.Drawing.Icon trayImage;bool lightTaskbar;
   readonly Forms.ToolStripMenuItem statusItem=new Forms.ToolStripMenuItem{Enabled=false};
   readonly Dictionary<string,Forms.ToolStripMenuItem> policies=new Dictionary<string,Forms.ToolStripMenuItem>();
   readonly HealthReader reader=new HealthReader();
@@ -20,8 +21,16 @@ namespace MonakaBridge {
   HealthReadResult health;
   Process controlProcess;
   bool disposed,busy,needsReload;string helperIssue;
-  internal SteamVrControlTray(string root):this(GuiLaunchOptions.FromRoot(root)){}
-  internal SteamVrControlTray(GuiLaunchOptions target){
+  readonly PcServiceLifecycle.Control serviceControl;
+  readonly EventWaitHandle openRequest;
+  readonly Forms.ToolStripMenuItem exitItem;
+  readonly bool showWindow;
+  bool exitPending;string lifecycleIssue;
+  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow){
+   showWindow=openWindow;
+   serviceControl=new PcServiceLifecycle.Control(@"Local\MonakaBridge_ServiceLifecycle_29810",serviceExecutable,
+    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MonakaBridge","service-logs"));
+   openRequest=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\MonakaBridge_OpenControl_29810");
    options=target;dispatcher.CreateControl();var menu=new Forms.ContextMenuStrip();
    menu.Items.Add(new Forms.ToolStripMenuItem(options.InstallationName){Enabled=false});menu.Items.Add(statusItem);
    var output=new Forms.ToolStripMenuItem("Save output policy");
@@ -30,19 +39,36 @@ namespace MonakaBridge {
     item.Click+=delegate{SetRoute(selected);};policies.Add(value,item);output.DropDownItems.Add(item);
    }
    menu.Items.Add(output);
-   foreach(string operation in new[]{"Start","Stop","Restart"})menu.Items.Add(new Forms.ToolStripMenuItem(operation+" Bridge (unsupported)"){Enabled=false,ToolTipText=options.ServiceBlockReason()});
    menu.Items.Add("Open Bridge Control...",null,delegate{OpenControlWindow();});
    menu.Items.Add("Reload target / review status",null,delegate{needsReload=false;RefreshTarget();});
-   menu.Items.Add("Exit",null,delegate{Exit();});
-   icon=new Forms.NotifyIcon{Icon=System.Drawing.SystemIcons.Application,Text="Monaka Bridge",ContextMenuStrip=menu,Visible=true};
+   exitItem=new Forms.ToolStripMenuItem("Exit");exitItem.Click+=delegate{Exit();};menu.Items.Add(exitItem);
+   lightTaskbar=BridgeIcons.LightTaskbar();trayImage=BridgeIcons.TrayIcon();
+   icon=new Forms.NotifyIcon{Icon=trayImage,Text="Monaka Bridge",ContextMenuStrip=menu,Visible=true};
    icon.DoubleClick+=delegate{OpenControlWindow();};menu.Opening+=delegate{RefreshTarget();};
-   timer.Tick+=delegate{ReadHealth();};timer.Start();RefreshTarget();ReadHealth();
+   timer.Tick+=delegate{RefreshIcon();ReadHealth();if(openRequest.WaitOne(0))OpenControlWindow();};timer.Start();RefreshTarget();ReadHealth();
   }
-  internal void Run(){OpenControlWindow();Forms.Application.Run(context);}
+  internal void Run(){
+   ThreadPool.QueueUserWorkItem(delegate{
+    string error=null;try{serviceControl.EnsureRunning(GuiLaunchOptions.Quote(options.ConfigFile));}catch(Exception e){error=e.Message;}
+    try{dispatcher.BeginInvoke((Action)delegate{
+     lifecycleIssue=error;RefreshRouteUi();
+     if(error!=null)icon.ShowBalloonTip(5000,"Monaka Bridge",error,Forms.ToolTipIcon.Error);
+     else if(showWindow)OpenControlWindow();
+    });}catch(InvalidOperationException){}
+   });
+   Forms.Application.Run(context);
+  }
+  void RefreshIcon(){
+   bool light=BridgeIcons.LightTaskbar();if(light==lightTaskbar)return;
+   var next=BridgeIcons.TrayIcon();var previous=trayImage;
+   icon.Icon=next;trayImage=next;lightTaskbar=light;previous.Dispose();
+  }
   void RefreshTarget(){helperIssue=options.ValidateEditing();RefreshRouteUi();}
   void ReadHealth(){reader.Request(options.HealthFile,delegate(Action apply){dispatcher.BeginInvoke(apply);},delegate(HealthReadResult result){health=result;RefreshRouteUi();});}
   void RefreshRouteUi(){
    if(disposed)return;
+   if(exitPending){statusItem.Text="Stopping Bridge; tray retained until process exit is confirmed";return;}
+   if(lifecycleIssue!=null){statusItem.Text="Service control: "+lifecycleIssue;return;}
    try{RefreshRoutePresentation();}catch(Exception e){
     // Diagnostic/presentation failures never escape a WinForms callback and
     // cannot establish runtime application or write permission.
@@ -83,6 +109,7 @@ namespace MonakaBridge {
   void RequireRouteChange(){options.RequireEdit();if(busy||needsReload||ControlAlive())throw new InvalidOperationException("Reload and review before saving");}
   bool ControlAlive(){return controlProcess!=null&&!controlProcess.HasExited;}
   void OpenControlWindow(){
+   if(exitPending)return;
    try{
     if(busy)throw new InvalidOperationException("Wait for the pending tray save");
     if(ControlAlive()){icon.ShowBalloonTip(1500,"Monaka Bridge","Bridge Control is already open.",Forms.ToolTipIcon.Info);return;}
@@ -90,7 +117,24 @@ namespace MonakaBridge {
     controlProcess=Process.Start(new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,options.WindowArguments()){UseShellExecute=false,CreateNoWindow=true});RefreshRouteUi();
    }catch(Exception e){Forms.MessageBox.Show(e.Message,"Bridge Control",Forms.MessageBoxButtons.OK,Forms.MessageBoxIcon.Error);}
   }
-  void Exit(){context.ExitThread();}
-  public void Dispose(){if(disposed)return;disposed=true;timer.Stop();timer.Dispose();reader.Dispose();icon.Visible=false;icon.Dispose();dispatcher.Dispose();context.Dispose();if(controlProcess!=null)controlProcess.Dispose();}
+  void Exit(){
+   if(exitPending)return;
+   if(busy){icon.ShowBalloonTip(4000,"Monaka Bridge","Wait for the pending save before Exit",Forms.ToolTipIcon.Warning);return;}
+   exitPending=true;exitItem.Enabled=false;RefreshRouteUi();
+   ThreadPool.QueueUserWorkItem(delegate{
+    string error;
+    new PcServiceLifecycle.ExitGate().TryExit(delegate{
+     if(ControlAlive()){
+      controlProcess.CloseMainWindow();if(!controlProcess.WaitForExit(1000))throw new IOException("Close Bridge Control first; service and tray retained");
+     }
+     serviceControl.StopAndWait(5000);
+    },delegate{
+     dispatcher.BeginInvoke((Action)delegate{context.ExitThread();});
+    },out error);
+    if(error!=null)try{dispatcher.BeginInvoke((Action)delegate{ExitFailed(error);});}catch(InvalidOperationException){}
+   });
+  }
+  void ExitFailed(string error){exitPending=false;exitItem.Enabled=true;lifecycleIssue=error;RefreshRouteUi();icon.ShowBalloonTip(5000,"Bridge stop failed",error,Forms.ToolTipIcon.Error);}
+  public void Dispose(){if(disposed)return;disposed=true;timer.Stop();timer.Dispose();reader.Dispose();openRequest.Dispose();serviceControl.Dispose();icon.Visible=false;icon.Dispose();trayImage.Dispose();dispatcher.Dispose();context.Dispose();if(controlProcess!=null)controlProcess.Dispose();}
  }
 }

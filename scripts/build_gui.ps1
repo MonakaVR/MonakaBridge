@@ -7,13 +7,18 @@ $GuiSource = Join-Path $RepoRoot "ui\steamvr_control_wpf.cs"
 $GuiTraySource = Join-Path $RepoRoot "ui\steamvr_control_tray.cs"
 $GuiMainSource = Join-Path $RepoRoot "ui\steamvr_control_gui_main.cs"
 $GuiModelsSource = Join-Path $RepoRoot "ui\control_models.cs"
+$LifecycleSource = Join-Path $RepoRoot "ui\service_lifecycle_control.cs"
 $InstallationSource = Join-Path $RepoRoot "ui\installation_control.cs"
+$IconSource = Join-Path $RepoRoot "ui\bridge_icons.cs"
+$BlackIcon = Join-Path $RepoRoot "ui\assets\monaka-bridge-tray-black.ico"
+$WhiteIcon = Join-Path $RepoRoot "ui\assets\monaka-bridge-tray-white.ico"
+$IconInputs = @($IconSource, $BlackIcon, $WhiteIcon)
 $CalibrationSources = @('calibration_json.cs','calibration_profile.cs','calibration_models.cs','calibration_owned_process.cs','calibration_pipe_frames.cs','calibration_process_client.cs','calibration_panel.cs','calibration_profile_dialog.cs') | ForEach-Object { Join-Path $RepoRoot ('ui/' + $_) }
 $DiscoverySources = @('discovery_models.cs','discovery_panel.cs','discovery_window.cs') | ForEach-Object { Join-Path $RepoRoot ('ui/' + $_) }
 $BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "build-gui" }
 $GuiExe = Join-Path $BuildDir "monaka_bridge_control.exe"
 
-foreach ($path in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource) + $CalibrationSources + $DiscoverySources)) {
+foreach ($path in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $LifecycleSource) + $CalibrationSources + $DiscoverySources + $IconInputs)) {
     if (-not (Test-Path $path)) {
         throw "SteamVR control GUI source was not found: $path"
     }
@@ -121,7 +126,7 @@ $WpfRefs = Get-WpfReferenceSet
 $needsBuild = $Force -or -not (Test-Path $GuiExe)
 if (-not $needsBuild) {
     $exeTime = (Get-Item $GuiExe).LastWriteTimeUtc
-    foreach ($source in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $PSCommandPath) + $CalibrationSources + $DiscoverySources)) {
+    foreach ($source in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $LifecycleSource, $PSCommandPath) + $CalibrationSources + $DiscoverySources + $IconInputs)) {
         if ((Get-Item $source).LastWriteTimeUtc -gt $exeTime) {
             $needsBuild = $true
             break
@@ -140,6 +145,9 @@ if ($needsBuild) {
         "/target:winexe",
         "/optimize+",
         "/out:$GuiExe",
+        "/win32icon:$WhiteIcon",
+        "/resource:$BlackIcon,MonakaBridge.Icons.black.ico",
+        "/resource:$WhiteIcon,MonakaBridge.Icons.white.ico",
         "/reference:System.dll",
         "/reference:System.Core.dll",
         "/reference:System.Web.Extensions.dll",
@@ -153,7 +161,9 @@ if ($needsBuild) {
         $GuiTraySource,
         $GuiModelsSource,
         $InstallationSource,
-        $GuiMainSource
+        $IconSource,
+        $GuiMainSource,
+        $LifecycleSource
     )
 
     $compilerArgs += $CalibrationSources
@@ -166,4 +176,4 @@ if ($needsBuild) {
 }
 
 Write-Host "WPF GUI/tray: $GuiExe"
-if ($Run) { Start-Process -FilePath $GuiExe -ArgumentList @('"'+$RepoRoot+'"') -WindowStyle Hidden }
+if ($Run) { throw "Use the managed service/tray entry with explicit service identity; build_gui.ps1 only builds" }

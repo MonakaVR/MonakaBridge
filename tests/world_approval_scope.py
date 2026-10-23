@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from offline_readiness_scope import approved_offline,project as readiness_project,project_text as readiness_project_text
 PARENT='7e95371b145a516e51dbba3beb8d526b4c91dd9f'
 PIN='dependencies/world-approval-baseline.json'
 FILES={'tests/calibration_session_scope.py','tests/measurement_target_scope.py','CMakeLists.txt','tools/bridge_config.cpp','src/calibration/world_calibration.cpp','include/monaka_bridge/world_calibration.hpp','tests/world_calibration_tests.cpp','tests/trajectory_calibration_tests.cpp','docs/configuration.md','docs/world-approval-invalidation.md','tests/responsibility_scope.py','tests/world_approval_scope.py','tests/world_approval_scope_tests.py','tests/world_approval_invalidation_tests.cpp','tests/world_approval_b4_tests.cpp','tests/world_approval_cli_tests.py','tests/world_approval_gui_tests.cs','tests/run_world_approval_gui.py','tests/fixtures/world-approval/approved-groups.json'}
@@ -14,7 +15,7 @@ NATIVE_PATCHES={
  'src/calibration/world_calibration.cpp':('            binding.inputRevision == measured.binding.inputRevision)\n            binding.world = transform;', '            binding.inputRevision == measured.binding.inputRevision) {\n            binding.world = transform;\n            binding.spaceApproved = false;\n        }')}
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def actual(root,name):
- try:return (Path(root)/name).read_bytes()
+ try:return readiness_project(root,name,(Path(root)/name).read_bytes())
  except OSError as e:raise RuntimeError('World approval missing actual source: '+name) from e
 @lru_cache(maxsize=None)
 def repository(location):
@@ -37,6 +38,7 @@ def metadata(root):
  except (KeyError,TypeError,ValueError) as e:raise RuntimeError('World approval malformed receipt') from e
 def approved_world_approval(root,git_root=None):
  root=Path(root)
+ extra=approved_offline(root,git_root)
  if not (root/PIN).exists():return set()
  p=metadata(root);repo=git_root or root
  for name,e in p['files'].items():
@@ -57,7 +59,7 @@ def approved_world_approval(root,git_root=None):
  if 'digest(world_project(root,name,(root/name).read_bytes(),git_root))' not in actual(root,'tests/measurement_target_scope.py').decode():raise RuntimeError('World approval B1 protected-source hook lost')
  legacy=actual(root,'tests/calibration_session_scope.py').decode()
  if 'approved_world_approval(root);proof={}' not in legacy or 'b=world_project(root,n,(root/n).read_bytes())' not in legacy:raise RuntimeError('World approval B2 legacy-source hook lost')
- return FILES|FROZEN|{PIN}
+ return FILES|FROZEN|{PIN}|extra
 @lru_cache(maxsize=None)
 def versions(repo,name):
  values={digest(immutable(repo,name))}
@@ -76,6 +78,7 @@ def versions(repo,name):
  return values
 def world_project(root,name,raw,git_root=None):
  root=Path(root)
+ raw=readiness_project(root,name,raw,git_root)
  if name not in FILES or not (root/PIN).exists():return raw
  e=metadata(root)['files'][name];sha=digest(raw)
  if sha==e['sha256']:return historical(git_root or root,name) if e['parent'] is not None else raw
@@ -83,6 +86,7 @@ def world_project(root,name,raw,git_root=None):
  raise RuntimeError('World approval foreign predecessor view: '+name)
 def world_project_text(root,text):
  root=Path(root)
+ text=readiness_project_text(root,text)
  if not (root/PIN).exists():return text
  sha=digest(text.encode());matches=[n for n,e in metadata(root)['files'].items() if e['parent'] is not None and sha==e['sha256']]
  if not matches:return text

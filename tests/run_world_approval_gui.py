@@ -6,7 +6,7 @@ for name in ['root','out','compiler','references','config']:p.add_argument('--'+
 a=p.parse_args();root=Path(a.root);out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
 files=sorted((root/'ui').glob('*.cs'))+[root/'tests/world_approval_gui_tests.cs']
 refs=['System.dll','System.Core.dll','System.Web.Extensions.dll','System.Drawing.dll','System.Windows.Forms.dll']+[str(Path(a.references)/(n+'.dll')) for n in ['WindowsBase','PresentationCore','PresentationFramework','System.Xaml']]
-exe=out/'world-approval-gui.exe';commands=[[a.compiler,'/nologo','/utf8output','/target:exe','/optimize+','/main:WorldApprovalGuiTests','/out:'+str(exe)]+['/reference:'+n for n in refs]+list(map(str,files)),[str(exe),str(root/'tests/fixtures/world-approval/approved-groups.json'),a.config,str(out/'runs')]]
+exe=out/'world-approval-gui.exe';commands=[[a.compiler,'/nologo','/utf8output','/target:exe','/optimize+','/main:WorldApprovalGuiTests','/out:'+str(exe),'/resource:'+str(root/'ui/assets/monaka-bridge-tray-white.ico')+',MonakaBridge.Icons.white.ico','/resource:'+str(root/'ui/assets/monaka-bridge-tray-black.ico')+',MonakaBridge.Icons.black.ico']+['/reference:'+n for n in refs]+list(map(str,files)),[str(exe),str(root/'tests/fixtures/world-approval/approved-groups.json'),a.config,str(out/'runs')]]
 records=[]
 for index,command in enumerate(commands):
  process=subprocess.run(command,capture_output=True,timeout=90);(out/(str(index)+'.stdout.txt')).write_bytes(process.stdout);(out/(str(index)+'.stderr.txt')).write_bytes(process.stderr)

@@ -168,7 +168,7 @@ namespace MonakaBridge {
     }
     if(status=="PROGRESS"){if(active==null||active.Op!="begin"||Text(value,"phase")!="RECORDING"||solvePhase)throw new InvalidOperationException("Unexpected native progress");progress=lastNative;return;}
     string terminal=Text(value,"phase");if(!Terminal(terminal)||CalibrationJson.Boolean(value,"eligible"))throw new InvalidOperationException("Unexpected unsolicited native control");
-    phase=terminal;FailLocked(value.ContainsKey("reason")?Text(value,"reason"):"Native session invalidated");Notify(lastNative,true);
+    phase=terminal;FailLocked(value.ContainsKey("first_failure")?Text(value,"first_failure"):value.ContainsKey("reason")?Text(value,"reason"):"Native session invalidated");Notify(lastNative,true);
    }
   }
   void Apply(Request entry,Dictionary<string,object> value,byte[] bytes,long now) {
@@ -196,7 +196,7 @@ namespace MonakaBridge {
     else if(actualOutcome==null&&!commitUnconfirmed)phase=nativePhase;
    }else if(status=="REJECTED"){
      prepared=null;confirmation=null;if(entry.Op=="commit"||entry.Op=="commit_output"){commitUnconfirmed=false;actualOutcome=nativePhase=="UNKNOWN"?"UNKNOWN":"REJECTED";}
-    phase=nativePhase;if(Terminal(nativePhase)||entry.Op=="open")FailLocked(value.ContainsKey("reason")?Text(value,"reason"):"Native action rejected");
+    phase=nativePhase;if(Terminal(nativePhase)||entry.Op=="open")FailLocked(value.ContainsKey("first_failure")?Text(value,"first_failure"):value.ContainsKey("reason")?Text(value,"reason"):"Native action rejected");
    }else throw new InvalidOperationException("Unexpected native outcome for "+entry.Op);
   }
   internal Task CloseAsync(){RequestStop(false);return stopped.Task;}

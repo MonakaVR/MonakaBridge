@@ -1,0 +1,326 @@
+{
+  "parent": "8f8ca0d4465ada163a122f174b49be13bf7ea80b",
+  "authority": "MonakaVR_Astra_Autonomous_Offline_HIL_Readiness_Codex_20261023.md",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "f9dbd1e3f23b99138007594f541068c0d39bff7734897930669534d3592572d7",
+      "parent": "42d44827f455bee9fec4860aaa6f8edd91003136db886984d42a9c0af65c5775"
+    },
+    "README.md": {
+      "sha256": "186cc2f6a05d442cf3df5b07b50b60cc4f5ec6d34155de2db473011188f7c26b",
+      "parent": "3a41b77cdccaed14e97f668f3b7cd578bcf0d6b59990f59c6224eb34efcae19d"
+    },
+    "Start_Bridge.cmd": {
+      "sha256": "b455803acab7190dd007b6a8b6987225ae7885e5cec7a5b0ceddf45b93fca4f1",
+      "parent": null
+    },
+    "assets/pico-rev3-source/PICO_Tracker_Detailed_APPROX_Rev3_mm.step": {
+      "sha256": "436509dd665aeca53d80fa33c35615d4d35834073a9481dcc876447dc65d55cd",
+      "parent": null
+    },
+    "assets/pico-rev3-source/PICO_Tracker_Detailed_APPROX_Rev3_mm.stl": {
+      "sha256": "909ea890f0b0adf180993c9ca2e00a4ee567af8ae6330a71d5b4b336e7ea8468",
+      "parent": null
+    },
+    "assets/pico-rev3-source/README_ja.md": {
+      "sha256": "d37d7a07152cd7d42d95c281b539cbcbed619106aad26f4f4cd4f28cc6c32693",
+      "parent": null
+    },
+    "assets/pico-rev3-source/SHA256.json": {
+      "sha256": "b4c91f1c56220c66b94812c49ebddb56113c4d5f0a385432167ef26a60d1e1e1",
+      "parent": null
+    },
+    "assets/pico-rev3-source/details_validation.json": {
+      "sha256": "c8de5083f7554f70d4ca886582fd86131949152333a8dfced08b0a6d0b3b3102",
+      "parent": null
+    },
+    "assets/pico-rev3-source/export_steamvr.py": {
+      "sha256": "36eba714fceafe7e053f26d794237304ab408fc4442d8761ce5b0b9584ebab93",
+      "parent": null
+    },
+    "config/output-approval/adoption.schema.json": {
+      "sha256": "e1ab50f885d2de113faa67b6e414c1da40dda094c2523e1801fdc702a0a88f37",
+      "parent": null
+    },
+    "config/output-approval/adoption.template.json": {
+      "sha256": "db8d05bcc79fa845016d848b802939a6dc9747a00eb560d885f47260ba9bb3d8",
+      "parent": null
+    },
+    "config/output-approval/evidence.schema.json": {
+      "sha256": "bbc1e49d84f8b4b9e829a4fa62b2d0ccb9782cfb8847a47731cc0c0c86bb9995",
+      "parent": null
+    },
+    "config/output-approval/policy.schema.json": {
+      "sha256": "d50d62bf9f47965d6609c9de9d789d7037f527626ddf026222ec74bd0ebb221d",
+      "parent": null
+    },
+    "config/output-approval/policy.template.json": {
+      "sha256": "98bbd9e10f9215fe641fa4eafc0f41f869a4cbc89edf6788dcee8c65efe72e9c",
+      "parent": null
+    },
+    "docs/offline-hil-readiness.md": {
+      "sha256": "65db3e00ce910042a6d639e285097fe64f96dc3950e08067c4a722a85fd367ee",
+      "parent": null
+    },
+    "include/monaka_bridge/calibration_session.hpp": {
+      "sha256": "c6c69bcde02cd2da1c73c0e787225448dded0f1d1004f45a3c8e44d3eb2e5898",
+      "parent": "2fe2fd00b3b565404cfbcf33220f415d0c6a5ccf26bf43f1724b8e82a5a29747"
+    },
+    "include/monaka_bridge/output_approval_authority.hpp": {
+      "sha256": "95188c9641bc525b1e5867e28628141d8eb795d20e2258ac46e05756eba40502",
+      "parent": null
+    },
+    "include/monaka_bridge/service_lifecycle.hpp": {
+      "sha256": "1e0cba30a7c3cf545be012b89c7243e42422980cd3dc22a1d914587245f5f617",
+      "parent": null
+    },
+    "include/monaka_bridge/static_calibration_session.hpp": {
+      "sha256": "ddad5107420b8681f60c712b200c995e2146f51dd3f06df8211709b3cda728ca",
+      "parent": "7233ee8fdd759649b60d186833cec9a4003ae106287c71bb850fdad2be22161a"
+    },
+    "include/monaka_bridge/trajectory_result_json.hpp": {
+      "sha256": "3a90cd0d56953ad006b3d9009ceab092b1cc59e26be7ccaff1a7afa20d9bea98",
+      "parent": null
+    },
+    "outputs/steamvr/driver/device_provider.cpp": {
+      "sha256": "f666bf905b4a376e59461930bee5d761ed6c7d7560cab6bab245ec310c702a06",
+      "parent": "a9ab5cdabef29a3c53716468529ef5ab53b23fb5f884a72d8753b86c8a2c5457"
+    },
+    "outputs/steamvr/driver/device_provider.hpp": {
+      "sha256": "bdb1580f2ccb501e4d241deb9b458b17ce65c00892239d9cccb79e7bd3e5a769",
+      "parent": "03f92fc1095292523174e3d6c4ad8397c7916e6e34c1609a1489bb03cfaf02d7"
+    },
+    "outputs/steamvr/driver/presentation.cpp": {
+      "sha256": "540772c8571da9737bf18c7c6636c72e22e5168406fcdf1b451b598e1f0bf613",
+      "parent": null
+    },
+    "outputs/steamvr/driver/presentation.hpp": {
+      "sha256": "80b2cce8748f2647a6807d8ad77704c3389ae979cacfb1858885b8ee2f3162ec",
+      "parent": null
+    },
+    "outputs/steamvr/driver/render_manifest.hpp.in": {
+      "sha256": "65c5e26d58be0865c3fb2cf443a073296554d8e08b9ffda3881e1714e9db706f",
+      "parent": null
+    },
+    "outputs/steamvr/driver/tracker_device.cpp": {
+      "sha256": "9359ce13da92fe01d50fe3e84dcf5286b7ca976e8e7d613be84cdb50097d1e42",
+      "parent": "7a0540a14846a40676b553a29b1c19832c1d2857853807579359df232c87366e"
+    },
+    "outputs/steamvr/driver/tracker_device.hpp": {
+      "sha256": "f2eb21d51a39fcd5fabbb070d6c7070074880befa86fbe989b51e9fe4923a4f9",
+      "parent": "3f0f9e2aacacac4d058841b9e4b5bd01939be796e99a144761e45af0a931e680"
+    },
+    "outputs/steamvr/package/resources/presentation/selection.json": {
+      "sha256": "842be029b20585c06f57dd74516a18bdd1d06aeff318a29b7fb4db14ee7f7410",
+      "parent": null
+    },
+    "outputs/steamvr/package/resources/rendermodels/pico_motion_tracker/assets-manifest.json": {
+      "sha256": "8d70ff3c30a3802e3848727eebfe95344d093b53e344f843412dba867cb9da30",
+      "parent": null
+    },
+    "outputs/steamvr/package/resources/rendermodels/pico_motion_tracker/pico_motion_tracker.mtl": {
+      "sha256": "52822006064a093cfcc9566cca66fb0df5a0d83b9276bafeaaad7ddf1f687869",
+      "parent": null
+    },
+    "outputs/steamvr/package/resources/rendermodels/pico_motion_tracker/pico_motion_tracker.obj": {
+      "sha256": "bc7a72ad9c50cb7af3755acea19cb2ed97cf9c6785be07909abdc3eaa78fc768",
+      "parent": null
+    },
+    "outputs/steamvr/package/resources/rendermodels/pico_motion_tracker/pico_motion_tracker.png": {
+      "sha256": "9540d68990444b0d89b23f9293b38c6911fc81864aa48d76d0d71c716013d7c7",
+      "parent": null
+    },
+    "scripts/build_gui.ps1": {
+      "sha256": "c4f6d5372f707664c8569e542320d62fee27c29fc2a7fe335c8765c638f2a3dc",
+      "parent": "7f8d401ff2be78bc61a2c1fb79836bc0e3998194667e89b0776bd962f74fdda6"
+    },
+    "scripts/control_gui.cmake": {
+      "sha256": "41f45d8c3881333cc04671b9baa2e19280d9f00bb467dffc9dddbcb0b9e1a4af",
+      "parent": "7e5a189cc4142b151a9076b8e09113f0dff742936856c70942393bdc8648587f"
+    },
+    "scripts/hil_preflight.py": {
+      "sha256": "2dbea8e33b05f55a20588cf301482dac27fbb0b52d39344f9cc77b820d88f1f6",
+      "parent": null
+    },
+    "scripts/launch_artifact_set.py": {
+      "sha256": "7c8e46565ad610b588a15580e85c9d0b19f7816998007fe7fc83fc9b1dc52733",
+      "parent": null
+    },
+    "scripts/prepare_output_evidence.py": {
+      "sha256": "05197c270163bb83ec681a5c1c7fa24cadf085e8faec5b7a993ffe240d0fb840",
+      "parent": null
+    },
+    "scripts/render_model_assets.py": {
+      "sha256": "0c4fabd3cbfc4566e3305c9c63e2c229856715a3d2800d3046164f7e8d39a8fc",
+      "parent": null
+    },
+    "src/calibration/calibration_capture_monitor.cpp": {
+      "sha256": "749170411ae6a759c00711a7b69163bc1836644120b89b39664944080b371023",
+      "parent": "9b222b34fb1d807d2ca9a1b2527bc175d43783c9039672561bacbd8a78d25667"
+    },
+    "src/calibration/calibration_production_entry.cpp": {
+      "sha256": "e3c264c12c34e5457f27234992e15a11a4beb5660f2027f7a4b8f2c451eb1ae1",
+      "parent": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f"
+    },
+    "src/calibration/calibration_runtime_provider.cpp": {
+      "sha256": "f57e06d36d3b60840cc1f968d55ea857e6c455857b62d3131b3cfbd971def5c4",
+      "parent": "eebb57c070dccb8c36c1e0efe965050dd1fa8fea7cdd4dce77f69d49bd2ed6ce"
+    },
+    "src/calibration/calibration_session.cpp": {
+      "sha256": "e7384b44b43a1b02ccee21c8bd48cbc3c47c1c922d68d45ee0119d7d604e1c49",
+      "parent": "222beb6159661169c19e3922c04c9eefcefc3f32d5fb042a261a0951739539f4"
+    },
+    "src/calibration/output_approval_authority.cpp": {
+      "sha256": "e7a65dadaf78a640a7424ebccbde110022b2c84f1be87c1b4a122ae4ef1ae00f",
+      "parent": null
+    },
+    "src/mapping/config_transaction.cpp": {
+      "sha256": "2605782720000359c6e6f177aaa4d42aa0d483ff16a7b499a65fce02806a9d2a",
+      "parent": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1"
+    },
+    "tests/calibration_client_process_tests.cs": {
+      "sha256": "10e7373fcc7bbcbbd7a240b28201c0057664072dd9768a3a14d5ac14c6f13bd2",
+      "parent": "e713704422350675550620b28f7b68627425fd92f81fe489b6f6dbf4bcd143e0"
+    },
+    "tests/control_foundation_tests.cs": {
+      "sha256": "e50fa54d4dfa4ad61aee8fe652e533f233d54561e7edb77109659a8937a0483a",
+      "parent": "764acdbeaabba4db7ae2951488a6fafa8a21c54e921fb9fddf5a9ea39ff9efdd"
+    },
+    "tests/hil_preflight_tests.py": {
+      "sha256": "14461bc4c792da007d15a3c154ab3cc7370ebb0b123ee4a8549f9bd682a08e76",
+      "parent": null
+    },
+    "tests/offline_readiness_scope.py": {
+      "sha256": "d8a6b8e9bf42b24e53ffc3de8f8197df141a6e8641dfbe948030ac2273be2ee7",
+      "parent": null
+    },
+    "tests/offline_readiness_scope_tests.py": {
+      "sha256": "d2c6888c2bf64f1a4ebe15f6c1fb76493ef6820ac59224dd70003604854ba0ea",
+      "parent": null
+    },
+    "tests/offline_readiness_tests.cpp": {
+      "sha256": "6f42e5fef1f903771f6e3507c358ff08b30c1bee62c5d037a4b2b9b85b74ff12",
+      "parent": null
+    },
+    "tests/offline_tools_tests.py": {
+      "sha256": "6ab06f0f1fc176cc7b1f19d6b2bbbd526e82929fcd3786de3a7cc1357d979939",
+      "parent": null
+    },
+    "tests/openvr_bootstrap_sentinel.cpp": {
+      "sha256": "11af0ee2e44465911b659c3d8aba81653def896d4810382019156e1718af30bb",
+      "parent": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047"
+    },
+    "tests/provider_host/provider_host.cpp": {
+      "sha256": "a65274fb7a7a8b77fe7ff75057d7f472ab974cb82bac1f5ee0dec513bd9d8083",
+      "parent": null
+    },
+    "tests/provider_host/run_tests.py": {
+      "sha256": "5e59fcc547caaca1c10fc3941c5dd0f21d680888345e1bce69d4ee29c3907907",
+      "parent": null
+    },
+    "tests/provider_host/strict_host.hpp": {
+      "sha256": "9b9280448b79252568667ab4e0945fe1116003307f48434d2de4f2db38afd38f",
+      "parent": null
+    },
+    "tests/render_model/asset_tests.py": {
+      "sha256": "b8ecafe260479608264c6852b8851bc04251beee085bea49df906c683ee3a9f0",
+      "parent": null
+    },
+    "tests/render_model/render_model_host.cpp": {
+      "sha256": "102ff12c4f1e906cb4fd35b7dcc2808015e3af9fdf222ce230f7b37335b4db03",
+      "parent": null
+    },
+    "tests/render_model/run_host.py": {
+      "sha256": "1fbd723f30412917a108c9dc5572dd92b093652db3b198ada31294c27e2e7ced",
+      "parent": null
+    },
+    "tests/run_calibration_managed.py": {
+      "sha256": "fb4561f8a626f873886b83c2f3bdc46ce5f643a2ccd58a0f2b65efb7750ed1a0",
+      "parent": "ac02876ed47d58249cab3fec041e3eb8e0c6da63ed866bf5597c0b994cd6ffec"
+    },
+    "tests/run_hil_discovery_managed.py": {
+      "sha256": "cf93c8100e86a3dada6c524cff64eebff0efa1b65f5e7e5f89a25a650d855efe",
+      "parent": "ae65c5c69bed8ef3b4264856865cd55c41b09f6789018c8866fceef894e314a0"
+    },
+    "tests/run_world_approval_gui.py": {
+      "sha256": "c4e630259650020985f2ca8ea27c217136a63074edced938eaf920c20f94bb5c",
+      "parent": "fbfb8af3befa2e520b310fa28e034d430659ac12c516fcae63f0d5b16481a8d7"
+    },
+    "tests/stored_hil_rehearsal.cpp": {
+      "sha256": "8bfd9fa9667cdfdc2a1b76cd363f5b9aa0ab6ab082ce4b570d6b584d84e9bddc",
+      "parent": null
+    },
+    "tests/trajectory_calibration_tests.cpp": {
+      "sha256": "6afd90ec4239af37ee0b89b2bdd79ccb8b2626ac5b54f959ca6c5d28db625851",
+      "parent": "5389ef1e8068db560b3505ab42115218b38a37769f3f8b8ddbf83af7e004ffa3"
+    },
+    "tests/world_approval_scope.py": {
+      "sha256": "9a3af687694f20689e05c8973ad4b409e759656ef70df352b5ed46ce8339fd04",
+      "parent": "ea5d47bc4625cd9e2e25809f0c7840660e905433e460c231d83cece50f5671de"
+    },
+    "tools/bridge_service.cpp": {
+      "sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61",
+      "parent": "34325d952060a2781a6711af36554bdb994f7a772a3d5f680fce524516907179"
+    },
+    "tools/calibration_local_api.cpp": {
+      "sha256": "bef4c10a6b08850f814052550c9f1f6dc47b40604a0ef616573d100b603ba3ab",
+      "parent": "2e0ff3b9be4af7b0935fbfc0a8a60a146be3d2835b0dfe29fea6ff41befcdd61"
+    },
+    "tools/trajectory_replay.cpp": {
+      "sha256": "d45bb3432a3eaba90f5899128e4802c0589bdd68630df44330f1f8d64b54e9bc",
+      "parent": null
+    },
+    "ui/assets/README.txt": {
+      "sha256": "6c91a2fc9097dd90aaed2e1b09d75c7a9ff7c05e1739f180acc97729a82ac6c1",
+      "parent": null
+    },
+    "ui/assets/monaka-bridge-tray-black.ico": {
+      "sha256": "5cd7e73fc9e9fc9c6cd6a43866ec99afe29c5b3b6ae3f30be47bb2616ee8294d",
+      "parent": null
+    },
+    "ui/assets/monaka-bridge-tray-black.svg": {
+      "sha256": "0138d313ee7d05606fbbe929635567a0c6e395aad51906ee7728de4e2741c6ac",
+      "parent": null
+    },
+    "ui/assets/monaka-bridge-tray-white.ico": {
+      "sha256": "3c2e0f1d646922164efc346631c1c825893ab68d3cb541c47c7ea9ee5adda563",
+      "parent": null
+    },
+    "ui/assets/monaka-bridge-tray-white.svg": {
+      "sha256": "55fabd6b564b6a7a7b39070f39ee52660df9cfd44cecb7df4959b4beb5621f88",
+      "parent": null
+    },
+    "ui/bridge_icons.cs": {
+      "sha256": "87ff137c455f09d4073d310b4e07c81223b068f9958448943138646ce536fa75",
+      "parent": null
+    },
+    "ui/calibration_models.cs": {
+      "sha256": "1f04f141faf538fd4abc62b8bdeaaef0e251ee636f7d51e4cb3ebdf93adb555e",
+      "parent": "ab86ea7a6a280a255cd8ff4ea9d9d92995a2ea0f7dc4ed8b0bbe95e2bcf53bc5"
+    },
+    "ui/calibration_panel.cs": {
+      "sha256": "17a1ba6f1459bf891b90dd24517ff4f7c0ff7ea94a255360b8505983f13e8091",
+      "parent": "f3459ce7ff85e466e6e6af94a4be29429887d4f16d3808c97b5a8001e894885d"
+    },
+    "ui/calibration_process_client.cs": {
+      "sha256": "093d856f88189a8c110c1a5d3eaabe4ce438ba8e3afce6a04858338457a56c33",
+      "parent": "07ec80fc68868421ccb67f2b89b57add12ae39e99daf64b1f1b975c26863f56a"
+    },
+    "ui/service_lifecycle_control.cs": {
+      "sha256": "83211943b7ec93c74577b01d33fe1f1458c34929338b46c8de87ae5b9387d222",
+      "parent": null
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "d8a59f8670b81b7ed3c5e8d2390f731b9ca009ea6ef0d1c36d75edebbb4568ef",
+      "parent": "aa7cfe5fb95671fa740ee495fcec5f69cd43244c813032b97c236b16893de4e0"
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "d775f04f0cc0a3377633ca27682577524b101d04d0ea8e31da2a1ef203847b9c",
+      "parent": "36795cd3bd80d3d327146ad4c07d40f7d19878d4aefb4d9ea3477b6ddfbf8af4"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "0d10a1f5491e61e4df0330f43237673122aebf7b647e6c90a4fa36b42bbf719f",
+      "parent": "d6b748792f0224fd29b96edd85fc7fe93f53b3c3358e5dd31357dcc79b67a1da"
+    }
+  }
+}

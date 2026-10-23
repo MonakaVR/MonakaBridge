@@ -72,7 +72,7 @@ int runLocalApi(CaptureProvider& provider,SessionEnvironment env){
     else if(!queue.empty()){command=std::move(queue.front());queue.pop_front();inflight=command;}
     else if(inputDone)break;
    }
-   if(command.is_null()){session.tick();if(session.terminal()&&!terminalSent){out.push({{"status",session.phase()},{"phase",session.phase()},{"eligible",false},{"reason","SESSION_INVALIDATED"},{"session_id",session.sessionId()},{"run_id",session.runId()}},false,true);terminalSent=true;}continue;}
+   if(command.is_null()){session.tick();if(session.terminal()&&!terminalSent){out.push(session.invalidationDiagnostic(),false,true);terminalSent=true;}continue;}
    if(!out.reserveControl()){session.requestCancel(true);inputDone=true;out.push({{"status","UNAVAILABLE"},{"reason","OUTPUT_BACKPRESSURE"}},false,true);break;}
    io("worker-before-execute");Json reply;try{reply=session.execute(command);}catch(const std::exception& e){reply={{"status","REJECTED"},{"reason",diagnostic(e)}};}
    reply["request_id"]=command.at("request_id");bool terminal=session.terminal()&&!terminalSent;out.publishReserved(std::move(reply),terminal);terminalSent=terminalSent||terminal;

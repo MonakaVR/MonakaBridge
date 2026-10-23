@@ -3,6 +3,7 @@
 #include "monaka_bridge/config_transaction.hpp"
 #include "monaka_bridge/static_calibration_session.hpp"
 #include <algorithm>
+#include "monaka_bridge/trajectory_result_json.hpp"
 #include <set>
 
 namespace mb::local_calibration {
@@ -75,7 +76,10 @@ struct CalibrationSession::Impl {
  std::atomic<Phase> state{NEW};std::atomic<bool> cancel{false},eof{false};
  const std::string session=opaqueId(),run=opaqueId();
  std::int64_t created,lastNow,confirmationDeadline=0,resultDeadline=0,reviewDeadline=0;
- std::string original,confirmation,review,resultId,candidate,candidateHash;
+ std::string original,confirmation,review,resultId,candidate,candidateHash,firstFailure;
+ void latchFailure(const std::string& reason){if(firstFailure.empty()){auto observed=owner?owner->snapshot().fault:std::string{};firstFailure=observed.empty()?reason:observed;}}
+ Json failure()const{return {{"status",name(state)},{"phase",name(state)},{"reason","SESSION_INVALIDATED"},{"first_failure",firstFailure},{"session_id",session},{"run_id",run},{"eligible",false}};}
+ void terminalArtifact(){if(!firstFailure.empty())drafts.write("terminal.json",failure().dump());drafts.terminal(name(state));}
  Config config;std::shared_ptr<const ProviderOpenOptions> providerOptions;
  const FrozenMeasurementTarget* frozen=nullptr; // Alias into the owning options.
  std::unique_ptr<const InputWitness> input;
@@ -91,9 +95,9 @@ struct CalibrationSession::Impl {
  std::size_t solves=0,commits=0,cacheBytes=0,ordinaryIds=0,reservedIds=0;
  struct Entry {std::string canonical;Json outcome;};std::map<std::string,Entry> cache;std::mutex cacheMutex;
  explicit Impl(CaptureProvider& p,SessionEnvironment e):provider(p),env(std::move(e)),drafts(env.draftRoot),created(env.clock()),lastNow(created){}
- std::int64_t now(){auto t=env.clock();if(t<lastNow){if(state==COMMITTING)evidenceStale=true;else{state=INSPECT_ONLY;confirmation.clear();review.clear();}throw std::runtime_error("MONOTONIC_CLOCK_ROLLBACK");}lastNow=t;return t;}
+ std::int64_t now(){auto t=env.clock();if(t<lastNow){if(state==COMMITTING)evidenceStale=true;else{state=INSPECT_ONLY;confirmation.clear();review.clear();}latchFailure("MONOTONIC_CLOCK_ROLLBACK");throw std::runtime_error("MONOTONIC_CLOCK_ROLLBACK");}lastNow=t;return t;}
  ~Impl(){cancel=true;if(owner)owner->shutdown();}
- void invalidate(const char* reason){if(owner)owner->invalidate(reason);if(state==COMMITTING){evidenceStale=true;return;}state=INSPECT_ONLY;confirmation.clear();review.clear();throw std::runtime_error(reason);}
+ void invalidate(const char* reason){latchFailure(reason);if(owner)owner->invalidate(firstFailure);if(state==COMMITTING){evidenceStale=true;return;}state=INSPECT_ONLY;confirmation.clear();review.clear();throw std::runtime_error(reason);}
  void checkCancel(){if(cancel&&state!=COMMITTING){state=eof?CLOSED:CANCELLED;confirmation.clear();review.clear();throw std::runtime_error(eof?"EOF_CLOSED":"CANCELLED");}}
  void current(){
   if(env.ioHook)env.ioHook("scope-before-read"); // Worker boundary only, never input owner.
@@ -139,7 +143,11 @@ struct CalibrationSession::Impl {
  }
  Json resultJson()const{
   if(staticResult)return {{"result_id",resultId},{"mode","static"},{"world",rigid(staticResult->transform)},{"extrinsic_not_mount",nullptr},{"mount_existing",rigid(frozen->target().binding.mount)},{"points",staticResult->pointCount},{"pairs_per_point",staticOptions.samples},{"rms_position",staticResult->rmsResidual},{"max_position",staticResult->maxResidual},{"rms_orientation",nullptr},{"quality","STATIC_RESIDUAL_ONLY_PHYSICAL_ACCURACY_UNVERIFIED"},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association",providerOptions->association()},{"review_deadline_ns",resultDeadline}};
-  need(bool(result),"NO_RESULT");return {{"result_id",resultId},{"world",rigid(result->world)},{"extrinsic_not_mount",rigid(result->extrinsic)},{"mount_existing",rigid(frozen->target().binding.mount)},{"pairs",result->pairs},{"inliers",result->inliers},{"rms_position",result->residuals.rmsPosition},{"rms_orientation",result->residuals.rmsOrientation},{"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},{"config_sha256",providerOptions->configSha256()},{"association","operator_declared / process_owner_unverified"},{"review_deadline_ns",resultDeadline}};
+  need(bool(result),"NO_RESULT");auto out=trajectoryResultJson(*result);
+  out.update({{"result_id",resultId},{"mount_existing",rigid(frozen->target().binding.mount)},
+   {"initial_pose_floor",input->initialPoseFloor},{"initial_state_floor",input->initialStateFloor?Json(*input->initialStateFloor):Json(nullptr)},
+   {"config_sha256",providerOptions->configSha256()},{"association",providerOptions->association()},{"review_deadline_ns",resultDeadline}});
+  return out;
  }
  Json waitingPoint(){pointToken=opaqueId();pointWaitDeadline=now()+60*second;state=WAITING_POINT;return {{"status","WAITING_POINT"},{"point_token",pointToken},{"point_index",staticMeasurement->pointCount()+1},{"points",staticOptions.points},{"pairs_required",staticOptions.samples},{"point_wait_deadline_ns",pointWaitDeadline},{"physical_stillness","NOT_VERIFIED"}};}
  OutputApprovalCriteria criteria(){
@@ -195,7 +203,7 @@ struct CalibrationSession::Impl {
    auto admission=owner->admit(barrier,admissionAt);state=COMMITTING;
   }catch(const std::exception& e){abandonOutputReview();if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
   review.clear();++commits;auto started=now();
-  try{commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{guards(false,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}});if(env.afterReplace)env.afterReplace();try{guards(true,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}if(cancel||readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;state=now()-started>=15*second?UNKNOWN:(evidenceStale?SAVED_STALE:SAVED);}catch(const std::exception& e){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"action","OUTPUT_APPROVAL"},{"reason",diagnostic(e)}};}
+  try{commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);need(!cancel,"OUTPUT_APPROVAL_CANCELLED_BEFORE_REPLACE");guards(false,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");});if(env.afterReplace)env.afterReplace();try{guards(true,false);need(fingerprint(criteria())==approvalFingerprint,"APPROVAL_CRITERIA_CHANGED");}catch(...){evidenceStale=true;}if(cancel||readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;state=now()-started>=15*second?UNKNOWN:(evidenceStale?SAVED_STALE:SAVED);}catch(const std::exception& e){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"action","OUTPUT_APPROVAL"},{"reason",diagnostic(e)}};}
   Json saved={{"status",name(state)},{"action","OUTPUT_APPROVAL"},{"config_sha256",candidateHash},{"runtime","UNCONFIRMED"},{"message","OUTPUT APPROVAL CONFIG SAVED / RUNTIME UNCONFIRMED"}};try{drafts.write("terminal.json",saved.dump());drafts.terminal(name(state));}catch(...){saved["artifact_warning"]="TERMINAL_ARTIFACT_IO_FAILED";}return saved;
  }
  Json action(const Json& j){
@@ -334,7 +342,7 @@ Json CalibrationSession::execute(const Json& j){
  bool expired=false;try{expired=x.now()-x.created>=20*60*second;}catch(const std::exception& e){return {{"status","REJECTED"},{"reason",diagnostic(e)},{"phase",phase()},{"eligible",false}};}
  const bool savedOutcome=x.state==SAVED||x.state==SAVED_STALE||x.state==UNKNOWN;
  if(expired&&!savedOutcome){
-  bool warning=false;if(!terminalPhase(x.state)){try{x.invalidate("WORKER_TTL_EXPIRED");}catch(...){}if(x.createdDraft)try{x.drafts.terminal(name(x.state));}catch(...){warning=true;}}
+  bool warning=false;if(!terminalPhase(x.state)){try{x.invalidate("WORKER_TTL_EXPIRED");}catch(...){}if(x.createdDraft)try{x.terminalArtifact();}catch(...){warning=true;}}
   Json out={{"status","REJECTED"},{"reason","WORKER_TTL_EXPIRED"},{"phase",phase()},{"eligible",false}};if(warning)out["artifact_warning"]="TERMINAL_IO_FAILED";return out;
  }
  std::unique_lock<std::mutex> cacheLock(x.cacheMutex);
@@ -344,7 +352,7 @@ Json CalibrationSession::execute(const Json& j){
   if(hit->second.outcome.is_null())return {{"status","IN_PROGRESS"},{"phase",phase()},{"replayed",true}};
   auto cached=hit->second.outcome;cacheLock.unlock();
   bool eligible=false;if(x.state>=DISCOVERED&&x.state<=PREPARED)try{x.guards(true);eligible=x.state==PREPARED&&x.now()<x.reviewDeadline&&!x.cancel;}catch(...){}
-  auto out=cached;out["replayed"]=true;out["current_phase"]=phase();out["eligible"]=eligible;if(expired)out["worker_lifetime_expired"]=true;return out;
+  auto out=cached;if(!x.firstFailure.empty())out["first_failure"]=x.firstFailure;out["replayed"]=true;out["current_phase"]=phase();out["eligible"]=eligible;if(expired)out["worker_lifetime_expired"]=true;return out;
  }
  if(expired)return {{"status","REJECTED"},{"reason","WORKER_TTL_EXPIRED"},{"phase",phase()},{"eligible",false}};
  bool reserved=op=="cancel"||op=="close";
@@ -353,12 +361,13 @@ Json CalibrationSession::execute(const Json& j){
  x.cacheBytes+=canonical.size()+16*KiB;x.cache.emplace(id,Impl::Entry{canonical,nullptr});cacheLock.unlock();
  Json out;
  try{out=x.action(j);}catch(const std::exception& e){out={{"status","REJECTED"},{"reason",diagnostic(e)}};if(x.state==RECORDING||x.state==SOLVING)x.state=FAILED;}
+ if(!x.firstFailure.empty())out["first_failure"]=x.firstFailure;
  out["session_id"]=x.session;out["run_id"]=x.run;out["phase"]=phase();out["replayed"]=false;
- if(x.createdDraft)try{x.drafts.journal({{"request_id",id},{"op",op},{"phase",phase()},{"status",out.at("status")},{"monotonic_ns",x.now()}});if(terminalPhase(x.state))x.drafts.terminal(name(x.state));}catch(...){if(terminalPhase(x.state))out["artifact_warning"]="JOURNAL_IO_FAILED";else{x.state=INSPECT_ONLY;out={{"status","REJECTED"},{"reason","JOURNAL_IO_FAILED"},{"phase",phase()}};}}
+ if(x.createdDraft)try{x.drafts.journal({{"request_id",id},{"op",op},{"phase",phase()},{"status",out.at("status")},{"monotonic_ns",x.now()}});if(terminalPhase(x.state))x.terminalArtifact();}catch(...){if(terminalPhase(x.state))out["artifact_warning"]="JOURNAL_IO_FAILED";else{x.state=INSPECT_ONLY;out={{"status","REJECTED"},{"reason","JOURNAL_IO_FAILED"},{"phase",phase()}};}}
  if(out.dump().size()>16*KiB){if(x.state==SAVED||x.state==SAVED_STALE||x.state==UNKNOWN)out={{"status",name(x.state)},{"reason","OUTCOME_LIMIT"},{"runtime","UNCONFIRMED"},{"output_approval","REQUIRED"}};else{x.state=INSPECT_ONLY;out={{"status","REJECTED"},{"reason","OUTCOME_LIMIT"},{"phase",phase()}};}}
  cacheLock.lock();x.cache.at(id).outcome=out;return out;
 }
-void CalibrationSession::tick(){auto& x=*impl_;if(terminalPhase(x.state))return;try{x.checkCancel();if(x.now()-x.created>=20*60*second)x.invalidate("WORKER_TTL_EXPIRED");if(x.state>=DISCOVERED&&x.state<=PREPARED)x.guards(false,false);}catch(...){if(!terminalPhase(x.state))x.state=INSPECT_ONLY;if(x.createdDraft)try{x.drafts.terminal(name(x.state));}catch(...){}}}
+void CalibrationSession::tick(){auto& x=*impl_;if(terminalPhase(x.state))return;try{x.checkCancel();if(x.now()-x.created>=20*60*second)x.invalidate("WORKER_TTL_EXPIRED");if(x.state>=DISCOVERED&&x.state<=PREPARED)x.guards(false,false);}catch(...){if(!terminalPhase(x.state))x.state=INSPECT_ONLY;if(x.createdDraft)try{x.terminalArtifact();}catch(...){}}}
 void CalibrationSession::requestCancel(bool eof){if(eof)impl_->eof=true;impl_->cancel=true;}
 void CalibrationSession::latchControl(const Json& j){
  schema(j);auto& x=*impl_;need((j.at("op")=="cancel"||j.at("op")=="close")&&text(j,"session_id")==x.session&&text(j,"run_id")==x.run,"WRONG_SESSION_RUN");
@@ -375,6 +384,7 @@ std::string CalibrationSession::runId()const{return impl_->run;}
 const InputWitness* CalibrationSession::frozenInput()const{return impl_->input.get();}
 std::pair<std::int64_t,std::optional<std::int64_t>> CalibrationSession::highwaters()const{if(!impl_->owner)return {-1,{}};auto s=impl_->owner->snapshot();return {s.poseHigh,s.stateHigh};}
 CaptureSnapshot CalibrationSession::captureSnapshot()const{return impl_->owner?impl_->owner->snapshot():CaptureSnapshot{};}
+Json CalibrationSession::invalidationDiagnostic()const{return impl_->failure();}
 std::size_t CalibrationSession::solveCalls()const{return impl_->solves;}
 std::size_t CalibrationSession::commitCalls()const{return impl_->commits;}
 } // namespace mb::local_calibration

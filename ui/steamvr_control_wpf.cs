@@ -49,7 +49,7 @@ namespace MonakaBridge {
    readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","disabled"}};
    byte[] configBytes;Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
    public ControlWindow(string root):this(GuiLaunchOptions.FromRoot(root)){}
-   public ControlWindow(GuiLaunchOptions target){options=target;Title="Monaka Bridge";Width=900;Height=820;
+   public ControlWindow(GuiLaunchOptions target){options=target;Title="Monaka Bridge";Icon=BridgeIcons.WindowIcon();Width=900;Height=820;
     var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
     openInstallation=Add(panel,"Open installation profile...",OpenInstallation);createCalibration=Add(panel,"Create calibration profile (Save As)...",CreateCalibrationProfile);panel.Children.Add(accessStatus);
     panel.Children.Add(new TextBlock{Text="Sources and devices",FontSize=20});panel.Children.Add(healthStatus);panel.Children.Add(devices);panel.Children.Add(livePose);
@@ -102,7 +102,7 @@ namespace MonakaBridge {
    }
    async void CloseSafely(object sender,System.ComponentModel.CancelEventArgs e){
     if(closingReady)return;e.Cancel=true;if(closing)return;closing=true;RefreshAvailability();if(cancellation!=null)cancellation.Cancel();
-    try{var work=pendingSave;if(work!=null)try{await work;}catch{}await calibration.StopAsync();closingReady=true;Close();}
+    try{var work=pendingSave;if(work!=null)try{await work;}catch{}await calibration.StopAsync();closingReady=true;await Dispatcher.InvokeAsync(new Action(Close));}
     catch(Exception error){closing=false;needsReload=true;status.Text="Owned shutdown unconfirmed; window retained: "+error.Message;RefreshAvailability();}
    }
    void RefreshAvailability(){

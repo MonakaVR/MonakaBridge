@@ -1,0 +1,46 @@
+"""Explicit successor scope. Admit current bytes before legacy predecessor views.
+
+The immutable parent remains the source of historical byte assertions. The
+current receipt must itself be committed; merely rehashing a mutant cannot
+expand authorization. Functional tests always compile/run current sources.
+"""
+from pathlib import Path
+from functools import lru_cache
+import hashlib,json,subprocess
+PARENT='8f8ca0d4465ada163a122f174b49be13bf7ea80b'
+PIN='dependencies/offline-readiness-baseline.json'
+def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
+def repository(location):
+    p=Path(location).resolve()
+    while not (p/'.git').exists():
+        if p.parent==p:raise RuntimeError('Readiness history missing')
+        p=p.parent
+    return str(p)
+@lru_cache(maxsize=None)
+def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
+def metadata(root):return json.loads((Path(root)/PIN).read_bytes())
+def approved_offline(root,git_root=None):
+    root=Path(root)
+    if not (root/PIN).exists():return set()
+    repo=repository(git_root or root);raw=(root/PIN).read_bytes()
+    if raw!=subprocess.check_output(['git','--no-optional-locks','-C',repo,'show','HEAD:'+PIN]):raise RuntimeError('Readiness receipt differs from committed review')
+    p=json.loads(raw)
+    if p['parent']!=PARENT or p['authority']!='MonakaVR_Astra_Autonomous_Offline_HIL_Readiness_Codex_20261023.md':raise RuntimeError('Readiness authority/parent mismatch')
+    for name,e in p['files'].items():
+        try:actual=(root/name).read_bytes()
+        except OSError as exc:raise RuntimeError('Readiness missing source: '+name) from exc
+        if digest(actual)!=e['sha256']:raise RuntimeError('Readiness unreviewed current bytes: '+name)
+        if e['parent'] is not None and digest(historical(repo,name))!=e['parent']:raise RuntimeError('Readiness predecessor drift: '+name)
+    return set(p['files'])|{PIN}
+def project(root,name,raw,git_root=None):
+    root=Path(root)
+    if not (root/PIN).exists():return raw
+    e=metadata(root)['files'].get(name)
+    if e and e['parent'] is not None and digest(raw)==e['sha256']:return historical(repository(git_root or root),name)
+    return raw
+def project_text(root,text):
+    root=Path(root)
+    if not (root/PIN).exists():return text
+    values={historical(repository(root),name).decode('utf-8-sig') for name,e in metadata(root)['files'].items() if e['parent'] is not None and e['sha256']==digest(text.encode())}
+    if len(values)>1:raise RuntimeError('Readiness ambiguous predecessor view')
+    return values.pop() if values else text

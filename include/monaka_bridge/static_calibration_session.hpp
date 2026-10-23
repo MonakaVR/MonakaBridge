@@ -32,8 +32,8 @@ public:
  const Json& raw()const{return raw_;}
 };
 
-// Native-only authority seam. The production environment leaves this absent.
-// Synthetic authorities are linked/injected only by test targets, never JSON.
+// Native authority interface. Production verifies an external hash-pinned policy
+// and evidence set. Synthetic implementations remain test-only.
 struct OutputApprovalCriteria {
  std::string policyId,evidenceId,evidenceSha256;
  std::int64_t expiresAt=0;

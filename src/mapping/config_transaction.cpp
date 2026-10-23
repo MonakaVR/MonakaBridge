@@ -53,7 +53,7 @@ void commitConfigDocument(const std::filesystem::path& path,const std::optional<
  {std::ofstream f(pending,std::ios::binary|std::ios::trunc);f.write(candidate.data(),std::streamsize(candidate.size()));f.flush();if(!f)throw std::runtime_error("configuration write failed");}
  checkpoint("staged");check();
  if(expected){auto backup=target;backup+=".backup-txn-"+unique();std::filesystem::copy_file(target,backup,std::filesystem::copy_options::none);}
- checkpoint("backed-up");check();checkpoint("before-replace");
+ checkpoint("backed-up");check();checkpoint("before-replace");check();
 #ifdef _WIN32
  if(!MoveFileExW(pending.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))throw std::runtime_error("configuration replacement failed; reload to verify outcome");
 #else
