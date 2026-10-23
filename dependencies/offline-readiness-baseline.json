@@ -138,6 +138,10 @@
       "sha256": "41f45d8c3881333cc04671b9baa2e19280d9f00bb467dffc9dddbcb0b9e1a4af",
       "parent": "7e5a189cc4142b151a9076b8e09113f0dff742936856c70942393bdc8648587f"
     },
+    "scripts/hil_diagnostics.py": {
+      "sha256": "d591880bb59b9f399dbc84de15d8ae033b5aea991435f7414b71e02a5fa88557",
+      "parent": null
+    },
     "scripts/hil_preflight.py": {
       "sha256": "2dbea8e33b05f55a20588cf301482dac27fbb0b52d39344f9cc77b820d88f1f6",
       "parent": null
@@ -191,7 +195,7 @@
       "parent": null
     },
     "tests/offline_readiness_scope.py": {
-      "sha256": "d8a6b8e9bf42b24e53ffc3de8f8197df141a6e8641dfbe948030ac2273be2ee7",
+      "sha256": "35a5b9e79b0af195560d6d073db6c6b57eee2916f74c8745e9f35677bf45bb92",
       "parent": null
     },
     "tests/offline_readiness_scope_tests.py": {
