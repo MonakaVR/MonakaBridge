@@ -18,6 +18,11 @@ with tempfile.TemporaryDirectory(dir=ROOT/'build') as directory:
     manifest['files_sha256']={p.name:launch.sha(p) for p in package.iterdir()}
     (package/'artifact-manifest.json').write_text(json.dumps(manifest))
     argv,identity=launch.verify(package,'pico');assert identity=='fixture' and '--service-exe' in argv
+    (package/'installation.json').write_text('{}')
+    relocated=copy.deepcopy(manifest);relocated['launch']['pico']['path_arguments']={'--installation':'installation.json'}
+    (package/'artifact-manifest.json').write_text(json.dumps(relocated));assert launch.verify(package,'pico')[0][-1]==str(package/'installation.json')
+    relocated['launch']['pico']['path_arguments']['--installation']='../outside';(package/'artifact-manifest.json').write_text(json.dumps(relocated));reject(lambda:launch.verify(package,'pico'))
+    (package/'artifact-manifest.json').write_text(json.dumps(manifest))
     catalog=root/'catalog.json';catalog.write_text(json.dumps(dict(artifact_sets=[dict(package=str(package),status='PASS',components=['pico'],build_utc='2026-10-23T00:00:00Z')])))
     assert launch.select(catalog,'pico')==package
     (package/'service.exe').write_bytes(b'stale-build');reject(lambda:launch.verify(package,'pico'));reject(lambda:launch.select(catalog,'pico'))
