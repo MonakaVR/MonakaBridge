@@ -19,11 +19,16 @@ def repository(location):
 @lru_cache(maxsize=None)
 def historical(repo,name):return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',PARENT+':'+name])
 def metadata(root):return json.loads((Path(root)/PIN).read_bytes())
+@lru_cache(maxsize=None)
+def committed_receipt(repo):
+    # One immutable HEAD snapshot per test process, never cache mutable files.
+    commit=subprocess.check_output(['git','--no-optional-locks','-C',repo,'rev-parse','HEAD']).decode().strip()
+    return subprocess.check_output(['git','--no-optional-locks','-C',repo,'show',commit+':'+PIN])
 def approved_offline(root,git_root=None):
     root=Path(root)
     if not (root/PIN).exists():return set()
     repo=repository(git_root or root);raw=(root/PIN).read_bytes()
-    if raw!=subprocess.check_output(['git','--no-optional-locks','-C',repo,'show','HEAD:'+PIN]):raise RuntimeError('Readiness receipt differs from committed review')
+    if digest(raw)!=digest(committed_receipt(repo)):raise RuntimeError('Readiness receipt differs from committed review')
     p=json.loads(raw)
     if p['parent']!=PARENT or p['authority']!='MonakaVR_Astra_Autonomous_Offline_HIL_Readiness_Codex_20261023.md':raise RuntimeError('Readiness authority/parent mismatch')
     for name,e in p['files'].items():
