@@ -147,11 +147,11 @@
       "parent": null
     },
     "scripts/hil_preflight.py": {
-      "sha256": "2dbea8e33b05f55a20588cf301482dac27fbb0b52d39344f9cc77b820d88f1f6",
+      "sha256": "5b186a1862e7efc9d32de4948c682fc8e8c2fbdddee4e54a77802131c3a04faf",
       "parent": null
     },
     "scripts/launch_artifact_set.py": {
-      "sha256": "7c8e46565ad610b588a15580e85c9d0b19f7816998007fe7fc83fc9b1dc52733",
+      "sha256": "16439286490c1b741b02801eee434af47982095614daa6a037b347a05019fdd5",
       "parent": null
     },
     "scripts/prepare_output_evidence.py": {
@@ -199,7 +199,7 @@
       "parent": "764acdbeaabba4db7ae2951488a6fafa8a21c54e921fb9fddf5a9ea39ff9efdd"
     },
     "tests/hil_preflight_tests.py": {
-      "sha256": "14461bc4c792da007d15a3c154ab3cc7370ebb0b123ee4a8549f9bd682a08e76",
+      "sha256": "3c91c87f8cad95865d70ba771bececb9a1065535d4f4ec431250cdc6f48c38d5",
       "parent": null
     },
     "tests/offline_readiness_scope.py": {
@@ -215,7 +215,7 @@
       "parent": null
     },
     "tests/offline_tools_tests.py": {
-      "sha256": "6ab06f0f1fc176cc7b1f19d6b2bbbd526e82929fcd3786de3a7cc1357d979939",
+      "sha256": "292712bdadd12ec429e962b0e39af087c9eb075da6445f0c36e0649a83a21112",
       "parent": null
     },
     "tests/openvr_bootstrap_sentinel.cpp": {

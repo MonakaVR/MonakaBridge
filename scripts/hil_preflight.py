@@ -21,6 +21,14 @@ def inside(root,relative):
 
 def normalized(value):return os.path.normcase(os.path.abspath(value)) if value else ''
 
+def runtime_path(registry):
+    runtimes=registry.get('runtime',[])
+    if not isinstance(runtimes,list) or not runtimes or any(not isinstance(p,str) or not p for p in runtimes):raise ValueError('OPENVR_RUNTIME_PATH_INVALID')
+    # OpenVR can retain spelling/case variants of the same Windows path.
+    # Distinct locations still require operator review; never choose one silently.
+    if len({normalized(p) for p in runtimes})!=1:raise ValueError('OPENVR_RUNTIME_PATH_AMBIGUOUS')
+    return str(Path(runtimes[0]).resolve())
+
 def evaluate_environment(actual,expected):
     reasons=[]
     for key in ('USERPROFILE','LOCALAPPDATA','TEMP','HOME'):
@@ -44,9 +52,7 @@ def inventory(expected,package):
     paths=Path(actual['LOCALAPPDATA'])/'openvr/openvrpaths.vrpath'
     # OpenVR's registry filename is openvrpaths.vrpath; no registry setter/API is used.
     registry=load(paths);actual['vrpaths_sha256']=digest(paths)
-    runtimes=registry.get('runtime',[])
-    if not isinstance(runtimes,list) or len(runtimes)!=1:raise ValueError('OPENVR_RUNTIME_PATH_AMBIGUOUS')
-    actual['runtime_path']=str(Path(runtimes[0]).resolve())
+    actual['runtime_path']=runtime_path(registry)
     executable=Path(actual['runtime_path'])/'bin/win64/vrserver.exe'
     actual['runtime_executable']=str(executable);actual['runtime_exists']=executable.is_file()
     actual['drivers']=[{'path':str(Path(p).resolve()),'exists':(Path(p)/'driver.vrdrivermanifest').is_file(),
@@ -61,14 +67,16 @@ def inventory(expected,package):
     sdk=load(inside(package,'provenance/calibration-openvr-sdk.json'))
     actual['sdk_matches']=all(digest(inside(package,'provenance/openvr/'+p))==h for p,h in sdk['files'].items()) and digest(helper.with_name('openvr_api.dll'))==sdk['files']['bin/win64/openvr_api.dll']
     # Only query endpoint/process identity. No socket construction, Start-Service or stop/kill.
-    script="""$ErrorActionPreference='Stop'
+    script="""[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$ErrorActionPreference='Stop'
 $endpoints=@(Get-NetUDPEndpoint | Select-Object LocalAddress,LocalPort,OwningProcess)
-$services=@(Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('monaka_bridge_service.exe','pico_ot_bridge_service.exe')} | ForEach-Object { @{path=$_.ExecutablePath;sha256=if($_.ExecutablePath){(Get-FileHash -LiteralPath $_.ExecutablePath -Algorithm SHA256).Hash.ToLower()}else{$null}} })
+$services=@(Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('monaka_bridge_service.exe','pico_ot_bridge_service.exe')} | Select-Object ExecutablePath)
 @{endpoints=$endpoints;services=$services} | ConvertTo-Json -Depth 5 -Compress
 """
-    query=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',script],capture_output=True,text=True,timeout=30,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),check=True)
+    query=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',script],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=30,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+    if query.returncode:raise ValueError('WINDOWS_INVENTORY_QUERY_FAILED:'+query.stderr.strip()[:1000])
     state=json.loads(query.stdout);actual['mirror_port_in_use']=any(x['LocalPort']==expected['mirror_port'] for x in state['endpoints'])
-    actual['services']=sorted(state['services'],key=lambda x:x.get('path') or '')
+    actual['services']=sorted([{'path':x.get('ExecutablePath'),'sha256':digest(x['ExecutablePath']) if x.get('ExecutablePath') else None} for x in state['services']],key=lambda x:x.get('path') or '')
     return actual
 
 def package_checks(package,now_ms):
