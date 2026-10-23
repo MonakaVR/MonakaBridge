@@ -32,7 +32,8 @@ protected = ['third_party', 'dependencies', 'config', 'outputs', 'ui', 'tools',
 changes = subprocess.check_output(['git', '-C', str(root), 'diff', '--name-only', base, '--', *protected], text=True)
 # BEGIN 5AI-P VERSIONED IDENTITY SCOPE
 from publisher_identity_scope import approved, historical_gate
-changes='\n'.join(n for n in changes.splitlines() if n not in approved(root))
+allowed=approved(root)
+changes='\n'.join(n for n in changes.splitlines() if n not in allowed)
 # END 5AI-P VERSIONED IDENTITY SCOPE
 assert not changes.strip(), 'protected changes: ' + changes
 subprocess.run([sys.executable, str(root / 'scripts/verify_protocol_v21.py')], check=True)

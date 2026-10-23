@@ -270,6 +270,10 @@
       "sha256": "6afd90ec4239af37ee0b89b2bdd79ccb8b2626ac5b54f959ca6c5d28db625851",
       "parent": "5389ef1e8068db560b3505ab42115218b38a37769f3f8b8ddbf83af7e004ffa3"
     },
+    "tests/verify_common_world_dormancy.py": {
+      "sha256": "7c172b25da77ec757406d9e19642237510490d3249b92787817c3ba6afe66ce3",
+      "parent": "e99008dd3cbf7f5303ee9cace3f9c93883eadcf46fbbc2f145cb71f5355bc695"
+    },
     "tests/world_approval_scope.py": {
       "sha256": "9a3af687694f20689e05c8973ad4b409e759656ef70df352b5ed46ce8339fd04",
       "parent": "ea5d47bc4625cd9e2e25809f0c7840660e905433e460c231d83cece50f5671de"
