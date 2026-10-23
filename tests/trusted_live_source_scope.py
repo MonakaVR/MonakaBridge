@@ -22,16 +22,19 @@ def verify(root):
     def git(*args):return subprocess.check_output(['git','-C',str(root),*args])
     changed=set(git('diff','--name-only',BASE).decode().splitlines())|set(git('ls-files','--others','--exclude-standard').decode().splitlines())
     assert changed<=FILES|approved_runtime(root),('5AI-S scope',changed-FILES)
+    from p2r_runtime_scope import RuntimeArchiveReview
+    projection=RuntimeArchiveReview(root)
     with tarfile.open(fileobj=io.BytesIO(git('archive',BASE))) as tree:
         for member in tree:
             if not member.isfile():continue
-            old=tree.extractfile(member).read();current=runtime_bytes(root,member.name,(root/member.name).read_bytes())
+            old=tree.extractfile(member).read();current=projection.project(member.name,(root/member.name).read_bytes())
             if member.name in {'CMakeLists.txt','tests/publisher_identity_scope.py','tests/receiver_scope.py'}:
                 current=historical_source(current.decode().replace('\r\n','\n')).encode()
                 old=old.replace(b'\r\n',b'\n')
                 # Removing an appended block also removes its intentional separating newline.
                 if member.name=='CMakeLists.txt':current=current.rstrip()+b'\n';old=old.rstrip()+b'\n'
             assert current==old,'R2 production/test baseline changed: '+member.name
+    projection.verify_current()
     core=(root/'src/source/trusted_live_source.cpp').read_text()
     adapter=(root/'scripts/trusted_live_source_adapter.py').read_text()
     assert 'w::EncodeEnvelope' in core and 'config_.sourcePublisherId' in core

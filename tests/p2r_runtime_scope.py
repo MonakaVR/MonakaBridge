@@ -18,14 +18,30 @@ def approved_runtime(root):
   if actual!=entry['sha256']:raise RuntimeError('Unreviewed P2R runtime baseline drift: '+name)
  return set(pin['files'])|{'dependencies/p2r-runtime-baseline.json'}|extra
 def runtime_bytes(root,name,raw):
- root=Path(root);approved_runtime(root);raw=predecessor_bytes(root,name,raw);pin=json.loads((root/'dependencies/p2r-runtime-baseline.json').read_text())
+ root=Path(root);approved_runtime(root)
+ return _runtime_bytes(root,name,raw,json.loads((root/'dependencies/p2r-runtime-baseline.json').read_text()))
+
+def _runtime_bytes(root,name,raw,pin):
+ raw=predecessor_bytes(root,name,raw)
  if name not in pin['files']:return raw
- approved_runtime(root)
  entry=pin['files'][name]
  if not entry['existed_at_base']:return raw
  old=subprocess.check_output(['git','-C',str(root),'show',BASE+':'+name])
  if digest(old)!=entry['base_sha256']:raise RuntimeError('P2R historical baseline drift: '+name)
  return old
+
+class RuntimeArchiveReview:
+ """Validate all scope bytes before and after a complete historical archive.
+
+ The caller still compares every archive member. Per-member predecessor
+ projection keeps its exact hash checks; this avoids repeating the same full
+ transitive approval graph thousands of times inside an unchanged file list.
+ """
+ def __init__(self,root):
+  self.root=Path(root);approved_runtime(self.root)
+  self.pin=json.loads((self.root/'dependencies/p2r-runtime-baseline.json').read_text())
+ def project(self,name,raw):return _runtime_bytes(self.root,name,raw,self.pin)
+ def verify_current(self):approved_runtime(self.root)
 def runtime_text(text):
  root=Path(__file__).resolve().parents[1];text=predecessor_text(root,text);pin=json.loads((root/'dependencies/p2r-runtime-baseline.json').read_text())
  for name,entry in pin['files'].items():
