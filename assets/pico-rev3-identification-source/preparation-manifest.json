@@ -7,7 +7,7 @@
     "uv": 147,
     "triangles": 31338,
     "expanded_vertices": 49103,
-    "manifest_sha256": "91ade04d32f3eb8dbce65ef13eccd81ebc825ba62f68db9a7058f6d68927f28b"
+    "manifest_sha256": "602d1eda4293a869c6d7c210ffbd031de89eb8b8ea4252120e1b1f1e292e6742"
   },
   "diagnostic": {
     "vertices": 16037,
@@ -15,7 +15,7 @@
     "uv": 507,
     "triangles": 31458,
     "expanded_vertices": 49463,
-    "manifest_sha256": "1dae68bef8e35a5e3d532aacc2b46dbdb6954a98fd2cab9bfe7358968650db5f"
+    "manifest_sha256": "e0cd34b51386f99d3dc4093bcee538408fae842bbdd0ab40d46797f957c32bbe"
   },
   "markers": [
     {
@@ -49,23 +49,41 @@
       "label": "+Z / FORWARD"
     }
   ],
-  "local_correction": "NONE",
-  "transformation": "Exact duplicate UV entries merged; all original positions, normals, ordered faces and sampled UV coordinates preserved.",
-  "feature_directions": {
-    "logo": [
-      0,
-      -1,
-      0
-    ],
-    "back": [
-      0,
+  "local_correction": "Rx(+90 degrees): (x,y,z) -> (x,-z,y)",
+  "model_to_tracking_matrix": [
+    [
       1,
+      0,
       0
     ],
-    "LED_button_arrow": [
+    [
       0,
       0,
       -1
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "correction_evidence": "axis-hil-correction-evidence.json",
+  "transformation": "Exact signed permutation of body positions/normals; original face order and sampled UV coordinates preserved. Axis markers use final resource axes.",
+  "feature_directions": {
+    "logo": [
+      0,
+      0,
+      -1
+    ],
+    "back": [
+      0,
+      0,
+      1
+    ],
+    "LED_button_arrow": [
+      0,
+      1,
+      0
     ],
     "USB": [
       -1,
@@ -73,7 +91,7 @@
       0
     ]
   },
-  "label_semantics": "FRONT names the supplied logo face (-Y). TOP names local +Y/back, not a physical tracking axis. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z.",
+  "label_semantics": "FRONT names the supplied logo face, now -Z. TOP retains the prepared model back-face name, now +Z, not physical up. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z. +Y / UP is the final model-local axis, not a neutral-pose world direction.",
   "units": "metres",
   "tracking_pose_changed": false
 }
