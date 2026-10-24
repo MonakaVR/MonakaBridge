@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "criteria_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "criteria_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "device": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_space": {
+      "type": "string",
+      "minLength": 1
+    },
+    "measurement_result_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_session": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_clock": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_serial": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_standing": {
+      "type": "string",
+      "minLength": 1
+    },
+    "build_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "criteria_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "config_preimage_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "config_candidate_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "tool_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "input_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "world_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mapping_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reference_generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "measured_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expires_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "native_result": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "raw": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "config_preimage": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "schema": {
+      "const": "monaka.physical-evidence.v1"
+    },
+    "evidence_kind": {
+      "const": "physical_capture"
+    },
+    "measurement_mode": {
+      "const": "trajectory"
+    },
+    "world": {
+      "type": "object",
+      "required": [
+        "rotation_xyzw",
+        "translation_m"
+      ],
+      "properties": {
+        "rotation_xyzw": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "number"
+          }
+        },
+        "translation_m": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "criteria_id",
+    "criteria_version",
+    "source",
+    "device",
+    "input_space",
+    "measurement_result_id",
+    "source_session",
+    "source_clock",
+    "reference_serial",
+    "reference_standing",
+    "build_identity",
+    "criteria_sha256",
+    "config_preimage_sha256",
+    "config_candidate_sha256",
+    "tool_sha256",
+    "input_revision",
+    "world_revision",
+    "mapping_revision",
+    "reference_generation",
+    "measured_at_utc_ms",
+    "expires_at_utc_ms",
+    "native_result",
+    "raw",
+    "config_preimage",
+    "schema",
+    "evidence_kind",
+    "measurement_mode",
+    "world"
+  ],
+  "additionalProperties": false
+}

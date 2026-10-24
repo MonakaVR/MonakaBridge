@@ -1,0 +1,85 @@
+#include "calibration_runtime_fake.hpp"
+#include <iostream>
+#include <limits>
+
+namespace lc=mb::local_calibration;namespace rf=runtime_fixture;
+namespace {
+template<class F>std::string rejection(F f){try{f();}catch(const std::exception& e){return e.what();}throw std::runtime_error("expected rejection");}
+int groups=0;void pass(const char* s){++groups;std::cout<<"PASS N1 "<<s<<std::endl;}
+void missingDeclaration(const std::filesystem::path& base){
+ for(bool readOnly:{false,true}){
+  fixture::Run r(base);auto canonical=lc::Json::parse(mb::readConfigBytes(r.path));for(auto& mapping:canonical["mappings"])mapping.erase("runtime_contract");
+  const auto original=canonical.dump();{std::ofstream file(r.path,std::ios::binary|std::ios::trunc);file<<original;}
+  CHECK(!mb::loadConfig(r.path).contracts.size());
+  rf::State state(r.time);auto provider=rf::provider(state,true);lc::CalibrationSession session(*provider,r.env);
+  auto open=r.open();open["readonly"]=readOnly;auto opened=session.execute(open);
+  std::cout<<"missing-declaration production open: "<<opened.dump()<<std::endl;
+  CHECK(opened["status"]=="OPEN"&&opened["phase"]=="OPEN"&&opened["readonly"]==readOnly);
+  CHECK(provider->configuration()&&!provider->configuration()->capabilityProfile());
+  auto command=[&](const char* op){return lc::Json{{"api_version",1},{"request_id",lc::opaqueId()},{"op",op},{"session_id",session.sessionId()},{"run_id",session.runId()}};};
+  auto rejected=session.execute(command("discover"));CHECK(rejected["status"]=="REJECTED"&&rejected["reason"]=="EXPLICIT_DECLARATION_REQUIRED"&&rejected["phase"]=="INSPECT_ONLY");
+  session.execute(command("close"));
+  CHECK(state.initCalls==0&&state.bindCalls==0&&state.poseCalls==0&&state.eventCalls==0&&state.shutdownCalls==0&&state.transportCloses==0);
+  CHECK(!state.initialized&&!state.bound&&!std::filesystem::exists(r.env.draftRoot)&&mb::readConfigBytes(r.path)==original);
+  // Also call the concrete provider boundary directly: an owner wrapper must
+  // not be necessary to avoid acquiring resources with no declaration.
+  r.reset();CHECK(r.execute(r.open())["status"]=="OPEN");rf::State direct(r.time);auto p=rf::provider(direct);p->configure(r.provider.configuration());std::atomic<bool> cancel{false};
+  CHECK(rejection([&]{p->discover(cancel);})=="EXPLICIT_DECLARATION_REQUIRED");p->shutdown();
+  CHECK(direct.initCalls==0&&direct.bindCalls==0&&direct.poseCalls==0&&direct.shutdownCalls==0&&direct.transportCloses==0);
+ }
+ pass("production missing declaration: canonical open writable/readonly succeeds; discover rejects before all SDK/socket calls; direct concrete boundary also closed");
+}
+struct Case {
+ fixture::Run run;rf::State state{run.time};std::unique_ptr<lc::RuntimeCaptureProvider> p{rf::provider(state)};std::atomic<bool> cancel{false};
+ explicit Case(const std::filesystem::path& base):run(base){CHECK(run.execute(run.open())["status"]=="OPEN");p->configure(run.provider.configuration());}
+ ~Case(){try{p->shutdown();}catch(...){}}
+};
+}
+int main(int argc,char** argv)try{
+ CHECK(argc==2||(argc==3&&std::string(argv[2])=="--missing-declaration"));auto base=std::filesystem::absolute(std::filesystem::u8path(argv[1]));
+ missingDeclaration(base);if(argc==3)return 0;
+ {Case c(base);CHECK(c.p->supported()&&c.state.initCalls==0&&c.state.bindCalls==0&&c.state.poseCalls==0);auto b=c.p->discover(c.cancel);CHECK(c.state.initCalls==1&&c.state.bindCalls==1&&c.state.application==vr::VRApplication_Background&&c.state.origin==vr::TrackingUniverseStanding&&c.state.prediction==0&&b.frames.size()==1&&b.referenceValid);lc::CaptureMonitor m(*c.p->configuration(),b,c.run.time,c.run.time);CHECK(m.witness().initialPoseFloor==1&&!m.witness().initialStateFloor);c.p->shutdown();CHECK(c.state.shutdownCalls==1&&c.state.transportCloses==1);c.p->shutdown();CHECK(c.state.shutdownCalls==1);pass("resource-free constructor/configure; lazy Background/Standing/prediction0; canonical discovery and same-owner cleanup");}
+ {for(const auto* role:{"hmd","right"}){fixture::Run r(base);auto open=r.open();open["reference_role"]=role;CHECK(r.execute(open)["status"]=="OPEN");rf::State s(r.time);s.controllerRole=vr::TrackedControllerRole_RightHand;auto p=rf::provider(s);p->configure(r.provider.configuration());std::atomic<bool> cancel{false};auto b=p->discover(cancel);CHECK(b.referenceValid&&b.identity.referenceRole==role);p->shutdown();CHECK(s.shutdownCalls==1&&s.transportCloses==1);}pass("explicit HMD and right-controller roles use same pinned Standing provider and owner cleanup");}
+ {auto m=rf::matrix({});CHECK(lc::sameStandingValues(m,m));auto zero=m;zero.m[0][1]=-0.0f;CHECK(lc::sameStandingValues(m,zero));auto ulp=m;ulp.m[0][3]=std::nextafter(0.0f,1.0f);CHECK(!lc::sameStandingValues(m,ulp));auto nan=m;nan.m[0][3]=std::numeric_limits<float>::quiet_NaN();CHECK(!lc::sameStandingValues(nan,nan));CHECK(rejection([&]{lc::calibrationReferenceRigid(nan);})=="NONFINITE_REFERENCE_MATRIX");auto reflection=m;reflection.m[0][0]=-1;CHECK(rejection([&]{lc::calibrationReferenceRigid(reflection);})=="IMPROPER_REFERENCE_MATRIX");auto scale=m;scale.m[0][0]=2;CHECK(rejection([&]{lc::calibrationReferenceRigid(scale);})=="NONRIGID_REFERENCE_MATRIX");auto shear=m;shear.m[0][1]=.2f;CHECK(rejection([&]{lc::calibrationReferenceRigid(shear);})=="NONRIGID_REFERENCE_MATRIX");mb::Rigid known{mb::normalized({.2,.3,.1,.9}),{1,2,3}};auto r=lc::calibrationReferenceRigid(rf::matrix(known));CHECK(mb::norm(mb::add(r.translation,mb::scale(known.translation,-1)))<1e-5);pass("finite/proper rigid goldens; reflection/scale/shear reject; exact float numeric witness signed-zero equality and ULP change");}
+ for(const auto* mode:{"matrix","universe","serial","generation","disconnect","reset","device","overflow","query-change","query-delay","ambiguous"}){
+  Case c(base);auto b=c.p->discover(c.cancel);lc::CaptureMonitor m(*c.p->configuration(),b,c.run.time,c.run.time);std::string modeName=mode;
+  if(modeName=="matrix")c.state.frame.m[0][3]=std::nextafter(0.0f,1.0f);
+  if(modeName=="universe")++c.state.universe;if(modeName=="serial")c.state.serial="other";if(modeName=="generation")++c.state.generation;if(modeName=="disconnect")c.state.connected=false;
+  if(modeName=="reset")c.state.event(vr::VREvent_StandingZeroPoseReset);
+  if(modeName=="device")c.state.event(vr::VREvent_TrackedDeviceDeactivated,1);
+  if(modeName=="overflow")for(int i=0;i<129;++i)c.state.event(vr::VREvent_None);
+  if(modeName=="query-change")c.state.poseHook=[&]{c.state.frame.m[0][3]=.01f;};
+  if(modeName=="query-delay")c.state.queryDelay=50000001;if(modeName=="ambiguous")c.state.ambiguous=true;
+  CHECK(!rejection([&]{c.p->guard();}).empty());pass(("reference failure closes guard: "+modeName).c_str());
+ }
+ {Case c(base);c.p->discover(c.cancel);c.state.queryDelay=20000001;auto b=c.p->guard();CHECK(!b.referenceValid&&!b.references[0].valid);pass("existing 20ms pairing bound invalidates slow reference; no new physical tolerance");}
+ {Case c(base);c.p->discover(c.cancel);c.run.time+=50000001;CHECK(rejection([&]{c.p->guard();})=="REFERENCE_POLL_STALLED");pass("poll stall rejects queued timing instead of refreshing it");}
+ {Case c(base);c.state.failInit=true;CHECK(rejection([&]{c.p->discover(c.cancel);})=="OPENVR_BACKGROUND_UNAVAILABLE");CHECK(c.state.bindCalls==0);pass("failed Background initialization never binds mirror");}
+ {Case c(base);c.state.failBind=true;CHECK(rejection([&]{c.p->discover(c.cancel);})=="MIRROR_BIND_FAILED");c.p->shutdown();CHECK(c.state.shutdownCalls==1&&!c.state.initialized);pass("bind failure releases initialized API on its owner");}
+ {Case c(base);c.state.generate=false;CHECK(rejection([&]{c.p->discover(c.cancel);})=="DISCOVER_TIMEOUT");pass("no mirror input has fixed bounded discovery deadline");}
+ {Case c(base);c.cancel=true;CHECK(rejection([&]{c.p->discover(c.cancel);})=="CANCELLED"&&c.state.initCalls==0&&c.state.bindCalls==0);c.p->shutdown();CHECK(c.state.shutdownCalls==0&&c.state.transportCloses==0);pass("cancel before discover and owner shutdown touch no unopened API/transport resources");}
+ {Case c(base);auto first=c.p->discover(c.cancel);lc::CaptureMonitor m(*c.p->configuration(),first,c.run.time,c.run.time);c.state.peer="127.0.0.1:42000";auto b=c.p->guard();CHECK(rejection([&]{m.consume(b,false,c.run.time);})=="SELECTED_LIFETIME_PEER_SPACE_CONFLICT");pass("decoded selected foreign peer reaches canonical sticky monitor");}
+ {Case c(base);auto first=c.p->discover(c.cancel);lc::CaptureMonitor m(*c.p->configuration(),first,c.run.time,c.run.time);c.state.generate=false;auto p=sample("pico",9);p.orientation=mb::Quat{0,0,0,1};p.timestamp_ns=c.run.time;p.sent_at_ns=c.run.time;p.capabilities={"orientation"};p.modality="rotation_only";p.tracking_state="degraded";p.position.reset();p.validity.position=false;std::string raw;mb::c1::Error e;CHECK(mb::c1::EncodeEnvelope(p,raw,e));c.state.datagrams.push_back({raw,c.state.peer});auto b=c.p->guard();CHECK(rejection([&]{m.consume(b,false,c.run.time);})=="DECLARATION_SCOPE_CHANGED");pass("no second normalizer or support inference from validity/presence; declaration subset stays rejected");}
+ {fixture::Run r(base);auto config=mb::loadConfig(r.path);config.contracts.at({"pico","device"}).inputDeclaration={"orientation"};config.contracts.at({"pico","device"}).outputDeclaration={"orientation"};++config.revision;mb::saveConfig(r.path,config);CHECK(r.execute(r.open())["status"]=="OPEN");rf::State s(r.time);auto p=rf::provider(s);p->configure(r.provider.configuration());std::atomic<bool> cancel{false};auto b=p->discover(cancel);CHECK(rejection([&]{lc::CaptureMonitor m(*p->configuration(),b,r.time,r.time);})=="DECLARATION_SCOPE_CHANGED");p->shutdown();pass("canonical position channel outside orientation-only provisioned declaration fails closed");}
+ for(const auto* mode:{"session","clock","space","revision","convention","absence"}){
+  Case c(base);auto first=c.p->discover(c.cancel);lc::CaptureMonitor m(*c.p->configuration(),first,c.run.time,c.run.time);c.state.generate=false;auto value=sample("pico",9);value.timestamp_ns=c.run.time;value.sent_at_ns=c.run.time;std::string key=mode;
+  if(key=="session")value.session_id=S2;if(key=="clock")value.clock_id=S2;if(key=="space")value.coordinate_space.id="foreign-space";if(key=="revision")++value.coordinate_space.revision;if(key=="convention")value.coordinate_space.convention="foreign-convention";
+  mb::c1::Envelope envelope=value;if(key=="absence"){auto absent=state(value,1);absent.presence="absent";absent.tracking_state="disconnected";envelope=absent;}
+  c.state.datagrams.push_back({wire(envelope),c.state.peer});auto bad=c.p->guard();CHECK(!rejection([&]{m.consume(bad,false,c.run.time);}).empty());CHECK(!rejection([&]{m.consume(first,false,c.run.time);}).empty());pass(("canonical selected "+key+" invalidation remains sticky after repair input").c_str());
+ }
+ {Case c(base);c.state.generate=false;mb::Bridge bridge(mb::loadConfig(c.run.path),SB);auto first=sample("pico",1);first.timestamp_ns=c.run.time;first.sent_at_ns=c.run.time;CHECK(bridge.receive(wire(first),c.state.peer,c.run.time));
+  bridge.fanout.flush([&](mb::Channel channel,std::string_view bytes){if(channel==mb::Channel::Mirror)c.state.datagrams.push_back({std::string(bytes),c.state.peer});return true;},c.run.time);
+  auto initial=c.p->discover(c.cancel);lc::CaptureMonitor monitor(*c.p->configuration(),initial,c.run.time,c.run.time);auto legacy=first;legacy.sequence=2;legacy.capabilities={"orientation"};legacy.modality="rotation_only";legacy.position.reset();legacy.validity.position=false;legacy.tracking_state="degraded";CHECK(bridge.receive(wire(legacy),c.state.peer,c.run.time));c.run.time+=6000000;
+  bridge.fanout.flush([&](mb::Channel channel,std::string_view bytes){if(channel==mb::Channel::Mirror)c.state.datagrams.push_back({std::string(bytes),c.state.peer});return true;},c.run.time);
+  auto batch=c.p->guard();CHECK(batch.frames.size()==1);auto normalized=std::get<mb::c1::TrackerObservation>(batch.frames[0].envelope);CHECK(normalized.capabilities==first.capabilities&&normalized.sent_at_ns==legacy.sent_at_ns+6000000&&normalized.timestamp_ns==legacy.timestamp_ns&&normalized.sequence==legacy.sequence&&!normalized.validity.position&&normalized.validity.orientation&&normalized.orientation==legacy.orientation&&normalized.session_id==legacy.session_id);monitor.consume(batch,false,c.run.time);
+  // Existing latest-only fanout can overwrite an undelivered invalid packet.
+  // This is an explicit observability limit, never an end-to-end history claim.
+  legacy.sequence=3;CHECK(bridge.receive(wire(legacy),c.state.peer,c.run.time));first.sequence=4;CHECK(bridge.receive(wire(first),c.state.peer,c.run.time));CHECK(bridge.fanout.pending(mb::Channel::Mirror)==1);
+  pass("actual Bridge P1 normalization/fanout to same N1 decode; six-ms queue age retained; invalid validity untouched; latest-only limit explicit");
+ }
+ {Case c(base);c.p->discover(c.cancel);c.state.generate=false;for(int i=0;i<129;++i)c.state.datagrams.push_back(c.state.packet());CHECK(rejection([&]{c.p->guard();})=="MIRROR_BATCH_OVERFLOW");pass("bounded canonical ingress rejects excess backlog");}
+ {Case c(base);auto b=c.p->discover(c.cancel);lc::CaptureMonitor m(*c.p->configuration(),b,c.run.time,c.run.time);c.state.generate=false;auto foreign=sample("other-source",2);foreign.orientation=mb::Quat{0,0,0,1};std::string raw;mb::c1::Error e;CHECK(mb::c1::EncodeEnvelope(foreign,raw,e));c.state.datagrams.push_back({raw,"other-peer"});c.state.datagrams.push_back({"malformed",c.state.peer});auto next=c.p->guard();CHECK(next.frames.empty());m.consume(next,false,c.run.time);pass("unrelated source and malformed datagram boundedly ignored without fabricating identity");}
+ {Case c(base);auto b=c.p->discover(c.cancel);auto original=c.state.frame;c.state.poseHook=[&]{c.state.frame.m[0][3]=1;c.state.frame=original;c.state.event(vr::VREvent_StandingZeroPoseReset);};CHECK(rejection([&]{c.p->guard();})=="STANDING_EVENT_CHANGED");pass("matrix ABA with reset event still invalidates; equality never overrides event");}
+ {fixture::Run r(base);rf::State s(r.time);auto p=rf::provider(s,true);lc::CalibrationSession session(*p,r.env);auto open=r.open();CHECK(session.execute(open)["capture_supported"]==true);auto command=[&](const char* op){lc::Json j={{"api_version",1},{"request_id",lc::opaqueId()},{"op",op},{"session_id",session.sessionId()},{"run_id",session.runId()}};return j;};CHECK(session.execute(command("discover"))["status"]=="DISCOVERED");auto confirmed=session.execute(command("confirm_target"));CHECK(confirmed["status"]=="CONFIRMED");auto begin=command("begin");begin["confirmation_token"]=confirmed["confirmation_token"];auto result=session.execute(begin);if(result["status"]!="RESULT_READY")throw std::runtime_error(result.dump());auto prepare=command("prepare_commit");prepare["result_id"]=result["result"]["result_id"];auto ready=session.execute(prepare);CHECK(ready["status"]=="PREPARED");auto bytes=mb::readConfigBytes(std::filesystem::u8path(ready["candidate_path"].get<std::string>()));auto commit=command("commit");for(auto key:{"result_id","review_token","candidate_sha256"})commit[key]=ready[key];CHECK(session.execute(commit)["status"]=="SAVED"&&session.solveCalls()==1&&session.commitCalls()==1&&mb::readConfigBytes(r.path)==bytes);session.execute(command("close"));CHECK(s.shutdownCalls==1&&s.transportCloses==1);pass("same actual runtime provider source → canonical decode → monitor → one solver/result/candidate/exact commit; fake API/transport only");}
+ std::cout<<"PASS N1 runtime provider "<<groups<<" groups; real SDK/runtime/socket execution NOT_RUN"<<std::endl;return 0;
+}catch(const std::exception& e){std::cerr<<e.what()<<std::endl;return 1;}

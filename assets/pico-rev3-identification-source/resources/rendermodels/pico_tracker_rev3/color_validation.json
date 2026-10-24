@@ -1,0 +1,59 @@
+{
+  "source_sha256": "5e0d31d843281b85227139ff3f8bbd648c966e553f08be77ae8ec06b62c6c840",
+  "vertices": 15677,
+  "triangles": 31338,
+  "face_categories": {
+    "housing": 20802,
+    "seam": 8064,
+    "cavity": 554,
+    "back": 124,
+    "logo": 278,
+    "button": 508,
+    "led": 500,
+    "usb": 508
+  },
+  "positions_preserved_verbatim": true,
+  "normals_preserved_verbatim": true,
+  "face_vertex_and_normal_indices_preserved": true,
+  "materials": 1,
+  "atlas_pixels": [
+    2048,
+    2048
+  ],
+  "back_normal": [
+    0,
+    1,
+    0
+  ],
+  "arrow_direction": [
+    0,
+    0,
+    -1
+  ],
+  "led_button_direction": [
+    0,
+    0,
+    -1
+  ],
+  "usb_direction": [
+    -1,
+    0,
+    0
+  ],
+  "seam_y_m": 0.00076,
+  "logo_side_to_back_side_ratio": "5.5 : 4.5",
+  "geometry_modified": false,
+  "runtime_test": "NOT RUN; assets only, no registration or installation",
+  "bounds_mm": [
+    [
+      -19.25,
+      -7.6,
+      -19.25
+    ],
+    [
+      19.25,
+      7.6,
+      19.249948999999997
+    ]
+  ]
+}

@@ -47,7 +47,8 @@ selection. It locks the first source session and aborts if session or coordinate
 changes, if the config/profile/mapping changes, or if the mirror stops supplying the exact device.
 Unknown addresses are not rebound. The selected profile's signed position mapping and any existing
 mount translation are applied to the source points; profile axes, mount rotation/translation and
-input approval are never edited.
+profile approval/evidence are never edited. Persisting Shared World clears the
+binding space approval for the exact source/input-map/revision group.
 
 Capture at least three non-collinear locations. At each location, keep the Altra and SteamVR
 reference device rigidly fixed relative to one another, keep their orientation nearly unchanged,
@@ -61,8 +62,11 @@ Measurement is the default and does not mutate configuration. Add `--apply` only
 the points and residuals. Apply reloads and revalidates the config, updates only `world.rotation`
 and `world.translation` for the existing shared source/input-map/revision group, increments
 `mapping_revision` exactly once, performs native validation, and uses the existing atomic
-replacement plus first-original backup. It does not change `world_revision`, mount/profile axes,
-space approval, or restart the tracking service. `--clear` additionally requires the full exact
+replacement plus first-original backup. Every explicit apply, including an identical W,
+clears `space_approved` on every member of that exact group, as does native `align`.
+No epsilon comparison is used. Other source/space/revision groups retain their approval.
+It does not change `world_revision`, mount/profile axes or profile approval/evidence,
+or restart the tracking service. `--clear` additionally requires the full exact
 selection and `--apply` and restores the shared world transform to identity.
 
 `align`/`rename` reject tracker-name shorthand if it occurs in multiple sources. Use an explicit source/device config edit in that case. Calibration no longer selects a Direct runtime serial; it requires the exact logical tracker/source/device/input-space/revision tuple. `--list-trackers` remains only as a legacy Direct-device diagnostic. Same-source logical tracker reassignment to a different device still requires Bridge restart; a saved configuration is not proof of runtime application.

@@ -57,6 +57,11 @@ namespace MonakaBridge {
    Dictionary<string,object> selected=selectedIndex<0?null:(Dictionary<string,object>)list[selectedIndex];
    if(selected==null)foreach(Dictionary<string,object> b in list)
     if(Text(b,"source_id")==Text(edit,"source_id")&&Text(b,"device_id")==Text(edit,"device_id"))selected=b;
+   bool sameApproval=selected!=null&&Convert.ToBoolean(selected["space_approved"],CultureInfo.InvariantCulture);
+   foreach(string field in new[]{"source_id","device_id","profile","input_space","input_revision","world_space"})
+    sameApproval=sameApproval&&selected!=null&&Text(selected,field)==Text(edit,field);
+   if(Convert.ToBoolean(edit["space_approved"],CultureInfo.InvariantCulture)&&!sameApproval)
+    throw new InvalidOperationException("New output approval requires separate native output review; existing approvals are preserved only for unchanged physical/coordinate identity.");
    if(selected==null){selected=new Dictionary<string,object>{{"world",Rigid()},{"mount",Rigid()},{"world_revision",0}};list.Add(selected);}
    foreach(var name in new[]{"source_id","device_id","tracker_id","profile","input_space","input_revision","world_space","space_approved"})selected[name]=edit[name];
    var inputs=new HashSet<Tuple<string,string>>();var outputs=new HashSet<Tuple<string,string,string>>();
@@ -86,7 +91,9 @@ namespace MonakaBridge {
     using(var text=new StreamReader(file,Encoding.UTF8)){
      var json=new JavaScriptSerializer{MaxJsonLength=32*1024*1024};
      var value=json.Deserialize<Dictionary<string,object>>(text.ReadToEnd());
-     if(value==null||!(value["devices"] is ICollection))throw new IOException("Invalid health snapshot.");
+     object devices;string policy;
+     if(value==null||!value.TryGetValue("devices",out devices)||!(devices is IList))throw new IOException("Invalid health snapshot devices.");
+     if(!HealthPresentation.TryPolicy(value,out policy))throw new IOException("Invalid health snapshot policy: expected steamvr, monaka, both or disabled.");
      // Time of snapshot creation, not delayed disk replacement/read completion.
      var timestamp=value.ContainsKey("snapshot_unix_ms")?new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc).AddMilliseconds(Convert.ToDouble(value["snapshot_unix_ms"],CultureInfo.InvariantCulture)):DateTime.MinValue;
      return new HealthReadResult{Value=value,SnapshotUtc=timestamp};
@@ -110,6 +117,12 @@ namespace MonakaBridge {
   public void Dispose(){Interlocked.Exchange(ref disposed,1);}
  }
  internal static class HealthPresentation {
+  internal static bool TryPolicy(Dictionary<string,object> value,out string policy){
+   object raw;policy=null;
+   if(value==null||!value.TryGetValue("policy",out raw)||!(raw is string))return false;
+   string text=(string)raw;if(text!="steamvr"&&text!="monaka"&&text!="both"&&text!="disabled")return false;
+   policy=text;return true;
+  }
   internal static string MappingRevision(object configured,object observed,bool current,bool samePublisher){
    string configText=Convert.ToString(configured,CultureInfo.InvariantCulture),healthText=observed==null?"unknown":Convert.ToString(observed,CultureInfo.InvariantCulture);
    string comparison=!current||!samePublisher||observed==null?"unavailable / historical; application status unknown":

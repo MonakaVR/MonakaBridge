@@ -1,0 +1,61 @@
+{
+  "base_commit": "31f47a4672b0eef22ef55bd2c6d866103e483ee6",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "50c373541fd3c83456bf6e43ee21501042caf3ffa1020a20aea528cbd8bfb2a3",
+      "existed_at_base": true,
+      "base_sha256": "8d202fbe509cbfb9ff68cdf87a4e8f05e0dba89f12d9e52ac32d5c9d41a09198"
+    },
+    "docs/writer-fixture-events.md": {
+      "sha256": "8e3863eb9466e0bd5e277a295c87bddff019cf0767afa888b372fcc38bc6957c",
+      "existed_at_base": false
+    },
+    "tests/calibration_review_events.hpp": {
+      "sha256": "a78e10345cad844b0b642351cf189fc631e97a6aa8e46edfd6cbae6e57bb08a9",
+      "existed_at_base": false
+    },
+    "tests/calibration_review_events.py": {
+      "sha256": "247de32f37c2c940becb44b355d4d050f98278b87d5e3754c03ad6395fa02c4c",
+      "existed_at_base": false
+    },
+    "tests/calibration_session_process.py": {
+      "sha256": "3758080f09719c50a833456c4d0d2464042c8e23ebd4b33f8699b474e6fad677",
+      "existed_at_base": true,
+      "base_sha256": "25fa638844e177bffe15978fbc2b2f9ce40a2d26435899735af36ef45c01556c"
+    },
+    "tests/calibration_session_process_fixture.cpp": {
+      "sha256": "1217c78641b91887b4bdd88b7b96d79be957b88f85a6750216cadb1fe7fabd11",
+      "existed_at_base": true,
+      "base_sha256": "e4e949cbe9369429110b9291be1f0b89f6329a2589b972aba6602f82981ebe08"
+    },
+    "tests/calibration_session_scope.py": {
+      "sha256": "11fcde03e60645b9734937d7920f73a2d8add1899d823865d0c6b19dad6a37a7",
+      "existed_at_base": true,
+      "base_sha256": "56b1750deb6a55101c48f0052b83e23385cce2b8f8813baf180cc06a3b8d6eb7"
+    },
+    "tests/calibration_session_scope_tests.py": {
+      "sha256": "3d89146d6351400c9415403401f84a0bd0d3962d5c4324fe1ffe0ee59f561074",
+      "existed_at_base": true,
+      "base_sha256": "3d89146d6351400c9415403401f84a0bd0d3962d5c4324fe1ffe0ee59f561074"
+    },
+    "tests/provider_options_scope.py": {
+      "sha256": "44f3f83075ac490cb09ee29d1d90f0b08a2c1d845225532f3efb8ba6937aa0a9",
+      "existed_at_base": true,
+      "base_sha256": "f64781ec916532703a48340d395192ec15b40553545d387cb5deb5ae5d7baaf5"
+    },
+    "tests/provider_options_scope_tests.py": {
+      "sha256": "654b4a27d8eaced3f6231c99f2b04df625398e8247a43e07b8a5fc189b9194c3",
+      "existed_at_base": true,
+      "base_sha256": "e9e04ff238b7796a660ea2bc762ad5a9d8722bb24cd3bfe7df2a77cdf5784833"
+    },
+    "tests/writer_fixture_scope.py": {
+      "sha256": "2c58729c219c09117d7be67c687408ca174fa437d3f0843b50fd85dbeffb111e",
+      "existed_at_base": false
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "e62e55f6ee5276f9927c8ff565974fd38043ae0d6a9ca8885d2ad7251581ca11",
+      "existed_at_base": false
+    }
+  },
+  "writer_dependency_commit": "283f08be6868e2580fccbc12ba2949d6e2dc4b1e"
+}
