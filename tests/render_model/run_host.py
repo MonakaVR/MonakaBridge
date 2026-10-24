@@ -34,7 +34,8 @@ def fixture():
     return config,selection
 
 def case(name,mode='generic',mutation='none',edit=None,baseline=False,model=None):
-    package=root/name/'package';shutil.copytree(a.package,package)
+    case_dir=root/('axis-%02d'%len(records) if a.axis_models else name)
+    package=case_dir/'package';shutil.copytree(a.package,package)
     config,selection=fixture()
     if model:selection["assignments"][0]["model_id"]=model
     folder=package/'resources/presentation'
@@ -54,16 +55,16 @@ def case(name,mode='generic',mutation='none',edit=None,baseline=False,model=None
     if baseline:shutil.copyfile(a.baseline_dll,dll)
     before=hashlib.sha256(dll.read_bytes()).hexdigest()
     immutable={str(p.relative_to(package)):hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
-    command=[str(a.host.resolve()),str(dll),str(root/name/'observation'),mode,mutation]
+    command=[str(a.host.resolve()),str(dll),str(case_dir/'observation'),mode,mutation]
     if model:command.append("{monaka_bridge}"+model)
     start=time.monotonic()
-    with (root/name/'stdout.txt').open('xb') as stdout,(root/name/'stderr.txt').open('xb') as stderr:
+    with (case_dir/'stdout.txt').open('xb') as stdout,(case_dir/'stderr.txt').open('xb') as stderr:
         proc=subprocess.Popen(command,stdout=stdout,stderr=stderr)
         try:code=proc.wait(timeout=15)
         except subprocess.TimeoutExpired:
             proc.kill();proc.wait();raise RuntimeError('D2 owned child timeout: '+name)
-    value=json.loads((root/name/'observation/result.json').read_text())
-    record=dict(name=name,pid=proc.pid,exit_code=code,seconds=time.monotonic()-start,command=command,result=value,child_exited=True)
+    value=json.loads((case_dir/'observation/result.json').read_text())
+    record=dict(package=str(package),name=name,pid=proc.pid,exit_code=code,seconds=time.monotonic()-start,command=command,result=value,child_exited=True)
     records.append(record);(root/'children.json').write_text(json.dumps(records,indent=2)+'\n')
     assert before==hashlib.sha256(dll.read_bytes()).hexdigest()
     assert immutable=={str(p.relative_to(package)):hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()},'native child modified package/config'
@@ -84,7 +85,7 @@ if a.axis_models:
         case(model+'-corrupt',model=model,edit=lambda c,s,p:(p/'resources/rendermodels'/model/(model+'.png')).write_bytes(b'bad PNG'))
     # Reuse the diagnostic package, replace only the presentation selection,
     # then initialize a fresh Provider snapshot against the same held DLL.
-    package=root/'pico_tracker_rev3_axis_debug-recovery/package'
+    package=Path(next(row['package'] for row in records if row['name']=='pico_tracker_rev3_axis_debug-recovery'))
     selection_path=package/'resources/presentation/selection.json'
     selection=json.loads(selection_path.read_text());selection['assignments'][0]['model_id']='pico_tracker_rev3_identification'
     selection_path.write_text(json.dumps(selection))
