@@ -10,7 +10,15 @@ def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def write(p,t):p.write_text(t,encoding='utf-8',newline='\n')
 def jsonwrite(p,v):write(p,json.dumps(v,indent=2)+'\n')
 raw=(SOURCE/'pico_tracker_rev3.obj').read_text().splitlines()
-vs=[l for l in raw if l.startswith('v ')];ns=[l for l in raw if l.startswith('vn ')]
+# HIL 2026-10-24: USB/-X agrees, physical LED lies along tracking +Y,
+# and physical logo lies along tracking -Z. Apply Rx(+90) to assets only.
+# Keep source decimal precision: this is an exact permutation/sign change.
+def corrected_record(line):
+ kind,x,y,z=line.split();negative_z=z[1:] if z.startswith('-') else '-'+z
+ return ' '.join([kind,x,negative_z,y])
+def corrected_vector(v):return [v[0],-v[2],v[1]]
+vs=[corrected_record(l) for l in raw if l.startswith('v ')]
+ns=[corrected_record(l) for l in raw if l.startswith('vn ')]
 old_uv=[tuple(map(float,l.split()[1:])) for l in raw if l.startswith('vt ')]
 uv=[];lookup={};faces=[]
 for l in raw:
@@ -23,7 +31,7 @@ for l in raw:
   faces.append(face)
 def export(model,vertices,normals,texture,triangles,png):
  directory=OUT/model;directory.mkdir(parents=True,exist_ok=True)
- text=['# Identification geometry preserved; no model-local rotation.','mtllib '+model+'.mtl','o '+model]+vertices+normals
+ text=['# Body vertices/normals: confirmed model-local Rx(+90), (x,y,z)->(x,-z,y).','mtllib '+model+'.mtl','o '+model]+vertices+normals
  text+=['vt %.12g %.12g'%t for t in texture]+['usemtl identification','s 1']
  text+=['f '+' '.join('/'.join(map(str,c)) for c in f) for f in triangles]
  write(directory/(model+'.obj'),'\n'.join(text)+'\n')
@@ -38,7 +46,7 @@ production=export(PROD,vs,ns,uv,faces,(SOURCE/'pico_rev3_identification_atlas.pn
 # diagnostic axis name, explicitly documented, never a tracking convention.
 atlas=Image.new('RGB',(2048,4096),(18,22,30));atlas.paste(Image.open(SOURCE/'pico_rev3_identification_atlas.png'),(0,0))
 draw=ImageDraw.Draw(atlas);font=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
-labels=[('+X / RIGHT',(230,45,45)),('+Y / UP',(35,200,75)),('+Z / FORWARD',(45,125,255)),('FRONT: LOGO -Y',(245,185,35)),('TOP: BACK +Y',(40,210,210)),('USB-C: -X',(210,90,230))]
+labels=[('+X / RIGHT',(230,45,45)),('+Y / UP',(35,200,75)),('+Z / FORWARD',(45,125,255)),('FRONT: LOGO -Z',(245,185,35)),('TOP: BACK +Z',(40,210,210)),('USB-C: -X',(210,90,230))]
 regions=[]
 for i,(label,color) in enumerate(labels):
  y=2110+i*260;draw.rounded_rectangle((64,y,1984,y+210),radius=24,fill=color)
@@ -76,18 +84,21 @@ for axis in range(3):
 plate([.076,.02,0],[1,0,0],[0,1,0],.047,.012,0)
 plate([0,.081,0],[1,0,0],[0,1,0],.047,.012,1)
 plate([0,0,.081],[1,0,0],[0,0,1],.055,.012,2)
-plate([0,-.012,0],[1,0,0],[0,0,1],.032,.008,3)
-plate([0,.012,0],[-1,0,0],[0,0,1],.032,.008,4)
-plate([-.047,0,0],[0,0,1],[0,1,0],.035,.009,5)
+# Axis arrows/axis cards remain on final resource-local positive X/Y/Z.
+# Physical face/USB cards follow the same correction as the body.
+plate(corrected_vector([0,-.012,0]),corrected_vector([1,0,0]),corrected_vector([0,0,1]),.032,.008,3)
+plate(corrected_vector([0,.012,0]),corrected_vector([-1,0,0]),corrected_vector([0,0,1]),.032,.008,4)
+plate(corrected_vector([-.047,0,0]),corrected_vector([0,0,1]),corrected_vector([0,1,0]),.035,.009,5)
 import io
 buffer=io.BytesIO();atlas.save(buffer,format='PNG')
 diagnostic=export(DEBUG,vertices,normals,texture,triangles,buffer.getvalue())
 assert production['expanded_vertices']<65000 and diagnostic['expanded_vertices']<65000
 jsonwrite(ROOT/'assets/pico-rev3-identification-source/preparation-manifest.json',dict(
  source_obj_sha256=sha(SOURCE/'pico_tracker_rev3.obj'),source_atlas_sha256=sha(SOURCE/'pico_rev3_identification_atlas.png'),
- production=production,diagnostic=diagnostic,markers=markers,local_correction='NONE',
- transformation='Exact duplicate UV entries merged; all original positions, normals, ordered faces and sampled UV coordinates preserved.',
- feature_directions=dict(logo=[0,-1,0],back=[0,1,0],LED_button_arrow=[0,0,-1],USB=[-1,0,0]),
- label_semantics='FRONT names the supplied logo face (-Y). TOP names local +Y/back, not a physical tracking axis. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z.',
+ production=production,diagnostic=diagnostic,markers=markers,local_correction='Rx(+90 degrees): (x,y,z) -> (x,-z,y)',
+ model_to_tracking_matrix=[[1,0,0],[0,0,-1],[0,1,0]],correction_evidence='axis-hil-correction-evidence.json',
+ transformation='Exact signed permutation of body positions/normals; original face order and sampled UV coordinates preserved. Axis markers use final resource axes.',
+ feature_directions=dict(logo=[0,0,-1],back=[0,0,1],LED_button_arrow=[0,1,0],USB=[-1,0,0]),
+ label_semantics='FRONT names the supplied logo face, now -Z. TOP retains the prepared model back-face name, now +Z, not physical up. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z. +Y / UP is the final model-local axis, not a neutral-pose world direction.',
  units='metres',tracking_pose_changed=False))
 print(json.dumps(dict(production=production,diagnostic=diagnostic)))

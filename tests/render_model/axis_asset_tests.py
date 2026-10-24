@@ -14,7 +14,25 @@ def parse(path):
 original=source/'resources/rendermodels/pico_tracker_rev3/pico_tracker_rev3.obj'
 assert m.sha(original)=='e477879904c8a5b3055f0a1d8cca63a889d1a6914ef71e2c07f742ba80cd9b6d'
 old_v,old_n,old_f=parse(original)
-v,n,f=parse(base/prod/(prod+'.obj'));assert (v,n,f)==(old_v,old_n,old_f),'geometry, normal, face order or UV sampling changed'
+def inverse_corrected(records):
+ # Undo the evidence-selected transform, independently of the asset generator.
+ result=[]
+ for line in records:
+  _,x,y,z=line.split();result.append((float(x),float(z),-float(y)))
+ return result
+def source_vectors(records):return [tuple(map(float,l.split()[1:])) for l in records]
+def check_reference(vertices,normals,faces):
+ assert inverse_corrected(vertices)==source_vectors(old_v),'body positions differ beyond approved rotation'
+ assert inverse_corrected(normals)==source_vectors(old_n),'body normals differ beyond approved rotation'
+ assert faces==old_f,'face order or UV sampling changed'
+v,n,f=parse(base/prod/(prod+'.obj'));check_reference(v,n,f)
+preparation=json.loads((source/'preparation-manifest.json').read_text())
+assert preparation['model_to_tracking_matrix']==[[1,0,0],[0,0,-1],[0,1,0]]
+assert preparation['feature_directions']==dict(logo=[0,0,-1],back=[0,0,1],LED_button_arrow=[0,1,0],USB=[-1,0,0])
+assert [m['direction'] for m in preparation['markers']]==[[1,0,0],[0,1,0],[0,0,1]]
+evidence=json.loads((source/'axis-hil-correction-evidence.json').read_text())
+assert evidence['verdict']=='RENDERMODEL_MODEL_LOCAL_OFFSET_CONFIRMED'
+assert evidence['correction_matrix']==preparation['model_to_tracking_matrix']
 assert m.sha(base/prod/(prod+'.png'))=='7e9922800e0255be6b3bbb2d4720cafa7851e454b4096cd2b3e771da1a58735e'
 dv,dn,df=parse(base/debug/(debug+'.obj'));assert dv[:len(v)]==v and dn[:len(n)]==n
 expected=[[(vi,(u,.5+.5*t),ni) for vi,(u,t),ni in face] for face in f]
@@ -27,7 +45,7 @@ def validate(d,model):
  assert set(manifest['files'])=={model+x for x in ['.obj','.mtl','.png']}
  for name,h in manifest['files'].items():assert m.sha(d/name)==h
  assert (d/(model+'.mtl')).read_text().split('map_Kd ')[1].strip()==model+'.png'
- value,_=m.mesh(d/(model+'.obj'),model,'identification',None if model==debug else (.0385,.0152,.0385))
+ value,_=m.mesh(d/(model+'.obj'),model,'identification',None if model==debug else (.0385,.0385,.0152))
  assert value['expanded_vertices']<65000
  assert m.png(d/(model+'.png'))==((2048,4096) if model==debug else (2048,2048))
  return value
@@ -37,6 +55,12 @@ for model in [prod,debug]:
  for p in (base/model).iterdir():assert p.read_bytes()==(a.package/'resources/rendermodels'/model/p.name).read_bytes()
 # Structural mutants bypass only checksum comparison, then must fail the mesh oracle.
 rejected=[]
+for name,rv,rn in [('uncorrected-body',old_v,old_n),('inverse-correction',
+ ['v %s %s %s'%(x,z,-y) for x,y,z in source_vectors(old_v)],
+ ['vn %s %s %s'%(x,z,-y) for x,y,z in source_vectors(old_n)])]:
+ try:check_reference(rv,rn,old_f)
+ except AssertionError:rejected.append(name)
+ else:raise AssertionError('accepted '+name)
 with tempfile.TemporaryDirectory() as t:
  d=Path(t);p=d/(prod+'.obj');text=(base/prod/(prod+'.obj')).read_text()
  changes={'missing-uv':'\n'.join(l for l in text.splitlines() if not l.startswith('vt ')),
@@ -49,4 +73,4 @@ with tempfile.TemporaryDirectory() as t:
   try:m.mesh(p,prod,'identification')
   except (ValueError,IndexError):rejected.append(name)
   else:raise AssertionError('accepted '+name)
-print(json.dumps(dict(result='PASS',geometry_uv_unchanged=True,resources=results,negative_cases=rejected,hardware='NOT_RUN')))
+print(json.dumps(dict(result='PASS',geometry_preserved_under_confirmed_rotation=True,face_order_uv_unchanged=True,resources=results,negative_cases=rejected,hardware='NOT_RUN')))

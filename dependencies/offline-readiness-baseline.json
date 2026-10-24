@@ -432,7 +432,7 @@
     },
     "assets/pico-rev3-identification-source/preparation-manifest.json": {
       "parent": null,
-      "sha256": "e3243bfe4a2ee5696f7323b6aaec9cb39440956a207f4398958c1d1878dd5db6"
+      "sha256": "f7fff61c00259814ced5d6ae503b1bc56fa3789178961061012d1a5f09ccb5dc"
     },
     "assets/pico-rev3-identification-source/resources/rendermodels/pico_tracker_rev3/color_validation.json": {
       "parent": null,
@@ -464,7 +464,7 @@
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_axis_debug/assets-manifest.json": {
       "parent": null,
-      "sha256": "1dae68bef8e35a5e3d532aacc2b46dbdb6954a98fd2cab9bfe7358968650db5f"
+      "sha256": "e0cd34b51386f99d3dc4093bcee538408fae842bbdd0ab40d46797f957c32bbe"
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_axis_debug/pico_tracker_rev3_axis_debug.mtl": {
       "parent": null,
@@ -472,15 +472,15 @@
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_axis_debug/pico_tracker_rev3_axis_debug.obj": {
       "parent": null,
-      "sha256": "ebb2c020dd07e701487ccd496773f0d239abf356efb9a37afd68255d8d90be5b"
+      "sha256": "090e90913a3d3023ff29a03b815c904fee1a7b0e234b5224492355c88619c591"
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_axis_debug/pico_tracker_rev3_axis_debug.png": {
       "parent": null,
-      "sha256": "34ea94baa45631bb1f24f147b7cbf3f857029a32c9ea8e6f75fdccb4f88e7187"
+      "sha256": "8c9430305e6735936fbe3436331921cdaed3adc8895f82b2a03b396055ff4ce2"
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_identification/assets-manifest.json": {
       "parent": null,
-      "sha256": "91ade04d32f3eb8dbce65ef13eccd81ebc825ba62f68db9a7058f6d68927f28b"
+      "sha256": "602d1eda4293a869c6d7c210ffbd031de89eb8b8ea4252120e1b1f1e292e6742"
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_identification/pico_tracker_rev3_identification.mtl": {
       "parent": null,
@@ -488,7 +488,7 @@
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_identification/pico_tracker_rev3_identification.obj": {
       "parent": null,
-      "sha256": "2669d94d605d6a2a28cae07d2b6bce23dcd17f1eaa657d4ac2f93fdc7f623619"
+      "sha256": "ba7e33de4d8259c5b8b9f50ac66f57d2273c4a9ddb139a7c55970fa1b86df331"
     },
     "outputs/steamvr/package/resources/rendermodels/pico_tracker_rev3_identification/pico_tracker_rev3_identification.png": {
       "parent": null,
@@ -496,15 +496,19 @@
     },
     "scripts/prepare_axis_assets.py": {
       "parent": null,
-      "sha256": "5c58e61fcfb5b12e583352d6739750acfe61d7c2eaeff63476e3bedc88346bfa"
+      "sha256": "860a082eac8bb6eb8e7e33a7c082633c2ea0025c354d9ac95dc660c97007a4bb"
     },
     "tests/render_model/axis_asset_tests.py": {
       "parent": null,
-      "sha256": "9f0dc8e4c13dd49ac0fcd6f942e49443d9462034e0df1eb21baae92eed83b4f1"
+      "sha256": "115fa3527bf644476dd48a4313670d70982eaf91cc4886c999b3b2f018cab27d"
     },
     "docs/render-model-axis.md": {
       "parent": null,
-      "sha256": "9b04ede3de869c6454b0967c027b7ef4ecc9beba7fe673cd16a79728b1540bae"
+      "sha256": "cc390011f5fe9613167ba5d1d9fe4b8da0693a1008659afb195149ac874a64d8"
+    },
+    "assets/pico-rev3-identification-source/axis-hil-correction-evidence.json": {
+      "parent": null,
+      "sha256": "c95373069abdb6f5997d9e026f8df54a36d34630de0ffdbbafe3a7d896def018"
     }
   },
   "authority_sha256": "c810b737fa8508ba1e90c1349630a88dabdbc2faf777bfd5ffa0432abbfe271a",
