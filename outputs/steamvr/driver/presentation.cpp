@@ -111,11 +111,15 @@ Presentation Presentation::load(const std::filesystem::path& package){
   return result;
  } catch(const std::exception& e){DriverLog("monaka_bridge: presentation disabled: %s",e.what());return {};}
 }
-bool Presentation::eligible(const std::string& serial,const DirectSample* sample,std::int64_t now)const{
- auto it=assignments_.find(serial);if(it==assignments_.end()||!sample||!sample->pose||sample->absent||sample->fixedTime<0||now<sample->fixedTime||now-sample->fixedTime>=500000000)return false;
+PresentationState Presentation::evaluate(const std::string& serial,const DirectSample* sample,std::int64_t now)const{
+ auto it=assignments_.find(serial);if(it==assignments_.end())return PresentationState::Unassigned;
+ if(!sample||!sample->pose)return PresentationState::Hidden;
  const auto& p=*sample->pose;const auto& a=it->second;
- return p.publisher_id==publisher_&&p.session_id==session_&&p.clock_id==session_&&p.mapping_revision==revision_&&
-  p.source_id==a.source&&p.tracker_id==a.tracker&&p.input.source_id==a.source&&p.input.device_id==a.device&&p.input.session_id==a.inputSession&&
-  p.validity.position&&p.validity.orientation&&p.modality=="full"&&p.tracking_state=="tracked";
+ const bool same=p.publisher_id==publisher_&&p.session_id==session_&&p.clock_id==session_&&p.mapping_revision==revision_&&
+  p.source_id==a.source&&p.tracker_id==a.tracker&&p.input.source_id==a.source&&p.input.device_id==a.device&&p.input.session_id==a.inputSession;
+ if(!same)return PresentationState::Revoked;
+ return !sample->absent&&sample->fixedTime>=0&&now>=sample->fixedTime&&now-sample->fixedTime<500000000&&
+  p.validity.position&&p.validity.orientation&&p.modality=="full"&&p.tracking_state=="tracked"
+  ?PresentationState::Visible:PresentationState::Hidden;
 }
 }

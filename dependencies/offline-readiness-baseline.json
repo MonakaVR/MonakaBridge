@@ -1,6 +1,6 @@
 {
   "parent": "8f8ca0d4465ada163a122f174b49be13bf7ea80b",
-  "authority": "MonakaVR_Astra_Evidence_Lifetime_Contract_Fix_Codex_20261024.md",
+  "authority": "MonakaVR_Astra_RenderModel_Reacquire_Offline_Fix_Codex_20261024.md",
   "files": {
     "CMakeLists.txt": {
       "sha256": "a5dd8f66f0bcd77eefb9644c5fb5d514527aecffccb31e62bb3c2eb5bb2b69e5",
@@ -59,7 +59,7 @@
       "parent": null
     },
     "docs/offline-hil-readiness.md": {
-      "sha256": "ee25a2d5cbd68f49326a5be8118f0b22f2172fa5bc26ecef7767a9173f1ee0c1",
+      "sha256": "4415a192317b62da8ad5eb77bd82ede26daf9426a6cb06e2f82f70d9a8c011fb",
       "parent": null
     },
     "include/monaka_bridge/bridge.hpp": {
@@ -87,7 +87,7 @@
       "parent": null
     },
     "outputs/steamvr/driver/device_provider.cpp": {
-      "sha256": "f666bf905b4a376e59461930bee5d761ed6c7d7560cab6bab245ec310c702a06",
+      "sha256": "043910f7263f07d126ee5bfafeab1c35d5d4ce5a4d2d0fbb3607d19bdf780c9e",
       "parent": "a9ab5cdabef29a3c53716468529ef5ab53b23fb5f884a72d8753b86c8a2c5457"
     },
     "outputs/steamvr/driver/device_provider.hpp": {
@@ -95,11 +95,11 @@
       "parent": "03f92fc1095292523174e3d6c4ad8397c7916e6e34c1609a1489bb03cfaf02d7"
     },
     "outputs/steamvr/driver/presentation.cpp": {
-      "sha256": "540772c8571da9737bf18c7c6636c72e22e5168406fcdf1b451b598e1f0bf613",
+      "sha256": "492045ef6b3cd2e79cf4c5271db3b022a6327272f7722daf255521ce7a014148",
       "parent": null
     },
     "outputs/steamvr/driver/presentation.hpp": {
-      "sha256": "80b2cce8748f2647a6807d8ad77704c3389ae979cacfb1858885b8ee2f3162ec",
+      "sha256": "0abd63b39d2e9c48777549eaab5da6028c03be7cff9655279e0bc5c42493daa1",
       "parent": null
     },
     "outputs/steamvr/driver/render_manifest.hpp.in": {
@@ -107,11 +107,11 @@
       "parent": null
     },
     "outputs/steamvr/driver/tracker_device.cpp": {
-      "sha256": "9359ce13da92fe01d50fe3e84dcf5286b7ca976e8e7d613be84cdb50097d1e42",
+      "sha256": "4b8a09f9a145b5e28a889326552b0a7525485707585a378efc852dc10211a969",
       "parent": "7a0540a14846a40676b553a29b1c19832c1d2857853807579359df232c87366e"
     },
     "outputs/steamvr/driver/tracker_device.hpp": {
-      "sha256": "f2eb21d51a39fcd5fabbb070d6c7070074880befa86fbe989b51e9fe4923a4f9",
+      "sha256": "5c3f9c533da5512360a32df193ef09f2bb98881f1a799d0242445df760e228d1",
       "parent": "3f0f9e2aacacac4d058841b9e4b5bd01939be796e99a144761e45af0a931e680"
     },
     "outputs/steamvr/package/resources/presentation/selection.json": {
@@ -203,7 +203,7 @@
       "parent": null
     },
     "tests/offline_readiness_scope.py": {
-      "sha256": "718aa23480f18c84f7cc953e14e0f684f06125ea618807ab3d94c7649ebde478",
+      "sha256": "3ff6941d4777201cecdf7e070b393eda15796e6ce59c944a6489e56b97d9949e",
       "parent": null
     },
     "tests/offline_readiness_scope_tests.py": {
@@ -239,7 +239,7 @@
       "parent": null
     },
     "tests/provider_host/strict_host.hpp": {
-      "sha256": "9b9280448b79252568667ab4e0945fe1116003307f48434d2de4f2db38afd38f",
+      "sha256": "79a07f9b910aa7e9d4bd6d7be93b30f05cecbeaba1c1ccce16b818fffc5e14f0",
       "parent": null
     },
     "tests/receiver_scope.py": {
@@ -251,11 +251,11 @@
       "parent": null
     },
     "tests/render_model/render_model_host.cpp": {
-      "sha256": "102ff12c4f1e906cb4fd35b7dcc2808015e3af9fdf222ce230f7b37335b4db03",
+      "sha256": "6435f06bff5f32a087d8ccff607d9e3944f69c0156d74a60e9392450b1d5f002",
       "parent": null
     },
     "tests/render_model/run_host.py": {
-      "sha256": "1fbd723f30412917a108c9dc5572dd92b093652db3b198ada31294c27e2e7ced",
+      "sha256": "17723d5a71ba2eb78ca7d5b0766999ca3f45a16c9ab046a0f1cabaa65821f288",
       "parent": null
     },
     "tests/run_calibration_managed.py": {
@@ -409,8 +409,16 @@
     "tests/measurement_target_scope.py": {
       "parent": "20dc9ecdb06277283a185f6895b258b27232c11d2514c150e2a385e70682e3b3",
       "sha256": "01091d8436194e1b7eb3350006abfd8fcc7d96e3943a68d59afe461faca24098"
+    },
+    "docs/render-model-reacquire.md": {
+      "sha256": "6012619266502666e683c98c8a929dd9158e5c85579229dce8a2a0e4033fc435",
+      "parent": null
+    },
+    "dependencies/render-model-reacquire-authority.md": {
+      "sha256": "3c7160a662899f1486e9171c0bedd59dde992c990f6a4374a04464a7c062969c",
+      "parent": null
     }
   },
-  "authority_sha256": "e9931558e77bdf00b1bcdb08a5b42b102564f9b91977be898bec0f61e324fe75",
-  "successor_of": "56c30a05ff87e7e2306897f381619ae8c5b7367f"
+  "authority_sha256": "3c7160a662899f1486e9171c0bedd59dde992c990f6a4374a04464a7c062969c",
+  "successor_of": "ff78097b775792046343cf2b3a69507bb527310d"
 }

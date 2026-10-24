@@ -3,6 +3,8 @@
 #include <filesystem>
 namespace mb::steamvr {
 inline constexpr const char* PicoRenderModel="{monaka_bridge}pico_motion_tracker";
+// Transient visibility and a conflicting immutable assignment are different.
+enum class PresentationState { Unassigned, Hidden, Visible, Revoked };
 // Presentation is an immutable Init snapshot. It never owns or changes tracking.
 class Presentation {
  struct Assignment {std::string source,device,tracker,inputSession;};
@@ -10,7 +12,7 @@ class Presentation {
  std::string publisher_,session_;std::uint32_t revision_=0;
 public:
  static Presentation load(const std::filesystem::path& package);
- bool eligible(const std::string& serial,const DirectSample*,std::int64_t now)const;
+ PresentationState evaluate(const std::string& serial,const DirectSample*,std::int64_t now)const;
 };
 std::filesystem::path currentDriverPackage();
 }

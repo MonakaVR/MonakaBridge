@@ -35,6 +35,7 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
         std::string serial; vr::ITrackedDeviceServerDriver* driver;
         Stage stage = Stage::Pending;
         std::map<vr::ETrackedDeviceProperty, Json> properties;
+        std::map<vr::ETrackedDeviceProperty, unsigned> propertyWrites,propertyAttempts;
         vr::DriverPose_t pose{}; unsigned poses = 0;
     };
     Events& events;
@@ -42,6 +43,9 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
     std::map<std::string, unsigned> attempts;
     std::map<std::string, unsigned> interfaceRequests;
     std::map<std::string, std::string> expectedRenderModels; // Explicit test oracle per full serial.
+    std::map<std::string, std::string> expectedActivationRenderModels;
+    unsigned rejectRenderModelWrites=0;
+    bool activateSynchronously=false;
     std::string missingInterface;
     int32_t inputPort=0;
     unsigned rejectNext = 0, totalPoses = 0, calls = 0;
@@ -74,7 +78,9 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
             {"pointer",reinterpret_cast<uintptr_t>(driver)},{"accepted",accepted},{"attempt",attempts[serial]}});
         if (!accepted) { --rejectNext; return false; } // Never retain a rejected pointer.
         const auto id = uint32_t(devices.size() + 1);
-        devices.emplace(id, Device{serial,driver}); return true;
+        devices.emplace(id, Device{serial,driver});
+        if(activateSynchronously)activatePending();
+        return true;
     }
     void activatePending() {
         for (auto& [id,d]: devices) if (d.stage == Stage::Pending) {
@@ -91,7 +97,10 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
             require(d.properties.at(vr::Prop_DeviceProvidesBatteryStatus_Bool) == false, "initial battery claim");
             const auto expected=expectedRenderModels.find(d.serial);
             if(expected==expectedRenderModels.end())require(!d.properties.count(vr::Prop_RenderModelName_String), "unexpected render model selection");
-            else require(d.properties.at(vr::Prop_RenderModelName_String)==expected->second,"explicit render model property");
+            else {
+                const auto initial=expectedActivationRenderModels.find(d.serial);
+                require(d.properties.at(vr::Prop_RenderModelName_String)==(initial==expectedActivationRenderModels.end()?expected->second:initial->second),"explicit render model property");
+            }
         }
     }
     void deactivateAll() {
@@ -167,7 +176,13 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
                 value=*static_cast<float*>(p.pvBuffer); require(std::isfinite(value.get<float>()) && value>=0 && value<=1, "battery bounds"); break;
             default: unexpected("unapproved property");
             }
-            require(p.unTag==tag, "property type tag"); d.properties[p.prop]=value; p.eError=vr::TrackedProp_Success;
+            require(p.unTag==tag, "property type tag");++d.propertyAttempts[p.prop];
+            if(p.prop==vr::Prop_RenderModelName_String&&rejectRenderModelWrites){
+                --rejectRenderModelWrites;p.eError=vr::TrackedProp_CouldNotContactServer;
+                events.write("PropertyWriteRejected",{{"object_id",id},{"property",int(p.prop)},{"value",value},{"error",int(p.eError)}});
+                continue;
+            }
+            d.properties[p.prop]=value;++d.propertyWrites[p.prop];p.eError=vr::TrackedProp_Success;
             events.write("SetProperty",{{"container",container},{"object_id",id},{"property",int(p.prop)},{"tag",tag},{"value",value}});
         }
         return vr::TrackedProp_Success;

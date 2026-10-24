@@ -28,10 +28,13 @@ void DeviceProvider::RunFrame(){
  for(int i=0;i<128;++i){auto d=receiver_->receive();if(!d)break;feed_.receive(d->bytes,monotonicNs(),d->peer);}
  for(auto& [key,sample]:feed_.devices){
   if(devices_.count(key)||!sample.pose)continue;
-  auto serial=runtimeSerial(key.first,key.second);auto device=std::make_unique<TrackerDevice>(serial,presentation_.eligible(serial,&sample,monotonicNs())?PicoRenderModel:"");
+  auto serial=runtimeSerial(key.first,key.second);auto now=monotonicNs();auto state=presentation_.evaluate(serial,&sample,now);
+  auto device=std::make_unique<TrackerDevice>(serial,state==PresentationState::Visible||state==PresentationState::Hidden?PicoRenderModel:"");
+  // Prepare desired state before Added, which may Activate synchronously.
+  device->Update(&sample,now,state);
   if(vr::VRServerDriverHost()->TrackedDeviceAdded(serial.c_str(),vr::TrackedDeviceClass_GenericTracker,device.get()))devices_.emplace(key,std::move(device));
  }
- auto now=monotonicNs();for(auto& [key,device]:devices_){auto s=feed_.devices.find(key);auto sample=s==feed_.devices.end()?nullptr:&s->second;device->Update(sample,now,presentation_.eligible(device->Serial(),sample,now));}
+ auto now=monotonicNs();for(auto& [key,device]:devices_){auto s=feed_.devices.find(key);auto sample=s==feed_.devices.end()?nullptr:&s->second;device->Update(sample,now,presentation_.evaluate(device->Serial(),sample,now));}
  vr::VREvent_t event{};while(vr::VRServerDriverHost()->PollNextEvent(&event,sizeof(event))){}
 }
 }
