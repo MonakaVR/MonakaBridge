@@ -29,7 +29,7 @@ void DeviceProvider::RunFrame(){
  for(auto& [key,sample]:feed_.devices){
   if(devices_.count(key)||!sample.pose)continue;
   auto serial=runtimeSerial(key.first,key.second);auto now=monotonicNs();auto state=presentation_.evaluate(serial,&sample,now);
-  auto device=std::make_unique<TrackerDevice>(serial,state==PresentationState::Visible||state==PresentationState::Hidden?PicoRenderModel:"");
+  auto device=std::make_unique<TrackerDevice>(serial,state==PresentationState::Visible||state==PresentationState::Hidden?presentation_.model(serial):"");
   // Prepare desired state before Added, which may Activate synchronously.
   device->Update(&sample,now,state);
   if(vr::VRServerDriverHost()->TrackedDeviceAdded(serial.c_str(),vr::TrackedDeviceClass_GenericTracker,device.get()))devices_.emplace(key,std::move(device));

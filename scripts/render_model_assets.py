@@ -23,7 +23,7 @@ def sha(path):
 def cross(a,b):
     return (a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
 
-def mesh(path):
+def mesh(path,model=MODEL,material="approx_white",expected_extent=(.0385,.0152,.0385)):
     vertices=[];uv=[];normals=[];faces=[];objects=[];libs=[];materials=[]
     for line in Path(path).read_text(encoding='utf-8').splitlines():
         row=line.split()
@@ -47,7 +47,7 @@ def mesh(path):
         else:require(kind=='s','unsupported OBJ statement '+kind)
     require(len(objects)==1 and objects[0] and vertices and faces,'one nonempty object required')
     require(len(vertices)<65000 and uv and normals,'vertex or UV/normal constraints')
-    require(libs==[MODEL+'.mtl'] and set(materials)=={'approx_white'},'OBJ material reference')
+    require(libs==[model+'.mtl'] and set(materials)=={material},'OBJ material reference')
     corners=set();triangles=[]
     for face in faces:
         for vi,ti,ni in face:
@@ -64,7 +64,7 @@ def mesh(path):
     lo=[min(v[i] for v in vertices) for i in range(3)]
     hi=[max(v[i] for v in vertices) for i in range(3)]
     extent=[hi[i]-lo[i] for i in range(3)]
-    require(all(abs(a-b)<=2e-6 for a,b in zip(extent,[.0385,.0152,.0385])),'mm/m or axis/bbox mismatch')
+    if expected_extent is not None:require(all(abs(a-b)<=2e-6 for a,b in zip(extent,expected_extent)),'mm/m or axis/bbox mismatch')
     return dict(vertices=len(vertices),uv=len(uv),normals=len(normals),faces=len(faces),
                 expanded_vertices=len(corners),bounds_m=dict(min=lo,max=hi,extent=extent)),triangles
 

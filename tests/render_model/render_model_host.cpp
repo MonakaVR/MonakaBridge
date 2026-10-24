@@ -4,7 +4,7 @@
 #include "../provider_host/provider_host.cpp"
 #undef main
 
-const std::string Model="{monaka_bridge}pico_motion_tracker";
+std::string Model="{monaka_bridge}pico_motion_tracker";
 mb::c1::MtpPose pico(){auto p=full();p.input.device_id="physical-pico";p.input.session_id=S1;p.coordinate_space={"world","rh_y_up_neg_z_forward",1};return p;}
 mb::c1::MtpPose invalidPose(mb::c1::MtpPose p,bool diagnostic=false){
  p.modality="none";p.validity={false,false};p.tracking_state="lost";
@@ -63,7 +63,8 @@ void reacquireSuite(Session& run,mb::Udp& sender,mb::c1::MtpPose& p,Json& result
 
 int main(int argc,char** argv){
  SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX|SEM_NOGPFAULTERRORBOX);
- if(argc!=5)return 2;
+ if(argc!=5&&argc!=6)return 2;
+ if(argc==6)Model=argv[5];
  const fs::path dll=fs::absolute(argv[1]),out=fs::absolute(argv[2]);const std::string mode=argv[3],mutation=argv[4];
  require(!fs::exists(out),"fresh D2 output required");fs::create_directories(out);pt::Events events((out/"host-events.jsonl").string());events.scenario="D2-05/06/07/08/09";
  Json result={{"result","FAIL"},{"mode",mode},{"mutation",mutation},{"driver_sha256",sha256(dll)},{"physical_hil","NOT RUN"}};

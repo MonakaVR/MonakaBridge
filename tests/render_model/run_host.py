@@ -16,6 +16,7 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--host',type=Path,required=True)
 p.add_argument('--package',type=Path,required=True)
 p.add_argument('--out',type=Path,required=True)
+p.add_argument('--axis-models',action='store_true')
 p.add_argument('--baseline-dll',type=Path)
 p.add_argument('--reacquire-only',action='store_true')
 p.add_argument('--expect-reacquire-failure',action='store_true')
@@ -32,9 +33,10 @@ def fixture():
     selection=dict(namespace='monaka.bridge.presentation',version=1,publisher_session=S1,config_file='bridge-config.json',config_sha256='',assignments=[assignment])
     return config,selection
 
-def case(name,mode='generic',mutation='none',edit=None,baseline=False):
+def case(name,mode='generic',mutation='none',edit=None,baseline=False,model=None):
     package=root/name/'package';shutil.copytree(a.package,package)
     config,selection=fixture()
+    if model:selection["assignments"][0]["model_id"]=model
     folder=package/'resources/presentation'
     if edit:edit(config,selection,package)
     if selection is not None:
@@ -53,6 +55,7 @@ def case(name,mode='generic',mutation='none',edit=None,baseline=False):
     before=hashlib.sha256(dll.read_bytes()).hexdigest()
     immutable={str(p.relative_to(package)):hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
     command=[str(a.host.resolve()),str(dll),str(root/name/'observation'),mode,mutation]
+    if model:command.append("{monaka_bridge}"+model)
     start=time.monotonic()
     with (root/name/'stdout.txt').open('xb') as stdout,(root/name/'stderr.txt').open('xb') as stderr:
         proc=subprocess.Popen(command,stdout=stdout,stderr=stderr)
@@ -72,6 +75,29 @@ def case(name,mode='generic',mutation='none',edit=None,baseline=False):
         assert code==1 and value['result']=='FAIL','old DLL unexpectedly implements D2'
     else:assert code==0 and value['result']=='PASS',name+': '+str(value)
 
+if a.axis_models:
+    for model in ['pico_tracker_rev3_identification','pico_tracker_rev3_axis_debug']:
+        case(model+'-tracked',mode='pico',model=model)
+        case(model+'-recovery',mode='reacquire',model=model)
+        case(model+'-inline',mode='reacquire',mutation='activate-inline',model=model)
+        case(model+'-initial-hidden',mode='initial-hidden',model=model)
+        case(model+'-corrupt',model=model,edit=lambda c,s,p:(p/'resources/rendermodels'/model/(model+'.png')).write_bytes(b'bad PNG'))
+    # Reuse the diagnostic package, replace only the presentation selection,
+    # then initialize a fresh Provider snapshot against the same held DLL.
+    package=root/'pico_tracker_rev3_axis_debug-recovery/package'
+    selection_path=package/'resources/presentation/selection.json'
+    selection=json.loads(selection_path.read_text());selection['assignments'][0]['model_id']='pico_tracker_rev3_identification'
+    selection_path.write_text(json.dumps(selection))
+    command=[str(a.host.resolve()),str(package/'bin/win64/driver_monaka_bridge.dll'),str(root/'restored-identification'),'reacquire','none','{monaka_bridge}pico_tracker_rev3_identification']
+    completed=subprocess.run(command,capture_output=True,timeout=15)
+    assert completed.returncode==0,completed.stderr
+    value=json.loads((root/'restored-identification/result.json').read_text());assert value['result']=='PASS'
+    records.append(dict(name='same-package-restore-identification',exit_code=completed.returncode,result=value,command=command))
+    result=dict(result='PASS',native_cases=len(records),records=records,hardware='NOT_RUN')
+    (root/'AXIS_RESULT.json').write_text(json.dumps(result,indent=2)+'\n')
+    (a.out/'latest-run.json').write_text(json.dumps(dict(run=str(root)),indent=2)+'\n')
+    print(json.dumps(dict(result='PASS',native_cases=len(records),run=str(root))))
+    raise SystemExit(0)
 if a.reacquire_only:
     case('lost-recovery',mode='reacquire')
     result=dict(result='EXPECTED_FAILURE_REPRODUCED' if a.expect_reacquire_failure else 'PASS',records=records,hardware='NOT_RUN')
