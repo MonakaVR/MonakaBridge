@@ -1,0 +1,79 @@
+{
+  "source_obj_sha256": "e477879904c8a5b3055f0a1d8cca63a889d1a6914ef71e2c07f742ba80cd9b6d",
+  "source_atlas_sha256": "7e9922800e0255be6b3bbb2d4720cafa7851e454b4096cd2b3e771da1a58735e",
+  "production": {
+    "vertices": 15677,
+    "normals": 15528,
+    "uv": 147,
+    "triangles": 31338,
+    "expanded_vertices": 49103,
+    "manifest_sha256": "91ade04d32f3eb8dbce65ef13eccd81ebc825ba62f68db9a7058f6d68927f28b"
+  },
+  "diagnostic": {
+    "vertices": 16037,
+    "normals": 15648,
+    "uv": 507,
+    "triangles": 31458,
+    "expanded_vertices": 49463,
+    "manifest_sha256": "117f9e114b5cd54c64687356dfd9bdbc7a43765dd6fc826a98e0026facc99c3b"
+  },
+  "markers": [
+    {
+      "axis": "+X",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "length_m": 0.066,
+      "label": "+X / RIGHT"
+    },
+    {
+      "axis": "+Y",
+      "direction": [
+        0,
+        1,
+        0
+      ],
+      "length_m": 0.066,
+      "label": "+Y / UP"
+    },
+    {
+      "axis": "+Z",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "length_m": 0.066,
+      "label": "+Z / FORWARD"
+    }
+  ],
+  "local_correction": "NONE",
+  "transformation": "Exact duplicate UV entries merged; all original positions, normals, ordered faces and sampled UV coordinates preserved.",
+  "feature_directions": {
+    "logo": [
+      0,
+      -1,
+      0
+    ],
+    "back": [
+      0,
+      1,
+      0
+    ],
+    "LED_button_arrow": [
+      0,
+      0,
+      -1
+    ],
+    "USB": [
+      -1,
+      0,
+      0
+    ]
+  },
+  "label_semantics": "FRONT names the supplied logo face (-Y). TOP names local +Y/back, not a physical tracking axis. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z.",
+  "units": "metres",
+  "tracking_pose_changed": false
+}

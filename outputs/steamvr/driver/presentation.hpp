@@ -7,11 +7,12 @@ inline constexpr const char* PicoRenderModel="{monaka_bridge}pico_motion_tracker
 enum class PresentationState { Unassigned, Hidden, Visible, Revoked };
 // Presentation is an immutable Init snapshot. It never owns or changes tracking.
 class Presentation {
- struct Assignment {std::string source,device,tracker,inputSession;};
+ struct Assignment {std::string source,device,tracker,inputSession,model;};
  std::map<std::string,Assignment> assignments_;
  std::string publisher_,session_;std::uint32_t revision_=0;
 public:
  static Presentation load(const std::filesystem::path& package);
+ std::string model(const std::string& serial)const;
  PresentationState evaluate(const std::string& serial,const DirectSample*,std::int64_t now)const;
 };
 std::filesystem::path currentDriverPackage();

@@ -1,0 +1,4 @@
+User supplied PICO_Tracker_Rev3_Identification.zip SHA256 c0cfd2584f5e7cf62f9d60b0c4b0ac9bf22d181cafc672481500b9fd0844af99.
+モデルの更新が入っています。
+差し替えた後、回転の調整確認を行います。
+New production identification copy is authorized; diagnosis remains a separate resource and no inferred rotation is applied.

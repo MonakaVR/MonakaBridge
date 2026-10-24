@@ -1,0 +1,10 @@
+{
+  "model": "pico_tracker_rev3_axis_debug",
+  "property": "{monaka_bridge}pico_tracker_rev3_axis_debug",
+  "files": {
+    "pico_tracker_rev3_axis_debug.obj": "ebb2c020dd07e701487ccd496773f0d239abf356efb9a37afd68255d8d90be5b",
+    "pico_tracker_rev3_axis_debug.mtl": "9f1b02db9df384cf1ed13e36651d8c1852507a75923d7d413d5101637ba02d68",
+    "pico_tracker_rev3_axis_debug.png": "770a0f8dfaebf95bc1cbad5b75b13795437089dcb286d0860d832778b50c3930"
+  },
+  "source_step_sha256": "436509dd665aeca53d80fa33c35615d4d35834073a9481dcc876447dc65d55cd"
+}
