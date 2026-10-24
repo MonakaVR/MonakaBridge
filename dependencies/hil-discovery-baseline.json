@@ -1,0 +1,203 @@
+{
+  "parent": "db338fa21467417987bc8f2e99f68027ca387f33",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "fe18c1817f36efa39a72ef715f97cf974533a417182341ad060041dce3e4f078",
+      "parent": {
+        "existed": true,
+        "sha256": "936d6cb79bf001769b40101a6685488b60c336a35c4514d7058d0268f13bed51"
+      }
+    },
+    "docs/hil-minimal-discovery.md": {
+      "sha256": "ba7bebfa812c2a0bde0b97492ccfcc8771f61e1bb6e8a1e07f9ee915b80feb0a",
+      "parent": {
+        "existed": false
+      }
+    },
+    "include/monaka_bridge/discovery.hpp": {
+      "sha256": "7ddbab9cf7ed7280ce94bcc29ecebe5f2bfdb68db7fbd0328362cceb08046030",
+      "parent": {
+        "existed": false
+      }
+    },
+    "scripts/build_gui.ps1": {
+      "sha256": "7f8d401ff2be78bc61a2c1fb79836bc0e3998194667e89b0776bd962f74fdda6",
+      "parent": {
+        "existed": true,
+        "sha256": "d5621473efe4699086042282596d8387c7d361cfb46b1a55c5d6af5539ed2de9"
+      }
+    },
+    "scripts/control_gui.cmake": {
+      "sha256": "7e5a189cc4142b151a9076b8e09113f0dff742936856c70942393bdc8648587f",
+      "parent": {
+        "existed": true,
+        "sha256": "805d71929c9f3810d832c7f958a72f252c6c5d43ba56ce80ce7ce018da1297ef"
+      }
+    },
+    "src/observation/discovery.cpp": {
+      "sha256": "fcd56337b0ed39619b3f1f47f9f664c636ce7f79d9aa0406c0c32b4614744758",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/calibration_b4_scope.py": {
+      "sha256": "0fed65c9b82eed388deb65162f2d114583b4d28c8380980ebc1fb0dee48dca98",
+      "parent": {
+        "existed": true,
+        "sha256": "d2d3b648874883ae81d7aa0d97e36b52c67a6a5911821907ec11165fc0f6cecd"
+      }
+    },
+    "tests/calibration_b4_scope_tests.py": {
+      "sha256": "5087e2db948a878d4b892f8c8c4d1cbed842143fc62e231776fc2a06b4ff9cf7",
+      "parent": {
+        "existed": true,
+        "sha256": "de776dc679c0e302756f89765ef08368d84c4ffa0a06d2f291c28802daeba006"
+      }
+    },
+    "tests/fixtures/hil/pico-five.jsonl": {
+      "sha256": "3483b660a1e34b74f0428ca9cb7b3cf52127cb2a3a72af3081c1c940e52a1d81",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/fixtures/hil/provenance.json": {
+      "sha256": "510cf595c3fde7da1014d63ca3013c3903afb0bae27b4374f249eca6c1328668",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/hil_discovery_gui_tests.cs": {
+      "sha256": "2e5c33ff017f235ef6eed736ddfbbe170e37688528ab1c098e999caf1f71e28e",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/hil_discovery_process.py": {
+      "sha256": "679f8d601d23b615857af7110ed32becab48a4a153b3ca95a0924fe9f11dbe86",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/hil_discovery_scope.py": {
+      "sha256": "a281aa3fb68be4d546bb5bb26d26124375873cbaa289944810f57f1af49541ff",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/hil_discovery_scope_tests.py": {
+      "sha256": "788a1c007e07b57ce7cbd2cbad123d303d64fcf2d2f610955a58402217a81767",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/hil_discovery_tests.cpp": {
+      "sha256": "500a0f30380be81947feeac8a379697325c126173e617b0a3a3d41ac784bf59c",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/run_calibration_managed.py": {
+      "sha256": "ac02876ed47d58249cab3fec041e3eb8e0c6da63ed866bf5597c0b994cd6ffec",
+      "parent": {
+        "existed": true,
+        "sha256": "aec5b85cd8b7f541cf6583c0ec14fc345ebbdc960811d726c4df79f4ad000e5e"
+      }
+    },
+    "tests/run_hil_discovery_managed.py": {
+      "sha256": "ae65c5c69bed8ef3b4264856865cd55c41b09f6789018c8866fceef894e314a0",
+      "parent": {
+        "existed": false
+      }
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "771d2a09472ccc58e28d7004e149258e48ae22f76391470abfb50e4b0c42c2ea",
+      "parent": {
+        "existed": true,
+        "sha256": "f5c7d80f9f915316b03b81e1ed00afc148f5182d050de8c6951d847221e3a0ea"
+      }
+    },
+    "tools/bridge_service.cpp": {
+      "sha256": "34325d952060a2781a6711af36554bdb994f7a772a3d5f680fce524516907179",
+      "parent": {
+        "existed": true,
+        "sha256": "107e0322056a556cf4e274921834a3198e9db1885a280d529b659f7c3f1793d7"
+      }
+    },
+    "ui/discovery_models.cs": {
+      "sha256": "114eef92b29487124d6aca5f0e3dc983bf623a3814981018854110ec7bfaaaba",
+      "parent": {
+        "existed": false
+      }
+    },
+    "ui/discovery_panel.cs": {
+      "sha256": "791aaf2f2cf17ddbd955a0068ca3cf6a2034f4a7f191dcb349e059c84bf71404",
+      "parent": {
+        "existed": false
+      }
+    },
+    "ui/discovery_window.cs": {
+      "sha256": "e23377b993482bc784ce1689a0e4081886fa42dfb594e1250d23fc7264424f01",
+      "parent": {
+        "existed": false
+      }
+    },
+    "ui/installation_control.cs": {
+      "sha256": "60308c6319c1defcbe104275bca29d39d6ea8addd31c97314629d28e32c8b737",
+      "parent": {
+        "existed": true,
+        "sha256": "9f5011815067f8e9c4194d3a109fd3d6896751c9008f30a6109cc3022aa114e1"
+      }
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "8cb242e0fc0b6daf340a7ef2f3d49964b3113452ad8c56577d9a344b792a99ec",
+      "parent": {
+        "existed": true,
+        "sha256": "a4f9b9fb7fc705053330135a8ce910eb13afa72509ce705db1429fb04962d4d4"
+      }
+    }
+  },
+  "pins": {
+    "dependencies/calibration-b4-baseline.json": "a6cbd63ddaa50e5a27894b21ed797143b4af9365be5c95bd59bb963f99d58312",
+    "dependencies/calibration-gui-baseline.json": "2cc8ea0b0ea96f923f46925a9c7d3623cd313f2336a97f0aa029b769da2858b1",
+    "dependencies/calibration-review-r1-baseline.json": "0ca0a183bf610096b23e3d70a1f79a1fa4e9620dd24db73484d0ad81d231f545",
+    "dependencies/calibration-session-baseline.json": "016bdfdb9b1abca71e5da32b4ec64908abc660f7609690df882047152e467fe5",
+    "dependencies/capabilities-runtime-baseline.json": "013564518ab325eb0287057f74e30a9e2d7d2cfc5c7953bc69fb78a4d5339ee3",
+    "dependencies/config-write-baseline.json": "0397c02b43ba597e08d57e9ed57175875e7d2b6b1a9c275d0c8dcf8f6c6b42b0",
+    "dependencies/continuous-monitor-baseline.json": "23814f3e1d951046dff15ba87ca51f19335ccafb31078b0d12a85819e347c145",
+    "dependencies/control-foundation-baseline.json": "49fdd0618292962dfd02728afe60159ee0a440e81aacd501df13caa7d2c9cd60",
+    "dependencies/measurement-target-baseline.json": "7e00289c15ff00a4355be53e2e200d65e66f7171de41c2ed96f4604eaf8d7455",
+    "dependencies/native-capture-baseline.json": "db97ee504c0ea93013f52bc1442656e22dc11d42321475b120558be105d2d23d",
+    "dependencies/native-control-integration-baseline.json": "66dc2744024559a556a96a4886eaa2bbe9e0571ee08eaadc36794bcf9d232cd0",
+    "dependencies/p2r-runtime-baseline.json": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b",
+    "dependencies/provider-options-baseline.json": "7b2f3546e5b9591de73a6f557935f7f12c51ba4b6dd5478da40d0d2c54f51279",
+    "dependencies/writer-fixture-baseline.json": "ead212b9ffee6641547d19660ac03bc766cd9b161bbabc31c60397a7fec44050",
+    "dependencies/writer-fixture-n0a-baseline.json": "8b9d96146ce1843cb5b1db5c1ff280d2571bdf9911e7e5807e6a96ac1f7b852c"
+  },
+  "protected": {
+    "scripts/build_control_toolset.py": "1924973e4e64e7d307160aa7b2dc13394429efb11a2d6e309ff688d030de1839",
+    "scripts/package_calibration_control.py": "f595a97a2e163d9cdf55e2824013e4053fbdbc8df7c81e6472d3bf0513ee21df",
+    "scripts/verify_control_toolset.py": "5ba84a953b4a179742bd183f37c7f61a79987f00de96e4358f02cb858a554ccd",
+    "src/calibration/calibration_capture_monitor.cpp": "9b222b34fb1d807d2ca9a1b2527bc175d43783c9039672561bacbd8a78d25667",
+    "src/calibration/calibration_drafts.cpp": "80bc67f54f72d16491bbd9cc3f66656a5bd518eeebee88f689b0ebe8c0f70973",
+    "src/calibration/calibration_production_entry.cpp": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f",
+    "src/calibration/calibration_runtime_provider.cpp": "eebb57c070dccb8c36c1e0efe965050dd1fa8fea7cdd4dce77f69d49bd2ed6ce",
+    "src/calibration/calibration_session.cpp": "222beb6159661169c19e3922c04c9eefcefc3f32d5fb042a261a0951739539f4",
+    "src/calibration/measurement_target.cpp": "313cb5c34ad8250f11cb1def557a8e0a96bf84d7cebcb1c2a3d6200d6bf75a51",
+    "src/calibration/static_calibration_session.cpp": "42c17147981a3b2c2c0c389d303d3757be296e9e6379869ab19db22a5f93099e",
+    "src/calibration/trajectory_calibration.cpp": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9",
+    "src/calibration/world_calibration.cpp": "525f197472940c4afd20612949bd4510c23bd8476122662c2491d1ddf02d3795",
+    "src/mapping/config.cpp": "1e4225341b809899ab3b156959671aed7d9918f57dcc8aba2c23411641e01814",
+    "src/mapping/config_transaction.cpp": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1",
+    "src/observation/registry.cpp": "be5ed0e40a2e0c221a128d4e13da0345e1b7fc7b997510f9b26d9ee1c272b826",
+    "src/routing/bridge.cpp": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0",
+    "src/routing/health.cpp": "66b5575ceb7e1d154d247e0bbe1285ebf13f624eaced9fd85bf26da63ec159b7",
+    "src/routing/runtime_normalization.cpp": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58",
+    "tools/calibration_local_api.cpp": "2e0ff3b9be4af7b0935fbfc0a8a60a146be3d2835b0dfe29fea6ff41befcdd61",
+    "tools/steamvr_calibrator.cpp": "6720f3990b3b0ddd1daf6b79ab555264152b574d116356f6f12b5f1ffd156359",
+    "ui/calibration_models.cs": "ab86ea7a6a280a255cd8ff4ea9d9d92995a2ea0f7dc4ed8b0bbe95e2bcf53bc5",
+    "ui/calibration_panel.cs": "6b19254ed14b68413ed36f4357850bf63ec5f6efee0bcf383101039061348b15",
+    "ui/calibration_process_client.cs": "07ec80fc68868421ccb67f2b89b57add12ae39e99daf64b1f1b975c26863f56a",
+    "ui/calibration_profile.cs": "a5edd376663680d85807679f16731334fb7fdc7f4a00f30d98fc8989722097c7",
+    "ui/control_models.cs": "e5251813c0af152f609a2b581a8f7529e3487a8a944eeae9c0a99cae9f9a751d"
+  }
+}

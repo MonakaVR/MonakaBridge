@@ -1,0 +1,97 @@
+{
+  "source_obj_sha256": "e477879904c8a5b3055f0a1d8cca63a889d1a6914ef71e2c07f742ba80cd9b6d",
+  "source_atlas_sha256": "7e9922800e0255be6b3bbb2d4720cafa7851e454b4096cd2b3e771da1a58735e",
+  "production": {
+    "vertices": 15677,
+    "normals": 15528,
+    "uv": 147,
+    "triangles": 31338,
+    "expanded_vertices": 49103,
+    "manifest_sha256": "602d1eda4293a869c6d7c210ffbd031de89eb8b8ea4252120e1b1f1e292e6742"
+  },
+  "diagnostic": {
+    "vertices": 16037,
+    "normals": 15648,
+    "uv": 507,
+    "triangles": 31458,
+    "expanded_vertices": 49463,
+    "manifest_sha256": "e0cd34b51386f99d3dc4093bcee538408fae842bbdd0ab40d46797f957c32bbe"
+  },
+  "markers": [
+    {
+      "axis": "+X",
+      "direction": [
+        1,
+        0,
+        0
+      ],
+      "length_m": 0.066,
+      "label": "+X / RIGHT"
+    },
+    {
+      "axis": "+Y",
+      "direction": [
+        0,
+        1,
+        0
+      ],
+      "length_m": 0.066,
+      "label": "+Y / UP"
+    },
+    {
+      "axis": "+Z",
+      "direction": [
+        0,
+        0,
+        1
+      ],
+      "length_m": 0.066,
+      "label": "+Z / FORWARD"
+    }
+  ],
+  "local_correction": "Rx(+90 degrees): (x,y,z) -> (x,-z,y)",
+  "model_to_tracking_matrix": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "correction_evidence": "axis-hil-correction-evidence.json",
+  "transformation": "Exact signed permutation of body positions/normals; original face order and sampled UV coordinates preserved. Axis markers use final resource axes.",
+  "feature_directions": {
+    "logo": [
+      0,
+      0,
+      -1
+    ],
+    "back": [
+      0,
+      0,
+      1
+    ],
+    "LED_button_arrow": [
+      0,
+      1,
+      0
+    ],
+    "USB": [
+      -1,
+      0,
+      0
+    ]
+  },
+  "label_semantics": "FRONT names the supplied logo face, now -Z. TOP retains the prepared model back-face name, now +Z, not physical up. +Z / FORWARD is the requested diagnostic label; OpenVR forward remains -Z. +Y / UP is the final model-local axis, not a neutral-pose world direction.",
+  "units": "metres",
+  "tracking_pose_changed": false
+}

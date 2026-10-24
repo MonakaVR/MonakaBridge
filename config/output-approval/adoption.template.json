@@ -1,0 +1,10 @@
+{
+  "schema": "monaka.output-adoption.v1",
+  "enabled": false,
+  "id": "UNADOPTED",
+  "policy": {
+    "file": "policy.json",
+    "sha256": null
+  },
+  "evidence": []
+}

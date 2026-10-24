@@ -1,0 +1,966 @@
+{
+  "common_base": "279a01363f47ad3564b5cd8b9346180c49ee41d3",
+  "parents": {
+    "native": "bf637c228c2f6fd4d972614660386702e194bdbb",
+    "control": "1b02d3628e11254bb0584e546c8a17713a6e6e26"
+  },
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "9a4ed0596bc8253319c8d1670efebf6a21a6b1e92f4e2c438c3702f7125b931a",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "4721fd0bf11dc17a7c56d8a29dd6587d5b30499c73e60180e1953965f224ed4e"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "1674121e3bc02522225d98b9dbb7db53b822d23299c07db47ff2fd730e3e32e1"
+        }
+      }
+    },
+    "dependencies/calibration-openvr-sdk.json": {
+      "sha256": "c6e5299dc8b10ff479a164ffbbed10308e97c992d6f2bbaf5eec485050c1547b",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "c6e5299dc8b10ff479a164ffbbed10308e97c992d6f2bbaf5eec485050c1547b"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/bridge-control-foundation.md": {
+      "sha256": "1ffe0b736f71484c0eaeb7a3fda71621834c4c321c0aa9aa9292f462c4abf082",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "1ffe0b736f71484c0eaeb7a3fda71621834c4c321c0aa9aa9292f462c4abf082"
+        }
+      }
+    },
+    "docs/calibration-session-contract.md": {
+      "sha256": "5c1cfa3ab05daf5549647dfdb85eedc868df0dd966ab012e063e570011d4e7c2",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "5c1cfa3ab05daf5549647dfdb85eedc868df0dd966ab012e063e570011d4e7c2"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/continuous-capture-monitor.md": {
+      "sha256": "a7e597ab0434037c30628039fc925f910f60d9d4d66f6dbb58e3ba7dc6b8291e",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "a7e597ab0434037c30628039fc925f910f60d9d4d66f6dbb58e3ba7dc6b8291e"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/measurement-target.md": {
+      "sha256": "2b1a9e61ab35cb24f5ca831694b23bdffe2c4a6debb75fa2e1c9f1caf123afa8",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "2b1a9e61ab35cb24f5ca831694b23bdffe2c4a6debb75fa2e1c9f1caf123afa8"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/native-calibration-capture.md": {
+      "sha256": "6c3aee412601c96e4499d9b955de5c4b6e92368a8e84ea6b0a14f8e50d5b7abd",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "6c3aee412601c96e4499d9b955de5c4b6e92368a8e84ea6b0a14f8e50d5b7abd"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/native-control-integration.md": {
+      "sha256": "201d03f12271e8fddada996e94733721f2bca938a7da91b274c906fd86018dc8",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/provider-open-options.md": {
+      "sha256": "116f011f09ff92e602e8146f60402327b8ae21d8f03ae1564acf150c257574cf",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "116f011f09ff92e602e8146f60402327b8ae21d8f03ae1564acf150c257574cf"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/writer-fixture-events.md": {
+      "sha256": "8e3863eb9466e0bd5e277a295c87bddff019cf0767afa888b372fcc38bc6957c",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "8e3863eb9466e0bd5e277a295c87bddff019cf0767afa888b372fcc38bc6957c"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "docs/ws01a-audit-correction.md": {
+      "sha256": "28b0d81a6c2bbbe4a49be86e96b84ea36abf3e582b5003e0691179085b9dd0ac",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "28b0d81a6c2bbbe4a49be86e96b84ea36abf3e582b5003e0691179085b9dd0ac"
+        }
+      }
+    },
+    "include/monaka_bridge/calibration_capture_monitor.hpp": {
+      "sha256": "9e76d58b185dc531e00e6a2ad1a029c9dc5224a8195dad14cb3155ba0bc9af3b",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "9e76d58b185dc531e00e6a2ad1a029c9dc5224a8195dad14cb3155ba0bc9af3b"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "include/monaka_bridge/calibration_runtime_provider.hpp": {
+      "sha256": "24958d7a5f0ce2fe442f3d6517b1b8c335157b84d49258a018190badf1172c11",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "24958d7a5f0ce2fe442f3d6517b1b8c335157b84d49258a018190badf1172c11"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "include/monaka_bridge/calibration_session.hpp": {
+      "sha256": "17bab348472af0d5caa80eba1bf3ecf9485034e04e9964627915f79705dd9351",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "17bab348472af0d5caa80eba1bf3ecf9485034e04e9964627915f79705dd9351"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "include/monaka_bridge/measurement_target.hpp": {
+      "sha256": "8b7edfbad0e49e58e0b25e4cf0050d4a56a55c04e8c12d31e8ba4c3ec4665ab7",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "8b7edfbad0e49e58e0b25e4cf0050d4a56a55c04e8c12d31e8ba4c3ec4665ab7"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "include/monaka_bridge/trajectory_calibration.hpp": {
+      "sha256": "62caa7379c56a33df40a02735c60b4e00654be7e0ebfdcba6356828328320f46",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "62caa7379c56a33df40a02735c60b4e00654be7e0ebfdcba6356828328320f46"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "448284405cc6cc4b41381f81d3c94736b30bcf6b627b0a5f8bdf9e2870f1d022"
+        }
+      }
+    },
+    "scripts/build_gui.ps1": {
+      "sha256": "564b35edda507f29d420e9e77cb5f4f1964e0c64edd95d1512ef60fcf7aaa727",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f93357b0edcfa209d29b7d9997cbf01b50aa22d8014cac72e2a21c585f6226c8"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "564b35edda507f29d420e9e77cb5f4f1964e0c64edd95d1512ef60fcf7aaa727"
+        }
+      }
+    },
+    "scripts/package_control.ps1": {
+      "sha256": "006ab6f51ce87bd40b50c1c43dabe435599b3aafaddc13d3abc63a3767d88b6c",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "006ab6f51ce87bd40b50c1c43dabe435599b3aafaddc13d3abc63a3767d88b6c"
+        }
+      }
+    },
+    "scripts/verify_calibration_sdk.py": {
+      "sha256": "6ddd88549e4e10bb8229e19dc397dca4a3e1f4d1f01a7b52450e43188864476c",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "6ddd88549e4e10bb8229e19dc397dca4a3e1f4d1f01a7b52450e43188864476c"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/calibration_capture_monitor.cpp": {
+      "sha256": "fb5c5c24dabd5a8870dfd56464a80e00f74d4483bb00dbae157c226fe48c387c",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "fb5c5c24dabd5a8870dfd56464a80e00f74d4483bb00dbae157c226fe48c387c"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/calibration_drafts.cpp": {
+      "sha256": "80bc67f54f72d16491bbd9cc3f66656a5bd518eeebee88f689b0ebe8c0f70973",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "80bc67f54f72d16491bbd9cc3f66656a5bd518eeebee88f689b0ebe8c0f70973"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/calibration_production_entry.cpp": {
+      "sha256": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/calibration_runtime_provider.cpp": {
+      "sha256": "760e09ab675ff453252fa03d328ad927e7f86a218594544f8a85ac677a102117",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "760e09ab675ff453252fa03d328ad927e7f86a218594544f8a85ac677a102117"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/calibration_session.cpp": {
+      "sha256": "bc8215b6c1bda113ccdbfe91de0db82e316e651bb036dd20f90aa544b06d2b26",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "bc8215b6c1bda113ccdbfe91de0db82e316e651bb036dd20f90aa544b06d2b26"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/measurement_target.cpp": {
+      "sha256": "313cb5c34ad8250f11cb1def557a8e0a96bf84d7cebcb1c2a3d6200d6bf75a51",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "313cb5c34ad8250f11cb1def557a8e0a96bf84d7cebcb1c2a3d6200d6bf75a51"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "src/calibration/trajectory_calibration.cpp": {
+      "sha256": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "9521a57f75e9c13dfa367e4d785716bc900ea36b69598526f34a8140ee0c94ef"
+        }
+      }
+    },
+    "src/calibration/world_calibration.cpp": {
+      "sha256": "525f197472940c4afd20612949bd4510c23bd8476122662c2491d1ddf02d3795",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "525f197472940c4afd20612949bd4510c23bd8476122662c2491d1ddf02d3795"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "525f197472940c4afd20612949bd4510c23bd8476122662c2491d1ddf02d3795"
+        }
+      }
+    },
+    "src/mapping/config_transaction.cpp": {
+      "sha256": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "3612d99b932b9094cf6332d44838e0c1e1ab5343551c9bc9ad70d12da1bf0df1"
+        }
+      }
+    },
+    "src/routing/bridge.cpp": {
+      "sha256": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "85b49cb6e861feb0a3f9644caeaf9e6e340c5e12d025f6865b76155d4ba2e1d0"
+        }
+      }
+    },
+    "src/routing/runtime_normalization.cpp": {
+      "sha256": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "1fb0a57cac76337c3d7577d58c3fab8c18529fb36cc82baeb1b8d7fb17de3e58"
+        }
+      }
+    },
+    "tests/calibration_capture_monitor_process.py": {
+      "sha256": "4214974704b49aa939e37774b1a1294ac120dfc0572281e1449cdf709bda45ed",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "4214974704b49aa939e37774b1a1294ac120dfc0572281e1449cdf709bda45ed"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_capture_monitor_tests.cpp": {
+      "sha256": "f9cfb91c5e5303d60fc307d6585d839ebafb5aa75d3793c65e7328f1d91157e7",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f9cfb91c5e5303d60fc307d6585d839ebafb5aa75d3793c65e7328f1d91157e7"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_fixture_provider.hpp": {
+      "sha256": "def3351eab1f2ffc26fed2a55faa07d315af582254d173ba6bf0036e9e8d9258",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "def3351eab1f2ffc26fed2a55faa07d315af582254d173ba6bf0036e9e8d9258"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_review_events.hpp": {
+      "sha256": "a78e10345cad844b0b642351cf189fc631e97a6aa8e46edfd6cbae6e57bb08a9",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "a78e10345cad844b0b642351cf189fc631e97a6aa8e46edfd6cbae6e57bb08a9"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_review_events.py": {
+      "sha256": "247de32f37c2c940becb44b355d4d050f98278b87d5e3754c03ad6395fa02c4c",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "247de32f37c2c940becb44b355d4d050f98278b87d5e3754c03ad6395fa02c4c"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_runtime_fake.hpp": {
+      "sha256": "b2d9102ad21775b4a83d30205d7d52527864c28e5e1cbcd362faca2eff27a1ea",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "b2d9102ad21775b4a83d30205d7d52527864c28e5e1cbcd362faca2eff27a1ea"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_runtime_process_fixture.cpp": {
+      "sha256": "822452434c2cc1d88dea6026aa280dc51a09ea0f34a1d719e90197b4d24c0db5",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "822452434c2cc1d88dea6026aa280dc51a09ea0f34a1d719e90197b4d24c0db5"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_runtime_provider_tests.cpp": {
+      "sha256": "a596b4760d31a2b5ed7f9a4dd2f72d0481dfea5a8184eda7fa90634bbe5115ca",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "a596b4760d31a2b5ed7f9a4dd2f72d0481dfea5a8184eda7fa90634bbe5115ca"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_session_process.py": {
+      "sha256": "d60141cca22b88af1a50ffd92f6dbae86ace80abc3a619f2ef89f7c65749d0b6",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "d60141cca22b88af1a50ffd92f6dbae86ace80abc3a619f2ef89f7c65749d0b6"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_session_process_fixture.cpp": {
+      "sha256": "d068b754077ae8eb2ae2a563cf5412f33d911bc922bdb7446ce0969a4e609e51",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "d068b754077ae8eb2ae2a563cf5412f33d911bc922bdb7446ce0969a4e609e51"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_session_scope.py": {
+      "sha256": "11fcde03e60645b9734937d7920f73a2d8add1899d823865d0c6b19dad6a37a7",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "11fcde03e60645b9734937d7920f73a2d8add1899d823865d0c6b19dad6a37a7"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_session_scope_tests.py": {
+      "sha256": "3d89146d6351400c9415403401f84a0bd0d3962d5c4324fe1ffe0ee59f561074",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "3d89146d6351400c9415403401f84a0bd0d3962d5c4324fe1ffe0ee59f561074"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/calibration_session_tests.cpp": {
+      "sha256": "52f8d18af47c9dcd5d6bf2f4bb4183b5b0114eb55ac1f20354b1d04fe88766b6",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "52f8d18af47c9dcd5d6bf2f4bb4183b5b0114eb55ac1f20354b1d04fe88766b6"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/capability_runtime_scope.py": {
+      "sha256": "5ae93717c0b6252e2a9dfe35314e0c0cb2bf3c357c2f9a816718c401cdfc140e",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f1125fee83dfd186946281ec05ff1a8248acaad1fb0cf7706fa3b0d3b6503492"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "cc28ffaef0afd58ca526c5ba8960efdac0af07af9681f86c65553dfa030847c2"
+        }
+      }
+    },
+    "tests/capability_runtime_scope_tests.py": {
+      "sha256": "111c32fd52dc52fdbb27162e605f7f8333fc5b879eb58133dadea9bbc1997893",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "a13c729fa34b7bd5f2fb26cd37edb89e34b4c6d9ca283a5dfa2d998683da0e9e"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "c77db376a46dfd6e848c8325e002d18a8497834361306e0d1eea85b99c74d6fb"
+        }
+      }
+    },
+    "tests/config_write_scope_tests.py": {
+      "sha256": "b47f4cd4055a48a69ed25eca770234022ee3ae9169a10b5cd1cdda7d01492f0a",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "d71cec471a78399daab15fcb1f407db3d45449ac1a3f3fb91a97171c754c0710"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "c75db5d347bcbc51b0483cf2d55db38af2c529b39a3667c0c5c3f12cc8df495c"
+        }
+      }
+    },
+    "tests/continuous_monitor_scope.py": {
+      "sha256": "9cf1595a8be14cf08467109a27bcbf748efb3c0256bbbfbcdf2b9ac33678b753",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "9cf1595a8be14cf08467109a27bcbf748efb3c0256bbbfbcdf2b9ac33678b753"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/continuous_monitor_scope_tests.py": {
+      "sha256": "c359c15620bf2325e9f9d725405145221bc73ace506c52f9fe6dbec070e78c6a",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "c359c15620bf2325e9f9d725405145221bc73ace506c52f9fe6dbec070e78c6a"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/control_foundation_scope.py": {
+      "sha256": "03a7a46e2c442504cb4ad7dc3bd02e66f0697f06d591a25f3081c488908fdfed",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "270359742376781628964bb21baf82a37c206b88f1e8bae2af8734652d08c61b"
+        }
+      }
+    },
+    "tests/control_foundation_scope_tests.py": {
+      "sha256": "2276d602be36f93346df6b1b6a19a115ed38f91d91eb8bf31e3b01275cb199af",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "ce1cf9d3b7dbef9968f7b389f8dfe31864ff482e639de9bb7435570a87fc7ba8"
+        }
+      }
+    },
+    "tests/control_foundation_tests.cs": {
+      "sha256": "764acdbeaabba4db7ae2951488a6fafa8a21c54e921fb9fddf5a9ea39ff9efdd",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "764acdbeaabba4db7ae2951488a6fafa8a21c54e921fb9fddf5a9ea39ff9efdd"
+        }
+      }
+    },
+    "tests/control_foundation_tests.ps1": {
+      "sha256": "64a0c0e182f37a6ba9c5a55d59c21448a03eff81958dc4bf258a17374157acd4",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "64a0c0e182f37a6ba9c5a55d59c21448a03eff81958dc4bf258a17374157acd4"
+        }
+      }
+    },
+    "tests/control_helper_fixture.cs": {
+      "sha256": "b3045cd15752aa71bee5a7f0b3ecd2da6f28a36cdaeb740b1d38b4c22d39fcbb",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "b3045cd15752aa71bee5a7f0b3ecd2da6f28a36cdaeb740b1d38b4c22d39fcbb"
+        }
+      }
+    },
+    "tests/control_packaged_smoke.py": {
+      "sha256": "9e443474a74d820f4159e163e1a7621ea28fb70fcb17dfe8b100325c34f32cb5",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "9e443474a74d820f4159e163e1a7621ea28fb70fcb17dfe8b100325c34f32cb5"
+        }
+      }
+    },
+    "tests/integration_scope.py": {
+      "sha256": "f9646c17ffd581fc2a042008e2cf50d11a849447b7f86380adec55467292b785",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/integration_scope_tests.py": {
+      "sha256": "3d6460bdffd0fd650c393fc1cdb969bcf5656e68770c1a379c797aa4a49fdc5a",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/measurement_target_scope.py": {
+      "sha256": "b83cb60d00006429e3f0a120af3f16e1b9c3a2895e563426353f2fd73d1b9c66",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "b83cb60d00006429e3f0a120af3f16e1b9c3a2895e563426353f2fd73d1b9c66"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/measurement_target_scope_tests.py": {
+      "sha256": "72c59939b5fc2e1be6059e3baf2a4f74c05244a8d70f7e4c57d254a014bd905e",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "72c59939b5fc2e1be6059e3baf2a4f74c05244a8d70f7e4c57d254a014bd905e"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/measurement_target_tests.cpp": {
+      "sha256": "e1eaaafab4abb892555b28951fb568695598b8a91d0bdfdd492223ec894dddd4",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "e1eaaafab4abb892555b28951fb568695598b8a91d0bdfdd492223ec894dddd4"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/native_capture_scope.py": {
+      "sha256": "d5a60f414053e011a7f44c1c340d2344f47e234c1e7c4abde6a879b5fc232d77",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "9cd4d36f955c5838a680fbebee65bd27cda8c3f646f4dc1ac2fa3ed0705aa5f7"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/native_capture_scope_tests.py": {
+      "sha256": "fe6b10faa5e07cad93a8d06487c1ddfd7e6e1a938d4296b8a8df3217d3f35529",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "fe6b10faa5e07cad93a8d06487c1ddfd7e6e1a938d4296b8a8df3217d3f35529"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/openvr_bootstrap_sentinel.cpp": {
+      "sha256": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f3f11fc6c1b2bf8504909681971ba2aad3dd423b9f5c306cd4f7b2dd9fcd1047"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/provider_options_scope.py": {
+      "sha256": "44f3f83075ac490cb09ee29d1d90f0b08a2c1d845225532f3efb8ba6937aa0a9",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "44f3f83075ac490cb09ee29d1d90f0b08a2c1d845225532f3efb8ba6937aa0a9"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/provider_options_scope_tests.py": {
+      "sha256": "654b4a27d8eaced3f6231c99f2b04df625398e8247a43e07b8a5fc189b9194c3",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "654b4a27d8eaced3f6231c99f2b04df625398e8247a43e07b8a5fc189b9194c3"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/trajectory_cli_sentinel.py": {
+      "sha256": "f3b8e969e1a0e06ce22423a5ba63c1844604c68722d532d342b0003b73a4406d",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f3b8e969e1a0e06ce22423a5ba63c1844604c68722d532d342b0003b73a4406d"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/ui_production_tests.cs": {
+      "sha256": "2da6fc57afc024adc2dd00190803e6f0bb1df327bb58bd7858d5d599b3ee6d5a",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "075c6349171c3511a1c6b3c649f2a25aa77abdb5557672144ca9a8de72697943"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "2da6fc57afc024adc2dd00190803e6f0bb1df327bb58bd7858d5d599b3ee6d5a"
+        }
+      }
+    },
+    "tests/writer_fixture_scope.py": {
+      "sha256": "10f3bfc3620b82de878d99a17ef99943f2245f738ced41200f024e404988f56e",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "10f3bfc3620b82de878d99a17ef99943f2245f738ced41200f024e404988f56e"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "f5c7d80f9f915316b03b81e1ed00afc148f5182d050de8c6951d847221e3a0ea",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "f5c7d80f9f915316b03b81e1ed00afc148f5182d050de8c6951d847221e3a0ea"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tools/calibration_local_api.cpp": {
+      "sha256": "10fe14d962e6ad282e56230f0a2e6e072f08d41e31a4bedd88c28ec1742a8550",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "10fe14d962e6ad282e56230f0a2e6e072f08d41e31a4bedd88c28ec1742a8550"
+        },
+        "control": {
+          "existed": false
+        }
+      }
+    },
+    "tools/steamvr_calibrator.cpp": {
+      "sha256": "6720f3990b3b0ddd1daf6b79ab555264152b574d116356f6f12b5f1ffd156359",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "6720f3990b3b0ddd1daf6b79ab555264152b574d116356f6f12b5f1ffd156359"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "c97a86c136f031ab2f2048b1f71b5833310925414a6f9606f09fa663b0673bc0"
+        }
+      }
+    },
+    "ui/control_models.cs": {
+      "sha256": "e5251813c0af152f609a2b581a8f7529e3487a8a944eeae9c0a99cae9f9a751d",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "5922753b2062750316d1f24fcb45c58f764a07a259f688537de1b5ce67e6cf63"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "e5251813c0af152f609a2b581a8f7529e3487a8a944eeae9c0a99cae9f9a751d"
+        }
+      }
+    },
+    "ui/installation_control.cs": {
+      "sha256": "00edae9a517d949e3531d4a6f98b3d42cc24aab62bed8a99e681071fd3f46e1b",
+      "parents": {
+        "native": {
+          "existed": false
+        },
+        "control": {
+          "existed": true,
+          "sha256": "00edae9a517d949e3531d4a6f98b3d42cc24aab62bed8a99e681071fd3f46e1b"
+        }
+      }
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "aa7cfe5fb95671fa740ee495fcec5f69cd43244c813032b97c236b16893de4e0",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "e81541dc7511c0f064f522e1dfdb82a675e91cb4b33ed854a0f5193e06b0b194"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "aa7cfe5fb95671fa740ee495fcec5f69cd43244c813032b97c236b16893de4e0"
+        }
+      }
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "624c768d53bdad97194ce6e8a573206dc1e9c81bbfb5c12f2eba0f96ef5eae48",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "5dad8de6e3f097dd29a887cfcec337f234d07711aa3c5b1603b403b41c445c59"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "624c768d53bdad97194ce6e8a573206dc1e9c81bbfb5c12f2eba0f96ef5eae48"
+        }
+      }
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "8df0ff143d97eb98d685df718f75af582c87f8720479630a7306d6b1d2ad052d",
+      "parents": {
+        "native": {
+          "existed": true,
+          "sha256": "8f6f96809efd973678eea3b108a9588acf4ccae5a676dda3b53047f06e7b5ad3"
+        },
+        "control": {
+          "existed": true,
+          "sha256": "8df0ff143d97eb98d685df718f75af582c87f8720479630a7306d6b1d2ad052d"
+        }
+      }
+    }
+  },
+  "pins": {
+    "dependencies/calibration-session-baseline.json": {
+      "native": "016bdfdb9b1abca71e5da32b4ec64908abc660f7609690df882047152e467fe5"
+    },
+    "dependencies/measurement-target-baseline.json": {
+      "native": "7e00289c15ff00a4355be53e2e200d65e66f7171de41c2ed96f4604eaf8d7455"
+    },
+    "dependencies/capabilities-runtime-baseline.json": {
+      "native": "013564518ab325eb0287057f74e30a9e2d7d2cfc5c7953bc69fb78a4d5339ee3",
+      "control": "013564518ab325eb0287057f74e30a9e2d7d2cfc5c7953bc69fb78a4d5339ee3"
+    },
+    "dependencies/config-write-baseline.json": {
+      "native": "0397c02b43ba597e08d57e9ed57175875e7d2b6b1a9c275d0c8dcf8f6c6b42b0",
+      "control": "0397c02b43ba597e08d57e9ed57175875e7d2b6b1a9c275d0c8dcf8f6c6b42b0"
+    },
+    "dependencies/p2r-runtime-baseline.json": {
+      "native": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b",
+      "control": "0ece50f075b07de137c690325390d1ef2e666704c9f5c4f956596f7fc8de317b"
+    },
+    "dependencies/provider-options-baseline.json": {
+      "native": "7b2f3546e5b9591de73a6f557935f7f12c51ba4b6dd5478da40d0d2c54f51279"
+    },
+    "dependencies/writer-fixture-baseline.json": {
+      "native": "ead212b9ffee6641547d19660ac03bc766cd9b161bbabc31c60397a7fec44050"
+    },
+    "dependencies/writer-fixture-n0a-baseline.json": {
+      "native": "8b9d96146ce1843cb5b1db5c1ff280d2571bdf9911e7e5807e6a96ac1f7b852c"
+    },
+    "dependencies/continuous-monitor-baseline.json": {
+      "native": "23814f3e1d951046dff15ba87ca51f19335ccafb31078b0d12a85819e347c145"
+    },
+    "dependencies/native-capture-baseline.json": {
+      "native": "db97ee504c0ea93013f52bc1442656e22dc11d42321475b120558be105d2d23d"
+    },
+    "dependencies/control-foundation-baseline.json": {
+      "control": "49fdd0618292962dfd02728afe60159ee0a440e81aacd501df13caa7d2c9cd60"
+    }
+  },
+  "overlap": [
+    "tests/capability_runtime_scope.py",
+    "tests/capability_runtime_scope_tests.py",
+    "tests/config_write_scope_tests.py"
+  ]
+}

@@ -48,6 +48,7 @@ public:
  void tick(std::int64_t now);
  void reconfigure(Config,std::int64_t now);
  const Config& config()const{return config_;}
+ const std::string& publisherSession()const{return session_;}
  const std::map<Key,Logical>& logical()const{return logical_;}
 };
 }

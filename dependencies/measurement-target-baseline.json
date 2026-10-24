@@ -1,0 +1,66 @@
+{
+  "base_commit": "279a01363f47ad3564b5cd8b9346180c49ee41d3",
+  "scope": "WS01b-B1 typed configuration freeze only; no B2-B4 claim",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "1c7caace6d5b8325c5c75f24ede7135adeaee9ee78283f84bc2af170ad8bcc88",
+      "existed_at_base": true,
+      "base_sha256": "1674121e3bc02522225d98b9dbb7db53b822d23299c07db47ff2fd730e3e32e1"
+    },
+    "docs/measurement-target.md": {
+      "sha256": "2b1a9e61ab35cb24f5ca831694b23bdffe2c4a6debb75fa2e1c9f1caf123afa8",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/measurement_target.hpp": {
+      "sha256": "8b7edfbad0e49e58e0b25e4cf0050d4a56a55c04e8c12d31e8ba4c3ec4665ab7",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "include/monaka_bridge/trajectory_calibration.hpp": {
+      "sha256": "62caa7379c56a33df40a02735c60b4e00654be7e0ebfdcba6356828328320f46",
+      "existed_at_base": true,
+      "base_sha256": "448284405cc6cc4b41381f81d3c94736b30bcf6b627b0a5f8bdf9e2870f1d022"
+    },
+    "src/calibration/measurement_target.cpp": {
+      "sha256": "313cb5c34ad8250f11cb1def557a8e0a96bf84d7cebcb1c2a3d6200d6bf75a51",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "src/calibration/trajectory_calibration.cpp": {
+      "sha256": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9",
+      "existed_at_base": true,
+      "base_sha256": "9521a57f75e9c13dfa367e4d785716bc900ea36b69598526f34a8140ee0c94ef"
+    },
+    "tests/capability_runtime_scope.py": {
+      "sha256": "f1125fee83dfd186946281ec05ff1a8248acaad1fb0cf7706fa3b0d3b6503492",
+      "existed_at_base": true,
+      "base_sha256": "2329916db7f0297a16be758a5f1569c609a81d62fda3023863e8afa7cfa524ff"
+    },
+    "tests/capability_runtime_scope_tests.py": {
+      "sha256": "a13c729fa34b7bd5f2fb26cd37edb89e34b4c6d9ca283a5dfa2d998683da0e9e",
+      "existed_at_base": true,
+      "base_sha256": "30a067aa26c89666ec85468cc4825b33cf41606b8ce88c5e896cf4937d260d9c"
+    },
+    "tests/config_write_scope_tests.py": {
+      "sha256": "d71cec471a78399daab15fcb1f407db3d45449ac1a3f3fb91a97171c754c0710",
+      "existed_at_base": true,
+      "base_sha256": "0bd565618e5f69d71f8878a002b0e807a109d0888237a09c1a9f718ab661e4e6"
+    },
+    "tests/measurement_target_scope.py": {
+      "sha256": "e7a087d436c9f7cc54eac59fcc9eef289f4ca55a37ef9a8262e675f7c2c11ec5",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/measurement_target_scope_tests.py": {
+      "sha256": "0944b51ad104d7c318a069ff2113c1e7ef1601ffae055e813116d7f670d41c31",
+      "existed_at_base": false,
+      "base_sha256": null
+    },
+    "tests/measurement_target_tests.cpp": {
+      "sha256": "e1eaaafab4abb892555b28951fb568695598b8a91d0bdfdd492223ec894dddd4",
+      "existed_at_base": false,
+      "base_sha256": null
+    }
+  }
+}

@@ -122,7 +122,7 @@ TrajectoryResiduals trajectoryResiduals(const std::vector<TrajectoryPair>& pairs
 TrajectoryResult solveTrajectory(const std::vector<TrajectoryPair>& pairs,double validRatio,const TrajectoryOptions& o){
     validateTrajectoryOptions(o);ensure(pairs.size()<=o.maxSamples,"trajectory solve bound exceeded");
     std::int64_t previous=-1;for(const auto& p:pairs){ensure(p.source.valid&&p.reference.valid&&finite(p.source.pose)&&finite(p.reference.pose),"invalid solve pair");ensure(p.source.timeNs>previous&&p.reference.timeNs>=0&&std::abs(p.source.timeNs-p.reference.timeNs)<=o.maxPairingDeltaNs,"invalid solve timing");previous=p.source.timeNs;}
-    TrajectoryResult result;result.quality=trajectoryQuality(pairs,validRatio,o);ensure(result.quality.sufficient,result.quality.reason.c_str());
+    TrajectoryResult result;result.options=o;result.quality=trajectoryQuality(pairs,validRatio,o);ensure(result.quality.sufficient,result.quality.reason.c_str());
     auto selected=boundedPairs(pairs,o.maxSolveSamples);
     for(int pass=0;pass<3;++pass){
         result.extrinsic=handEye(motions(selected,o),o);result.world=worldMean(selected,result.extrinsic,o);
@@ -143,8 +143,9 @@ void validateTrajectoryTarget(const Config& current,const WorldCalibrationTarget
         ensure(b.profile==target.binding.profile&&b.worldSpace==target.binding.worldSpace&&b.worldRevision==target.binding.worldRevision,"shared calibration group has incompatible profile/world space");
 }
 TrajectoryRecorder::TrajectoryRecorder(const Config& c,const WorldCalibrationTarget& t,std::string ref,TrajectoryOptions o):target_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateTrajectoryTarget(c,t,publisher_);ensure(!referenceId_.empty(),"reference serial required");}
+TrajectoryRecorder::TrajectoryRecorder(const Config& c,const FrozenMeasurementTarget& t,std::string ref,TrajectoryOptions o):target_(t.target()),frozenTarget_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateFrozenMeasurementTarget(c,t);ensure(!referenceId_.empty(),"reference serial required");}
 void TrajectoryRecorder::require(bool ok,const char* reason){if(!failure_.empty())throw std::invalid_argument(failure_);if(!ok){failure_=reason;throw std::invalid_argument(failure_);}}
-void TrajectoryRecorder::checkConfig(const Config& c){try{require(true,"");validateTrajectoryTarget(c,target_,publisher_);}catch(const std::exception& e){failure_=e.what();throw;}}
+void TrajectoryRecorder::checkConfig(const Config& c){try{require(true,"");if(frozenTarget_)validateFrozenMeasurementTarget(c,*frozenTarget_);else validateTrajectoryTarget(c,target_,publisher_);}catch(const std::exception& e){failure_=e.what();throw;}}
 bool TrajectoryRecorder::observation(const c1::TrackerObservation& p,std::int64_t arrival){
     require(true,"");try{validateCalibrationObservationIdentity(p,target_,session_);}catch(const std::exception& e){failure_=e.what();throw;}
     if(clock_.empty())clock_=p.clock_id;require(clock_==p.clock_id,"observation clock changed");
