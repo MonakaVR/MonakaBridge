@@ -46,8 +46,16 @@ def verify_diff_scope(root):
 
 def verify_solver_bytes(root):
  root=Path(root)
+ # The authorized lifetime successor records the exact solver options in Result.
+ # Admit committed current bytes, then erase only these two metadata additions.
+ # Every numerical/default/recording byte below must still equal the B1 baseline.
+ from offline_readiness_scope import approved_offline
+ approved_offline(root)
  name='src/calibration/trajectory_calibration.cpp'
  old=historical(str(root),name).replace(b'\r\n',b'\n');new=(root/name).read_bytes().replace(b'\r\n',b'\n')
+ marker=b'TrajectoryResult result;result.options=o;result.quality='
+ if new.count(marker)!=1:raise RuntimeError('Lifetime options metadata assignment drift')
+ new=new.replace(marker,b'TrajectoryResult result;result.quality=',1)
  # Only the new ctor/checkConfig can differ. Preserve validator, legacy ctor,
  # require(), and every math/recording/quality/pairing/default byte separately.
  start=b'void validateTrajectoryTarget(';tail=b'bool TrajectoryRecorder::observation('
@@ -61,6 +69,9 @@ def verify_solver_bytes(root):
   'observation-state-pairing-quality-solve':(old.split(tail)[1],new.split(tail)[1])}
  header='include/monaka_bridge/trajectory_calibration.hpp'
  a=historical(str(root),header).replace(b'\r\n',b'\n');b=(root/header).read_bytes().replace(b'\r\n',b'\n')
+ marker=b'    std::size_t inliers=0, pairs=0;\n    TrajectoryOptions options;\n};'
+ if b.count(marker)!=1:raise RuntimeError('Lifetime options metadata member drift')
+ b=b.replace(marker,b'    std::size_t inliers=0, pairs=0;\n};',1)
  pieces['trajectory-numeric-defaults-and-solver-api']=(a.split(b'struct TrajectoryOptions')[1].split(b'class TrajectoryRecorder')[0],b.split(b'struct TrajectoryOptions')[1].split(b'class TrajectoryRecorder')[0])
  for name,(a,b) in pieces.items():
   if a!=b:raise RuntimeError('B1 changed protected solver/legacy bytes: '+name)

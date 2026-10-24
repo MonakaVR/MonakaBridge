@@ -405,6 +405,10 @@
     "tests/semantic_hil_rehearsal.cpp": {
       "parent": null,
       "sha256": "889bc8d7d103bfcc99a6c6d38ad923665e3e5cc81fd2e797b8262bc0ef86e8ab"
+    },
+    "tests/measurement_target_scope.py": {
+      "parent": "20dc9ecdb06277283a185f6895b258b27232c11d2514c150e2a385e70682e3b3",
+      "sha256": "01091d8436194e1b7eb3350006abfd8fcc7d96e3943a68d59afe461faca24098"
     }
   },
   "authority_sha256": "e9931558e77bdf00b1bcdb08a5b42b102564f9b91977be898bec0f61e324fe75",
