@@ -122,7 +122,7 @@ TrajectoryResiduals trajectoryResiduals(const std::vector<TrajectoryPair>& pairs
 TrajectoryResult solveTrajectory(const std::vector<TrajectoryPair>& pairs,double validRatio,const TrajectoryOptions& o){
     validateTrajectoryOptions(o);ensure(pairs.size()<=o.maxSamples,"trajectory solve bound exceeded");
     std::int64_t previous=-1;for(const auto& p:pairs){ensure(p.source.valid&&p.reference.valid&&finite(p.source.pose)&&finite(p.reference.pose),"invalid solve pair");ensure(p.source.timeNs>previous&&p.reference.timeNs>=0&&std::abs(p.source.timeNs-p.reference.timeNs)<=o.maxPairingDeltaNs,"invalid solve timing");previous=p.source.timeNs;}
-    TrajectoryResult result;result.quality=trajectoryQuality(pairs,validRatio,o);ensure(result.quality.sufficient,result.quality.reason.c_str());
+    TrajectoryResult result;result.options=o;result.quality=trajectoryQuality(pairs,validRatio,o);ensure(result.quality.sufficient,result.quality.reason.c_str());
     auto selected=boundedPairs(pairs,o.maxSolveSamples);
     for(int pass=0;pass<3;++pass){
         result.extrinsic=handEye(motions(selected,o),o);result.world=worldMean(selected,result.extrinsic,o);

@@ -15,6 +15,11 @@ inline nlohmann::json trajectoryResultJson(const TrajectoryResult& r) {
     auto out=residual(r.residuals);
     out.update({{"mode","trajectory"},{"world",rigid(r.world)},{"extrinsic_not_mount",rigid(r.extrinsic)},
         {"pairs",r.pairs},{"inliers",r.inliers},{"all_residuals",residual(r.allResiduals)}});
+    const auto& q=r.quality;const auto& o=r.options;
+    out["quality"]={{"extent_m",q.extent},{"accumulated_rotation_rad",q.rotation},{"axis_diversity",q.axisDiversity},
+        {"valid_ratio",q.validRatio},{"span_seconds",q.spanSeconds},{"samples",q.samples},{"sufficient",q.sufficient}};
+    out["measurement_options"]={{"recording_seconds",o.durationSeconds},{"relative_motion_min_rad",o.minMotionAngle},
+        {"relative_motion_max_rad",o.maxMotionAngle},{"inlier_position_m",o.inlierPosition},{"inlier_orientation_rad",o.inlierOrientation}};
     return out;
 }
 } // namespace mb

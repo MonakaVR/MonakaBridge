@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "operator",
+    "source",
+    "device",
+    "input_space",
+    "current_session",
+    "current_clock",
+    "space_generation",
+    "attachment_relation",
+    "reference_serial",
+    "reference_role",
+    "reference_standing",
+    "input_revision",
+    "reference_generation",
+    "config_sha256",
+    "policy_sha256",
+    "evidence_sha256",
+    "schema",
+    "continuity",
+    "attachment_unchanged"
+  ],
+  "properties": {
+    "operator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "device": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_space": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_session": {
+      "type": "string",
+      "minLength": 1
+    },
+    "current_clock": {
+      "type": "string",
+      "minLength": 1
+    },
+    "space_generation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "attachment_relation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_serial": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_standing": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "reference_generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "config_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "policy_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidence_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "schema": {
+      "const": "monaka.evidence-continuity.v1"
+    },
+    "continuity": {
+      "enum": [
+        "SAME",
+        "UNKNOWN",
+        "CHANGED"
+      ]
+    },
+    "attachment_unchanged": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

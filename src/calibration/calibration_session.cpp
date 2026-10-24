@@ -152,25 +152,27 @@ struct CalibrationSession::Impl {
  Json waitingPoint(){pointToken=opaqueId();pointWaitDeadline=now()+60*second;state=WAITING_POINT;return {{"status","WAITING_POINT"},{"point_token",pointToken},{"point_index",staticMeasurement->pointCount()+1},{"points",staticOptions.points},{"pairs_required",staticOptions.samples},{"point_wait_deadline_ns",pointWaitDeadline},{"physical_stillness","NOT_VERIFIED"}};}
  OutputApprovalCriteria criteria(){
   need(bool(env.outputApprovalAuthority),"PHYSICAL_CRITERIA_NOT_ADOPTED");
-  auto c=env.outputApprovalAuthority->verify({*frozen,*input,config,providerOptions->configSha256(),now()});
-  need(!c.policyId.empty()&&c.policyId.size()<=4096&&!c.evidenceId.empty()&&c.evidenceId.size()<=4096&&c.evidenceSha256.size()==64&&c.expiresAt>now(),"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
+  const auto witness=owner->snapshot();const auto checkedAt=now();
+  auto c=env.outputApprovalAuthority->verify({*frozen,*input,config,providerOptions->configSha256(),checkedAt,
+   witness.fault.empty()&&witness.poseValid&&witness.referenceValid,checkedAt-witness.lastValidPose,checkedAt-witness.referenceAt});
+  need(!c.policyId.empty()&&c.policyId.size()<=4096&&!c.evidenceId.empty()&&c.evidenceId.size()<=4096&&c.evidenceSha256.size()==64&&(!c.expiresAt||*c.expiresAt>now()),"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
   for(char v:c.evidenceSha256)need((v>='0'&&v<='9')||(v>='a'&&v<='f'),"PHYSICAL_EVIDENCE_HASH_INVALID");
   const auto& b=frozen->target().binding;
   for(const auto& k:c.eligible){auto it=config.bindings.find(k);need(it!=config.bindings.end()&&it->second.source==b.source&&it->second.inputSpace==b.inputSpace&&it->second.inputRevision==b.inputRevision,"APPROVAL_CRITERIA_FOREIGN_MEMBER");}
   return c;
  }
- std::string fingerprint(const OutputApprovalCriteria& c){return Json({{"policy",c.policyId},{"evidence",c.evidenceId},{"sha256",c.evidenceSha256},{"expires",c.expiresAt},{"eligible",c.eligible}}).dump();}
+ std::string fingerprint(const OutputApprovalCriteria& c){return Json({{"policy",c.policyId},{"evidence",c.evidenceId},{"sha256",c.evidenceSha256},{"expires",c.expiresAt?Json(*c.expiresAt):Json(nullptr)},{"eligible",c.eligible}}).dump();}
  Json outputAction(const Json& j){
   const auto op=text(j,"op");need(approvalPurpose,"OUTPUT_APPROVAL_SESSION_REQUIRED");
   if(op=="review_output"){
    need(state==CONFIRMED||state==APPROVAL_REVIEW,"STATE_REJECTED");const bool confirming=state==CONFIRMED;if(confirming)beginReady();guards(true,true,confirming?confirmationDeadline:0);
-   std::optional<OutputApprovalCriteria> adopted;std::string reason;
-   try{adopted=criteria();}catch(const std::exception& e){reason=diagnostic(e);}
+   std::optional<OutputApprovalCriteria> adopted;std::string reason;Json evaluation=Json::object();
+   try{adopted=criteria();evaluation=adopted->evaluation;}catch(const EvidenceEvaluationError& e){reason=diagnostic(e);evaluation=e.evaluation;}catch(const std::exception& e){reason=diagnostic(e);evaluation={{"status","UNKNOWN"},{"reason",reason}};}
    if(confirming)beginReady();
    need(candidate.empty(),"APPROVAL_CANDIDATE_FIXED_REPREPARE_OR_NEW_SESSION");approvalFingerprint=adopted?fingerprint(*adopted):"UNADOPTED";resultId=opaqueId();resultDeadline=now()+10*60*second;state=APPROVAL_REVIEW;
    const auto& b=frozen->target().binding;Json members=Json::array();
    for(const auto& [k,v]:config.bindings)if(v.source==b.source&&v.inputSpace==b.inputSpace&&v.inputRevision==b.inputRevision)members.push_back({{"device",v.device},{"tracker",v.tracker},{"approved",v.spaceApproved},{"eligible",bool(adopted)&&adopted->eligible.count(k)!=0&&!v.spaceApproved&&!providerOptions->readOnly()},{"selected",false},{"mount_existing",rigid(v.mount)},{"world",rigid(v.world)},{"profile",v.profile},{"reason",providerOptions->readOnly()?"READONLY_APPROVAL_REJECTED":(!reason.empty()?reason:(v.spaceApproved?"ALREADY_APPROVED":(adopted&&adopted->eligible.count(k)?"ELIGIBLE_UNSELECTED":"MEMBER_PHYSICAL_EVIDENCE_MISSING")))}});
-   return {{"status","APPROVAL_REVIEW"},{"approval_id",resultId},{"members",members},{"world",rigid(b.world)},{"mount_existing",rigid(b.mount)},{"extrinsic_not_mount",nullptr},{"config_sha256",providerOptions->configSha256()},{"source",b.source},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"standing_witness",input->standing},{"criteria",adopted?adopted->policyId:"NOT_ADOPTED"},{"evidence",adopted?adopted->evidenceId:"MISSING"},{"evidence_sha256",adopted?adopted->evidenceSha256:""},{"reason",reason},{"runtime","UNCONFIRMED"}};
+   return {{"status","APPROVAL_REVIEW"},{"approval_id",resultId},{"members",members},{"world",rigid(b.world)},{"mount_existing",rigid(b.mount)},{"extrinsic_not_mount",nullptr},{"config_sha256",providerOptions->configSha256()},{"source",b.source},{"input_space",b.inputSpace},{"input_revision",b.inputRevision},{"standing_witness",input->standing},{"criteria",adopted?adopted->policyId:"NOT_ADOPTED"},{"evidence",adopted?adopted->evidenceId:"MISSING"},{"evidence_sha256",adopted?adopted->evidenceSha256:""},{"evidence_evaluation",evaluation},{"reason",reason},{"runtime","UNCONFIRMED"}};
   }
   need((state==APPROVAL_REVIEW||state==PREPARED)&&text(j,"approval_id")==resultId,"APPROVAL_REVIEW_REQUIRED");
   need(!providerOptions->readOnly(),"READONLY_APPROVAL_REJECTED");OutputApprovalCriteria adopted;
@@ -199,7 +201,7 @@ struct CalibrationSession::Impl {
    if(admissionAt-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");
    if(admissionAt>=resultDeadline)invalidate("RESULT_REVIEW_EXPIRED");
    need(admissionAt<reviewDeadline,"APPROVAL_REVIEW_TOKEN_EXPIRED");
-   need(admissionAt<adopted.expiresAt,"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
+   need(!adopted.expiresAt||admissionAt<*adopted.expiresAt,"PHYSICAL_EVIDENCE_MISSING_OR_EXPIRED");
    auto admission=owner->admit(barrier,admissionAt);state=COMMITTING;
   }catch(const std::exception& e){abandonOutputReview();if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;}
   review.clear();++commits;auto started=now();
