@@ -37,12 +37,12 @@ production=export(PROD,vs,ns,uv,faces,(SOURCE/'pico_rev3_identification_atlas.pn
 # OpenVR +Z is backward; the requested +Z / FORWARD text is only a local
 # diagnostic axis name, explicitly documented, never a tracking convention.
 atlas=Image.new('RGB',(2048,4096),(18,22,30));atlas.paste(Image.open(SOURCE/'pico_rev3_identification_atlas.png'),(0,0))
-draw=ImageDraw.Draw(atlas);font=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',74)
+draw=ImageDraw.Draw(atlas);font=ImageFont.truetype('C:/Windows/Fonts/arialbd.ttf',150)
 labels=[('+X / RIGHT',(230,45,45)),('+Y / UP',(35,200,75)),('+Z / FORWARD',(45,125,255)),('FRONT: LOGO -Y',(245,185,35)),('TOP: BACK +Y',(40,210,210)),('USB-C: -X',(210,90,230))]
 regions=[]
 for i,(label,color) in enumerate(labels):
  y=2110+i*260;draw.rounded_rectangle((64,y,1984,y+210),radius=24,fill=color)
- draw.text((110,y+55),label,font=font,fill=(8,12,19))
+ draw.text((1024,y+105),label,font=font,fill=(8,12,19),anchor='mm')
  regions.append([(64/2048,1-(y+210)/4096),(1984/2048,1-(y+210)/4096),(1984/2048,1-y/4096),(64/2048,1-y/4096)])
 vertices=list(vs);normals=list(ns);texture=[(u,.5+.5*v) for u,v in uv];triangles=list(faces)
 def sub(a,b):return [a[i]-b[i] for i in range(3)]
