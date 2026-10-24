@@ -41,6 +41,7 @@ struct TrajectoryResult {
     TrajectoryQuality quality;
     TrajectoryResiduals residuals, allResiduals;
     std::size_t inliers=0, pairs=0;
+    TrajectoryOptions options;
 };
 
 Rigid composeRigid(const Rigid& a,const Rigid& b);

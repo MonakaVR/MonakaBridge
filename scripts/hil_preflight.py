@@ -79,6 +79,85 @@ $services=@(Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('monaka_
     actual['services']=sorted([{'path':x.get('ExecutablePath'),'sha256':digest(x['ExecutablePath']) if x.get('ExecutablePath') else None} for x in state['services']],key=lambda x:x.get('path') or '')
     return actual
 
+def time_contract(document,now_ms,semantic,evidence=False):
+    """Validate declared time constraints only; never choose a duration."""
+    def integer(v):
+        if type(v) is not int or not 0<=v<=9223372036854775807:raise ValueError('APPROVAL_INTEGER_INVALID')
+        return v
+    if semantic:
+        v=document.get('lifetime')
+        if not isinstance(v,dict):raise ValueError('APPROVAL_LIFETIME_REQUIRED')
+        if v.get('mode')!='semantic':raise ValueError('APPROVAL_LIFETIME_MODE_INVALID')
+        if set(v)-{'mode','not_before_utc_ms','not_after_utc_ms'}:raise ValueError('APPROVAL_LIFETIME_FIELD_INVALID')
+        if set(document)&{'expires_at_utc_ms','valid_from_utc_ms','valid_until_utc_ms'}:raise ValueError('APPROVAL_MIXED_LIFETIME_SCHEMA')
+        start=v.get('not_before_utc_ms');end=v.get('not_after_utc_ms')
+        if start is not None:start=integer(start)
+        if end is not None:end=integer(end)
+        if start is not None and end is not None and start>=end:raise ValueError('APPROVAL_TIME_POLICY_RANGE')
+        if start is not None and now_ms<start:raise ValueError('APPROVAL_TIME_POLICY_NOT_YET_VALID')
+        if end is not None and now_ms>=end:raise ValueError('APPROVAL_TIME_POLICY_EXPIRED')
+    elif evidence:end=integer(document['expires_at_utc_ms'])
+    else:
+        start=integer(document['valid_from_utc_ms']);end=integer(document['valid_until_utc_ms'])
+        if not start<end or not start<=now_ms<end:raise ValueError('APPROVAL_POLICY_EXPIRED_OR_NOT_YET_VALID')
+    if evidence:
+        measured=integer(document['measured_at_utc_ms'])
+        if measured>now_ms or (end is not None and (measured>=end or now_ms>=end)):raise ValueError('APPROVAL_EVIDENCE_EXPIRED_OR_FUTURE')
+    return end
+
+def authority_package_checks(root,now_ms):
+    """Static artifact readiness. Live continuity/freshness is Native-only at approval."""
+    failures=[];adoption=load(root/'adoption.json')
+    if adoption.get('schema')!='monaka.output-adoption.v1':return ['ADOPTION_SCHEMA_UNSUPPORTED']
+    if adoption.get('enabled') is not True:return ['PHYSICAL_POLICY_NOT_ADOPTED']
+    def pinned(pin):
+        path=inside(root,pin['file'])
+        if digest(path)!=pin['sha256']:raise ValueError('APPROVAL_HASH_MISMATCH')
+        return load(path)
+    def number(v):
+        if type(v) not in (int,float) or not math.isfinite(v) or v<0:raise ValueError('APPROVAL_NUMBER_INVALID')
+        return v
+    try:
+        policy=pinned(adoption['policy']);semantic=policy.get('schema')=='monaka.physical-criteria.v2'
+        if not semantic and policy.get('schema')!='monaka.physical-criteria.v1':raise ValueError('APPROVAL_POLICY_INVALID_OR_DISABLED')
+        if policy.get('enabled') is not True:raise ValueError('APPROVAL_POLICY_INVALID_OR_DISABLED')
+        time_contract(policy,now_ms,semantic);limits=policy['limits']
+        for k in ('min_pairs','min_inliers','min_inlier_ratio','rms_position','rms_orientation','max_position','max_orientation'):number(limits[k])
+        if type(limits['min_pairs']) is not int or type(limits['min_inliers']) is not int or limits['min_pairs']<1 or limits['min_inliers']<1 or limits['min_inlier_ratio']>1:raise ValueError('APPROVAL_LIMITS_INVALID')
+        if semantic:
+            if policy.get('all_pair_max_mode')!='diagnostic':raise ValueError('APPROVAL_ALL_PAIR_MODE_INVALID')
+            if set(limits)&{'all_max_position','all_max_orientation'}:raise ValueError('APPROVAL_DIAGNOSTIC_LIMIT_CONFLICT')
+        else:
+            for k in ('all_max_position','all_max_orientation'):number(limits[k])
+        if policy['measurement_mode']!='trajectory' or any(not isinstance(policy['scope'][k],str) or not policy['scope'][k] for k in ('source','input_space','profile','world_space')):raise ValueError('POLICY_SCOPE_INVALID')
+        if not adoption.get('evidence'):raise ValueError('PHYSICAL_EVIDENCE_NOT_ADOPTED')
+        if 'current_declaration' in adoption:pinned(adoption['current_declaration'])
+        for pin in adoption['evidence']:
+            e=pinned(pin)
+            if e['schema']!=('monaka.physical-evidence.v2' if semantic else 'monaka.physical-evidence.v1') or e['evidence_kind']!='physical_capture':raise ValueError('PHYSICAL_EVIDENCE_REQUIRED')
+            time_contract(e,now_ms,semantic,True)
+            if (e['criteria_id'],e['criteria_version'],e['criteria_sha256'])!=(policy['id'],policy['version'],adoption['policy']['sha256']):raise ValueError('EVIDENCE_POLICY_MISMATCH')
+            result=pinned(e['native_result']);pinned(e['raw']);pinned(e['config_preimage'])
+            if result['result_id']!=e['measurement_result_id'] or result['world']!=e['world'] or result['config_sha256']!=e['config_preimage_sha256']:raise ValueError('EVIDENCE_NATIVE_RESULT_MISMATCH')
+            for k in ('rms_position','rms_orientation','max_position','max_orientation'):
+                if number(result[k])>limits[k]:raise ValueError('EVIDENCE_RESIDUAL_LIMIT:'+k)
+            for k in ('max_position','max_orientation'):
+                v=number(result['all_residuals'][k])
+                if not semantic and v>limits['all_'+k]:raise ValueError('EVIDENCE_RESIDUAL_LIMIT:all_'+k)
+            if not 0<result['inliers']<=result['pairs'] or result['pairs']<limits['min_pairs'] or result['inliers']<limits['min_inliers'] or result['inliers']/result['pairs']<limits['min_inlier_ratio']:raise ValueError('EVIDENCE_PAIR_LIMIT')
+            if semantic:
+                if 'quality' not in result or 'measurement_options' not in result:raise ValueError('APPROVAL_NATIVE_QUALITY_MISSING')
+                q=result['quality'];minimum=policy['motion_quality']
+                if q['sufficient'] is not True or q['samples']!=result['inliers'] or number(q['valid_ratio'])>1:raise ValueError('APPROVAL_NATIVE_QUALITY_INVALID')
+                for k in ('valid_ratio','span_seconds','accumulated_rotation_rad','axis_diversity'):
+                    if number(q[k])<number(minimum[k]):raise ValueError('APPROVAL_MOTION_QUALITY_FAILED')
+                if len(q['extent_m'])!=3 or len(minimum['extent_m'])!=3:raise ValueError('APPROVAL_NATIVE_QUALITY_INVALID')
+                if any(number(v)<number(b) for v,b in zip(q['extent_m'],minimum['extent_m'])):raise ValueError('APPROVAL_MOTION_QUALITY_FAILED')
+                for k in ('recording_seconds','relative_motion_min_rad','relative_motion_max_rad','inlier_position_m','inlier_orientation_rad'):
+                    if number(result['measurement_options'][k])!=number(policy['measurement_options'][k]):raise ValueError('APPROVAL_MEASUREMENT_OPTIONS_MISMATCH')
+    except (ValueError,KeyError,TypeError,OverflowError) as error:failures.append(str(error))
+    return failures
+
 def package_checks(package,now_ms):
     failures=[];manifest=load(package/'artifact-manifest.json')
     if manifest.get('schema')!='monaka.hil-artifact-set.v1':raise ValueError('ARTIFACT_SCHEMA_UNSUPPORTED')
@@ -94,33 +173,7 @@ def package_checks(package,now_ms):
     for feature in ('file_output_authority_v1','max_residuals_v1','first_failure_v1'):
         if feature not in features:failures.append('NATIVE_FEATURE_MISSING:'+feature)
     if manifest.get('config_transaction')!='monaka-config-transaction-v1':failures.append('CONFIG_TRANSACTION_UNSUPPORTED')
-    adoption=load(package/'monaka/OutputApproval/adoption.json')
-    if not adoption.get('enabled'):failures.append('PHYSICAL_POLICY_NOT_ADOPTED')
-    else:
-        root=package/'monaka/OutputApproval';pin=adoption['policy'];policy_path=inside(root,pin['file']);policy=load(policy_path)
-        if digest(policy_path)!=pin['sha256']:failures.append('POLICY_HASH_MISMATCH')
-        if not policy.get('enabled') or policy.get('schema')!='monaka.physical-criteria.v1' or not policy['valid_from_utc_ms']<=now_ms<policy['valid_until_utc_ms']:failures.append('POLICY_INVALID_OR_EXPIRED')
-        limits=policy['limits']
-        for k in ('min_pairs','min_inliers','min_inlier_ratio','rms_position','rms_orientation','max_position','max_orientation','all_max_position','all_max_orientation'):
-            if type(limits[k]) not in (float,int) or not math.isfinite(limits[k]) or limits[k]<0:failures.append('POLICY_LIMIT_INVALID:'+k)
-        if type(limits['min_pairs']) is not int or type(limits['min_inliers']) is not int or limits['min_pairs']<1 or limits['min_inliers']<1 or limits['min_inlier_ratio']>1:failures.append('POLICY_PAIR_LIMIT_INVALID')
-        if policy['measurement_mode']!='trajectory' or any(not isinstance(policy['scope'][k],str) or not policy['scope'][k] for k in ('source','input_space','profile','world_space')):failures.append('POLICY_SCOPE_INVALID')
-        if not adoption.get('evidence'):failures.append('PHYSICAL_EVIDENCE_NOT_ADOPTED')
-        for pin in adoption.get('evidence',[]):
-            if digest(inside(root,pin['file']))!=pin['sha256']:failures.append('EVIDENCE_HASH_MISMATCH')
-            evidence=load(inside(root,pin['file']))
-            if evidence['schema']!='monaka.physical-evidence.v1' or evidence['evidence_kind']!='physical_capture':failures.append('PHYSICAL_EVIDENCE_REQUIRED')
-            if not evidence['measured_at_utc_ms']<=now_ms<evidence['expires_at_utc_ms']:failures.append('EVIDENCE_EXPIRED_OR_FUTURE')
-            if (evidence['criteria_id'],evidence['criteria_version'],evidence['criteria_sha256'])!=(policy['id'],policy['version'],adoption['policy']['sha256']):failures.append('EVIDENCE_POLICY_MISMATCH')
-            for member in ('native_result','raw','config_preimage'):
-                target=inside(root,evidence[member]['file'])
-                if digest(target)!=evidence[member]['sha256']:failures.append('EVIDENCE_MEMBER_HASH_MISMATCH:'+member)
-            result=load(inside(root,evidence['native_result']['file']))
-            if result['result_id']!=evidence['measurement_result_id'] or result['world']!=evidence['world'] or result['config_sha256']!=evidence['config_preimage_sha256']:failures.append('EVIDENCE_NATIVE_RESULT_MISMATCH')
-            for k in ('rms_position','rms_orientation','max_position','max_orientation','all_max_position','all_max_orientation'):
-                v=result['all_residuals'][k[4:]] if k.startswith('all_') else result[k]
-                if type(v) not in (int,float) or not math.isfinite(v) or v<0 or v>limits[k]:failures.append('EVIDENCE_RESIDUAL_LIMIT:'+k)
-            if not 0<result['inliers']<=result['pairs'] or result['pairs']<limits['min_pairs'] or result['inliers']<limits['min_inliers'] or result['inliers']/result['pairs']<limits['min_inlier_ratio']:failures.append('EVIDENCE_PAIR_LIMIT')
+    failures.extend(authority_package_checks(package/'monaka/OutputApproval',now_ms))
     return failures
 
 def main():

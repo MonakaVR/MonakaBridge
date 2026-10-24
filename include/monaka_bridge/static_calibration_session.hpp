@@ -36,8 +36,10 @@ public:
 // and evidence set. Synthetic implementations remain test-only.
 struct OutputApprovalCriteria {
  std::string policyId,evidenceId,evidenceSha256;
- std::int64_t expiresAt=0;
+ // nullopt is semantic lifetime, not an infinite timestamp. Review TTL is separate.
+ std::optional<std::int64_t> expiresAt=0;
  std::set<Key> eligible;
+ Json evaluation=Json::object();
 };
 struct OutputApprovalContext {
  const FrozenMeasurementTarget& target;
@@ -45,6 +47,14 @@ struct OutputApprovalContext {
  const Config& config;
  const std::string& configSha256;
  std::int64_t now;
+ // Supplied by the native capture monitor, never by a GUI request or saved file.
+ bool currentWitnessAvailable=false;
+ std::int64_t poseAgeNs=-1,referenceAgeNs=-1;
+};
+class EvidenceEvaluationError:public std::runtime_error {
+public:
+ Json evaluation;
+ explicit EvidenceEvaluationError(Json detail):std::runtime_error(detail.at("reason").get<std::string>()),evaluation(std::move(detail)){}
 };
 class OutputApprovalAuthority {
 public:

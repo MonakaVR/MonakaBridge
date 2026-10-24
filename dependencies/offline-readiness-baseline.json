@@ -1,9 +1,9 @@
 {
   "parent": "8f8ca0d4465ada163a122f174b49be13bf7ea80b",
-  "authority": "MonakaVR_Astra_Autonomous_Offline_HIL_Readiness_Codex_20261023.md",
+  "authority": "MonakaVR_Astra_Evidence_Lifetime_Contract_Fix_Codex_20261024.md",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "aa7730ddff45ad3cee63095e44be5c2913904407c7fbddf979fec416d7a50117",
+      "sha256": "a5dd8f66f0bcd77eefb9644c5fb5d514527aecffccb31e62bb3c2eb5bb2b69e5",
       "parent": "42d44827f455bee9fec4860aaa6f8edd91003136db886984d42a9c0af65c5775"
     },
     "README.md": {
@@ -39,7 +39,7 @@
       "parent": null
     },
     "config/output-approval/adoption.schema.json": {
-      "sha256": "e1ab50f885d2de113faa67b6e414c1da40dda094c2523e1801fdc702a0a88f37",
+      "sha256": "5d1afbdd6212f9dd62149b9c2b56bd586b8f5724037492c8be500bc5464c7417",
       "parent": null
     },
     "config/output-approval/adoption.template.json": {
@@ -71,7 +71,7 @@
       "parent": "2fe2fd00b3b565404cfbcf33220f415d0c6a5ccf26bf43f1724b8e82a5a29747"
     },
     "include/monaka_bridge/output_approval_authority.hpp": {
-      "sha256": "95188c9641bc525b1e5867e28628141d8eb795d20e2258ac46e05756eba40502",
+      "sha256": "1bbd6caf52a258e54961d55a239c7681987274e4ad7ca8f840403061a9203c4b",
       "parent": null
     },
     "include/monaka_bridge/service_lifecycle.hpp": {
@@ -79,11 +79,11 @@
       "parent": null
     },
     "include/monaka_bridge/static_calibration_session.hpp": {
-      "sha256": "ddad5107420b8681f60c712b200c995e2146f51dd3f06df8211709b3cda728ca",
+      "sha256": "3c3a10a703d97f333df4e11ee330ce4a448a25b6422d6cbbbbb7b45f85a0b5f5",
       "parent": "7233ee8fdd759649b60d186833cec9a4003ae106287c71bb850fdad2be22161a"
     },
     "include/monaka_bridge/trajectory_result_json.hpp": {
-      "sha256": "3a90cd0d56953ad006b3d9009ceab092b1cc59e26be7ccaff1a7afa20d9bea98",
+      "sha256": "858ac57196ee48439c474b9f15995b1abc7d2999d68078bf37d8b4677529f06a",
       "parent": null
     },
     "outputs/steamvr/driver/device_provider.cpp": {
@@ -147,7 +147,7 @@
       "parent": null
     },
     "scripts/hil_preflight.py": {
-      "sha256": "5b186a1862e7efc9d32de4948c682fc8e8c2fbdddee4e54a77802131c3a04faf",
+      "sha256": "b5ff013709581ca3daeb359dda73634d51c66d3c01e2c552c95a5030cd75e48e",
       "parent": null
     },
     "scripts/launch_artifact_set.py": {
@@ -155,7 +155,7 @@
       "parent": null
     },
     "scripts/prepare_output_evidence.py": {
-      "sha256": "05197c270163bb83ec681a5c1c7fa24cadf085e8faec5b7a993ffe240d0fb840",
+      "sha256": "46fd833fa461b805eed734db69fc661f0b340a4943a7b33ed0db1504cb86f9b8",
       "parent": null
     },
     "scripts/render_model_assets.py": {
@@ -175,11 +175,11 @@
       "parent": "eebb57c070dccb8c36c1e0efe965050dd1fa8fea7cdd4dce77f69d49bd2ed6ce"
     },
     "src/calibration/calibration_session.cpp": {
-      "sha256": "e7384b44b43a1b02ccee21c8bd48cbc3c47c1c922d68d45ee0119d7d604e1c49",
+      "sha256": "5e96b606fc93375d28065e634e72e476857f337a8928dd007246d0f1d45fa058",
       "parent": "222beb6159661169c19e3922c04c9eefcefc3f32d5fb042a261a0951739539f4"
     },
     "src/calibration/output_approval_authority.cpp": {
-      "sha256": "e7a65dadaf78a640a7424ebccbde110022b2c84f1be87c1b4a122ae4ef1ae00f",
+      "sha256": "145ffb4100c609301fde683ff518f72a93ab9ee0b8722788a62a0fbad2ed2698",
       "parent": null
     },
     "src/mapping/config_transaction.cpp": {
@@ -203,7 +203,7 @@
       "parent": null
     },
     "tests/offline_readiness_scope.py": {
-      "sha256": "35a5b9e79b0af195560d6d073db6c6b57eee2916f74c8745e9f35677bf45bb92",
+      "sha256": "718aa23480f18c84f7cc953e14e0f684f06125ea618807ab3d94c7649ebde478",
       "parent": null
     },
     "tests/offline_readiness_scope_tests.py": {
@@ -357,6 +357,56 @@
     "ui/steamvr_control_wpf.cs": {
       "sha256": "0d10a1f5491e61e4df0330f43237673122aebf7b647e6c90a4fa36b42bbf719f",
       "parent": "d6b748792f0224fd29b96edd85fc7fe93f53b3c3358e5dd31357dcc79b67a1da"
+    },
+    ".gitattributes": {
+      "parent": "3542314c43f4c050b2621f967fd48ddae8775de94b912c2c4f40b932f44dcddf",
+      "sha256": "348f0ab790871fba8a407edcde80815c61b48c5fd2249d86a1f4898741460bf4"
+    },
+    "config/output-approval/continuity.schema.json": {
+      "parent": null,
+      "sha256": "8ca2557fa96818141af0c55c0d9c7d7484a9db9a38cb7f5a65ce06342ad2515f"
+    },
+    "config/output-approval/evidence-v2.schema.json": {
+      "parent": null,
+      "sha256": "590865e48b58c707f50ef16cf0a27408fbff955a086823891e023ecdc49d5f5b"
+    },
+    "config/output-approval/policy-v2.schema.json": {
+      "parent": null,
+      "sha256": "8811caa70ba12d14537b8624f5d950b76045c780c429af132c51af32aca8f012"
+    },
+    "dependencies/evidence-lifetime-authority.md": {
+      "parent": null,
+      "sha256": "e9931558e77bdf00b1bcdb08a5b42b102564f9b91977be898bec0f61e324fe75"
+    },
+    "docs/evidence-lifetime-contract.md": {
+      "parent": null,
+      "sha256": "11ac39c9e2fff1f2bbb96582d7896e3006cf32bf1af654dc7ff518fc707b5faf"
+    },
+    "include/monaka_bridge/trajectory_calibration.hpp": {
+      "parent": "62caa7379c56a33df40a02735c60b4e00654be7e0ebfdcba6356828328320f46",
+      "sha256": "c20df0e2e4fdf9ec83bb5c23dab7782b0100b5461f89b2e014857c9c49cf32be"
+    },
+    "scripts/prepare_evidence_continuity.py": {
+      "parent": null,
+      "sha256": "e0664628db0e1f85fdcbf3b845d6fe44924ada11827022dc7130bc0b209495a8"
+    },
+    "src/calibration/trajectory_calibration.cpp": {
+      "parent": "223a8f447e27ddedaecd0e054a54c89a707852e577a71b87829544cf8fdb39f9",
+      "sha256": "8e8ee2a024dc61505ca5272bad117ce6661460059b493829fde5cad63ab8eef1"
+    },
+    "tests/evidence_lifetime_tests.cpp": {
+      "parent": null,
+      "sha256": "d9a77ffb85b34d51231b6a8b840c504ed6dc200f1c3be34a553b59dbac17422a"
+    },
+    "tests/evidence_lifetime_tools_tests.py": {
+      "parent": null,
+      "sha256": "d1c2f0dd6d0c845722f553785d6b0482eccf58f3f9c533b9325071ad25f7bfdc"
+    },
+    "tests/semantic_hil_rehearsal.cpp": {
+      "parent": null,
+      "sha256": "889bc8d7d103bfcc99a6c6d38ad923665e3e5cc81fd2e797b8262bc0ef86e8ab"
     }
-  }
+  },
+  "authority_sha256": "e9931558e77bdf00b1bcdb08a5b42b102564f9b91977be898bec0f61e324fe75",
+  "successor_of": "56c30a05ff87e7e2306897f381619ae8c5b7367f"
 }
