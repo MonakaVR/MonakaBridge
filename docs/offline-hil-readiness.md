@@ -71,8 +71,10 @@ service before hiding the tray; stale PID/name and other owners fail closed.
 The ordinary driver now includes the existing reviewed D2 Rev3 resource and
 explicit assignment implementation. Generic/unassigned devices keep generic
 presentation. Assignment binds publisher/session, source/device/input session,
-mapping revision and approved config. Lost identity/expiry revokes appearance
-for that registered object's lifetime; a new explicit snapshot needs restart.
+mapping revision and approved config. Transient loss/invalidity/expiry hides
+appearance; fresh valid tracking with the same pinned identity restores it.
+An observed conflicting identity/config still revokes appearance for that
+registered object's lifetime; a new explicit snapshot needs restart.
 Rev3 is an approximate mesh; physical mount alignment is not certified.
 
 After approval, `monaka_prepare_presentation config.json health.json source

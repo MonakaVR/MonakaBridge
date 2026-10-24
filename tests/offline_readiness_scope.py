@@ -30,8 +30,8 @@ def approved_offline(root,git_root=None):
     repo=repository(git_root or root);raw=(root/PIN).read_bytes()
     if digest(raw)!=digest(committed_receipt(repo)):raise RuntimeError('Readiness receipt differs from committed review')
     p=json.loads(raw)
-    if p['parent']!=PARENT or p['authority']!='MonakaVR_Astra_Evidence_Lifetime_Contract_Fix_Codex_20261024.md':raise RuntimeError('Readiness authority/parent mismatch')
-    if hashlib.sha256((root/'dependencies/evidence-lifetime-authority.md').read_bytes()).hexdigest()!=p['authority_sha256']:raise RuntimeError('Readiness successor authority drift')
+    if p['parent']!=PARENT or p['authority']!='MonakaVR_Astra_RenderModel_Reacquire_Offline_Fix_Codex_20261024.md':raise RuntimeError('Readiness authority/parent mismatch')
+    if hashlib.sha256((root/'dependencies/render-model-reacquire-authority.md').read_bytes()).hexdigest()!=p['authority_sha256']:raise RuntimeError('Readiness successor authority drift')
     for name,e in p['files'].items():
         try:actual=(root/name).read_bytes()
         except OSError as exc:raise RuntimeError('Readiness missing source: '+name) from exc

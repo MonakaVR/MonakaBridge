@@ -17,6 +17,8 @@ p.add_argument('--host',type=Path,required=True)
 p.add_argument('--package',type=Path,required=True)
 p.add_argument('--out',type=Path,required=True)
 p.add_argument('--baseline-dll',type=Path)
+p.add_argument('--reacquire-only',action='store_true')
+p.add_argument('--expect-reacquire-failure',action='store_true')
 a=p.parse_args()
 root=a.out.resolve()/('run-'+uuid.uuid4().hex);root.mkdir(parents=True)
 records=[]
@@ -64,17 +66,32 @@ def case(name,mode='generic',mutation='none',edit=None,baseline=False):
     assert immutable=={str(p.relative_to(package)):hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()},'native child modified package/config'
     if code==77:
         (root/'D2_RESULT.json').write_text(json.dumps(dict(result='BLOCKED',reason='BLOCKED_PORT_IN_USE',records=records),indent=2));raise SystemExit(77)
-    if baseline:
+    if a.expect_reacquire_failure:
+        assert mode=='reacquire' and code==1 and value.get('error')=='recovery did not restore model',value
+    elif baseline:
         assert code==1 and value['result']=='FAIL','old DLL unexpectedly implements D2'
     else:assert code==0 and value['result']=='PASS',name+': '+str(value)
 
+if a.reacquire_only:
+    case('lost-recovery',mode='reacquire')
+    result=dict(result='EXPECTED_FAILURE_REPRODUCED' if a.expect_reacquire_failure else 'PASS',records=records,hardware='NOT_RUN')
+    (root/'reacquire-result.json').write_text(json.dumps(result,indent=2)+'\n')
+    (a.out/'latest-run.json').write_text(json.dumps(dict(run=str(root)),indent=2)+'\n')
+    print(json.dumps(dict(result=result['result'],run=str(root))))
+    raise SystemExit(0)
+assert not a.expect_reacquire_failure,'negative control must be isolated'
 case('default-unassigned')
 case('explicit-pico',mode='pico')
 case('mixed-pico-altra',mode='mixed')
 for mutation in ['publisher','source','device','tracker','revision','session','input-session']:
     case('unknown-'+mutation,mutation=mutation)
-for mutation in ['rebind','generation','input-restart','backend-restart','expiry']:
+for mutation in ['rebind','generation','input-restart','backend-restart']:
     case('revoke-'+mutation,mode='revoke',mutation=mutation)
+case('lost-recovery-cycles',mode='reacquire')
+case('synchronous-activation',mode='reacquire',mutation='activate-inline')
+case('initial-lost-recovery',mode='initial-hidden')
+case('initial-expired-recovery',mode='initial-hidden',mutation='expiry')
+case('new-publisher-explicit-snapshot',mode='pico',mutation='session-reapproved',edit=lambda c,s,p:s.update(publisher_session=S1[:-1]+'2'))
 case('wrong-config-hash')
 case('missing-config')
 case('missing-selection')
