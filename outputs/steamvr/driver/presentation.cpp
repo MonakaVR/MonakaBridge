@@ -50,12 +50,15 @@ bool uuid(const std::string& id){
  return true;
 }
 void assets(const std::filesystem::path& package,const std::string& model){
- const char* expected=nullptr;
- if(model=="pico_motion_tracker")expected=MonakaRenderManifestSha;
- else if(model=="pico_tracker_rev3_identification")expected=MonakaIdentificationManifestSha;
- else if(model=="pico_tracker_rev3_axis_debug")expected=MonakaAxisManifestSha;
- require(expected!=nullptr,"unsupported model");
+ require(!model.empty()&&model.size()<=128&&model.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")==std::string::npos,"invalid model identifier");
+ const auto catalogBytes=read(package/L"resources"/L"render-catalog.json",65536);
+ require(hash(catalogBytes)==MonakaRenderCatalogSha,"resource catalog changed");
+ const auto catalog=json(catalogBytes);keys(catalog,{"namespace","version","models"});
+ require(catalog.at("namespace")=="monaka.bridge.render-catalog"&&catalog.at("version").is_number_integer()&&catalog.at("version")==1,"resource catalog identity");
+ const auto& models=catalog.at("models");require(models.is_object()&&models.size()<=256&&models.contains(model),"unsupported model");
+ const auto expected=models.at(model).get<std::string>();
  const auto directory=package/L"resources"/L"rendermodels"/model;
+ require(std::filesystem::weakly_canonical(directory).parent_path()==std::filesystem::weakly_canonical(package/L"resources"/L"rendermodels"),"model directory containment");
  auto bytes=read(directory/L"assets-manifest.json",8192);
  require(hash(bytes)==expected,"asset manifest changed");
  auto manifest=json(bytes);keys(manifest,{"model","property","files","source_step_sha256"});
@@ -104,7 +107,8 @@ Presentation Presentation::load(const std::filesystem::path& package){
   std::set<std::string> validated;
   for(const auto& row:assignments){
    keys(row,{"model_id","device_kind","source_id","device_id","tracker_id","runtime_serial","input_session"});
-   require(row.at("device_kind")=="pico_motion_tracker","explicit PICO model assignment required");
+   // Legacy display metadata is opaque; it never selects a resource or producer.
+   require(row.at("device_kind").is_string()&&row.at("device_kind").get<std::string>().size()<=128,"display metadata size");
    const auto model=row.at("model_id").get<std::string>();
    if(validated.insert(model).second)assets(package,model);
    Assignment entry{row.at("source_id"),row.at("device_id"),row.at("tracker_id"),row.at("input_session"),"{monaka_bridge}"+model};

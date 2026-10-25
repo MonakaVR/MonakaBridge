@@ -2,7 +2,6 @@
 #include "monaka_bridge/direct.hpp"
 #include <filesystem>
 namespace mb::steamvr {
-inline constexpr const char* PicoRenderModel="{monaka_bridge}pico_motion_tracker";
 // Transient visibility and a conflicting immutable assignment are different.
 enum class PresentationState { Unassigned, Hidden, Visible, Revoked };
 // Presentation is an immutable Init snapshot. It never owns or changes tracking.

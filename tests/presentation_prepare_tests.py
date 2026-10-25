@@ -13,8 +13,15 @@ with tempfile.TemporaryDirectory(dir=a.out) as folder:
         assert (r.returncode==0)==okay,(name,r.stderr)
         assert cp.read_bytes()==before
         if okay:
-            v=json.loads((out/'selection.json').read_text());assert v['assignments'][0]['model_id']==(model or 'pico_motion_tracker');assert v['publisher_session']==h['publisher_session'] and v['assignments'][0]['input_session']==h['devices'][0]['input_session'];assert (out/'bridge-config.json').read_bytes()==before
-    case('normal',okay=True)
+            v=json.loads((out/'selection.json').read_text())
+            assert (out/'bridge-config.json').read_bytes()==before
+            if model:
+                assert v['assignments'][0]['model_id']==model and v['assignments'][0]['device_kind']==''
+                assert v['publisher_session']==h['publisher_session'] and v['assignments'][0]['input_session']==h['devices'][0]['input_session']
+            else:assert v==dict(namespace='monaka.bridge.presentation',version=1,assignments=[])
+    case('no-model',okay=True)
+    case('normal',okay=True,model='pico_motion_tracker')
+    case('generic-resource',okay=True,model='generic_shape_01')
     case('identification',okay=True,model='pico_tracker_rev3_identification')
     case('diagnostic',okay=True,model='pico_tracker_rev3_axis_debug')
     case('unknown-model',model='../outside')

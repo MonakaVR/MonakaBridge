@@ -73,7 +73,7 @@ int main(int argc,char** argv){
   catch(const std::exception& e){result["result"]="BLOCKED";result["reason"]=e.what();std::ofstream(out/"result.json")<<result.dump(2);return 77;}
   {
    Module module(dll,events);Session run(module);require(run.error==vr::VRInitError_None,"D2 Init");
-   const bool enabled=mode=="pico"||mode=="revoke"||mode=="mixed"||mode=="reacquire"||mode=="initial-hidden";
+   const bool enabled=mode=="two-assigned"||mode=="pico"||mode=="revoke"||mode=="mixed"||mode=="reacquire"||mode=="initial-hidden";
    if(enabled)run.host.expectedRenderModels[Serial]=Model;
    run.host.activateSynchronously=mutation=="activate-inline";
    if(mode=="initial-hidden")run.host.expectedActivationRenderModels[Serial]="";
@@ -111,6 +111,19 @@ int main(int argc,char** argv){
     require(props.at(vr::Prop_RenderModelName_String)==Model,"recovery did not restore model");
     require(run.host.devices.size()==1&&run.host.attempts.at(Serial)==1,"recovery recreated logical device");
     reacquireSuite(run,sender,p,result);
+   }
+   if(mode=="two-assigned"){
+    auto other=p;other.source_id=other.input.source_id="unknown";other.input.device_id="anonymous-device";
+    const std::string otherSerial="monaka-direct:313a70756e6b6e6f776e:74";
+    run.host.expectedRenderModels[otherSerial]=Model;
+    send(sender,events,other);run.until([&]{return run.host.devices.size()==2&&run.host.devices.at(2).poses>0;});
+    require(run.host.devices.at(2).properties.at(vr::Prop_RenderModelName_String)==Model,"explicit generic identity did not receive same resource");
+    validFull(run.host.devices.at(2).pose,other);
+    auto lost=invalidPose(other);++lost.sequence;send(sender,events,lost);run.pump(10);
+    require(!run.host.devices.at(2).pose.poseIsValid&&run.host.devices.at(2).properties.at(vr::Prop_RenderModelName_String)=="","second identity loss failed");
+    other.sequence+=2;send(sender,events,other);run.pump(10);validFull(run.host.devices.at(2).pose,other);
+    require(run.host.devices.at(2).properties.at(vr::Prop_RenderModelName_String)==Model,"second identity recovery failed");
+    result["equivalent_synthetic_identities"]="PASS";
    }
    if(mode=="mixed"){
     auto other=p;other.source_id=other.input.source_id="altra";other.input.device_id="ALTRA-device";
