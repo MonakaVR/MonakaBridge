@@ -7,7 +7,7 @@
       "parent_sha256": "9368bed0a510cc2f5a54dff72e5e6ec7baa7edca2ed0e4de0e4199dc5de77571"
     },
     "scripts/hil_preflight.py": {
-      "sha256": "3b9efc891d97b1f0aeb312c4b8aa62e33ee06ea33e552c2508e722a59aa4e579",
+      "sha256": "a2a03c8dfb252a3d051c832d2e272a87b44dcded130ef50f686c9bd8d465d415",
       "parent_sha256": "b5ff013709581ca3daeb359dda73634d51c66d3c01e2c552c95a5030cd75e48e"
     },
     "tests/hil_preflight_tests.py": {
@@ -15,11 +15,11 @@
       "parent_sha256": "3c91c87f8cad95865d70ba771bececb9a1065535d4f4ec431250cdc6f48c38d5"
     },
     "tests/hil_preflight_public_input_tests.py": {
-      "sha256": "9f86b637cfd52d5e6da3c0ba1157c6ef9e406735d8d1b7a6ed88038160c3b4da",
+      "sha256": "b42df657a56b835bc0cfe21324a6c7dcaf22af136ed3fbd34656ebe50f0a2b38",
       "parent_sha256": null
     },
     "docs/offline-hil-readiness.md": {
-      "sha256": "bcfcc84a74a5ee841355d2247c166f2958d4f7cba0887b078fb4387694ca1865",
+      "sha256": "e3aefa11c995731a46c8d457ce7e1ce8a63b12c08ad1271496fb86a9b435c17d",
       "parent_sha256": "4415a192317b62da8ad5eb77bd82ede26daf9426a6cb06e2f82f70d9a8c011fb"
     },
     "tests/final_integration_scope.py": {

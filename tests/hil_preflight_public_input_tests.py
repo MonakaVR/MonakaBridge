@@ -25,6 +25,14 @@ def check(h=health,e=expected,c=config,valid=True):
     assert bool(result)!=valid,result
     count+=1
 check()
+c=copy.deepcopy(config);del c['pose_timeout_ms'];check(c=c)
+h=copy.deepcopy(health);h['pose_timeout_ms']=499;check(h,c=c,valid=False)
+for invalid in (None,True,500.0,0,10001):
+    c=copy.deepcopy(config);c['pose_timeout_ms']=invalid;check(c=c,valid=False)
+for timeout in (1,10000):
+    c=copy.deepcopy(config);c['pose_timeout_ms']=timeout
+    h=copy.deepcopy(health);h.update(snapshot_unix_ms=now,pose_timeout_ms=timeout)
+    h['devices'][0].update(pose_age_ms=0,source_receive_age_ms=0);check(h,c=c)
 for field in ('fresh','has_pose','position_valid','orientation_valid','collision','absent'):
     for bad in (not row[field],None,1 if row[field] else 0,'true'):
         h=copy.deepcopy(health);h['devices'][0][field]=bad;check(h,valid=False)
