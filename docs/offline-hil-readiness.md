@@ -53,10 +53,44 @@ the separate terminal artifact rather than rewriting a measured result.
 `scripts/hil_preflight.py --package <package> --output <report.json>` checks
 package hashes, compatibility receipts, disabled/missing policy, runtime/profile,
 registry, registered driver copies, helper SDK identity, config, mirror-port
-occupancy and current service identities. It only invokes the helper's
+occupancy and the Bridge-owned service identity. It only invokes the helper's
 `--hil-runtime-path` static query; it never calls VR_Init, binds a port, starts
 SteamVR, changes registrations, stops services or writes configurations.
 The output report is the only intentional write. Missing evidence produces FAIL.
+
+Current expectations use `bridge_services`, containing exactly one reviewed
+Bridge service path/SHA pair, rather than the former mixed `services` list.
+The OS query is restricted to `monaka_bridge_service.exe`; external input
+executables, processes, installation paths and hashes are never inspected.
+Legacy `services` expectations fail with `LEGACY_SERVICES_SCHEMA_UNSUPPORTED`;
+create a new reviewed expectation instead of rewriting historical HIL receipts.
+
+Input readiness uses the Bridge's existing native-observation Health file.
+Provide its absolute `health_path`, the pinned absolute `config_path` and exact
+`config_sha256`, plus an opaque selection:
+
+```json
+{
+  "input_readiness": {
+    "source": "opaque-source", "device": "opaque-device", "tracker": "logical-1",
+    "input_space": "declared-space", "input_revision": 112, "mapping_revision": 54
+  }
+}
+```
+
+The selected configuration mapping must be unique and match this expectation.
+Health must match the Bridge publisher, mapping revision and pose timeout, use
+the native-observation stage, and be no more than 2000 ms old or in the future.
+Exactly one selected source/device must have a fresh, tracked, present pose,
+valid position and orientation, no collision, and the expected tracker, space,
+revision and profile convention. Pose/receive age plus snapshot age must remain
+below the configured pose timeout. Missing, malformed, duplicate, stale, future
+or mismatched Health fails closed. Sessions, clocks and sequences are recorded
+as diagnostics. Replacing an input implementation while preserving equivalent
+public observations does not affect this result, even when external process
+inventory is inaccessible. This diagnostic does not establish output approval,
+physical continuity, runtime config byte identity or actual downstream output;
+those retain their separate native/operator gates.
 
 Normal startup is `Start_Bridge.cmd` / PICO `Start_Receiver.cmd`. The shared
 launcher selects the newest successful compatible artifact set in
