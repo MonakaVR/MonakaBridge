@@ -84,8 +84,11 @@ the native-observation stage, and be no more than 2000 ms old or in the future.
 Exactly one selected source/device must have a fresh, tracked, present pose,
 valid position and orientation, no collision, and the expected tracker, space,
 revision and profile convention. Pose/receive age plus snapshot age must remain
-below the configured pose timeout. Missing, malformed, duplicate, stale, future
-or mismatched Health fails closed. Sessions, clocks and sequences are recorded
+below the configured pose timeout. The optional `pose_timeout_ms` uses the
+Native default of 500 ms when omitted;
+explicit values must be integers from 1 through 10000, as in `parseConfigDocument`.
+Missing, malformed, duplicate, stale, future or mismatched Health fails closed.
+Sessions, clocks and sequences are recorded
 as diagnostics. Replacing an input implementation while preserving equivalent
 public observations does not affect this result, even when external process
 inventory is inaccessible. This diagnostic does not establish output approval,

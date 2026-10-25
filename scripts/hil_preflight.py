@@ -66,8 +66,8 @@ def evaluate_input_readiness(health,expected,config,now_ms):
             require(integer(target[key]),'INPUT_EXPECTATION_INVALID:'+key)
         require(isinstance(config,dict) and config['namespace']=='monaka.bridge' and config['version']==2,'INPUT_CONFIG_INVALID')
         require(identity(config['bridge_id']) and integer(config['mapping_revision']),'INPUT_CONFIG_INVALID')
-        timeout=config['pose_timeout_ms']
-        require(number(timeout) and timeout>0,'INPUT_CONFIG_TIMEOUT_INVALID')
+        timeout=config.get('pose_timeout_ms',500) # Native parseConfigDocument default.
+        require(integer(timeout) and 1<=timeout<=10000,'INPUT_CONFIG_TIMEOUT_INVALID')
         require(type(config['mappings']) is list,'INPUT_CONFIG_INVALID')
         bindings=[b for b in config['mappings'] if b['source_id']==target['source'] and b['device_id']==target['device']]
         require(len(bindings)==1,'INPUT_CONFIG_MAPPING_NOT_UNIQUE')
