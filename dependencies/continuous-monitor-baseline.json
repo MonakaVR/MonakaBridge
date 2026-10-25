@@ -1,0 +1,79 @@
+{
+  "base_commit": "29245bd885ffd502df52a9a654887aed208d3bf2",
+  "scope": "N0b single-owner monitor concurrency; canonical inputs; no production SDK/transport",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "41599771d2345b77a3ebce407b4a3a8cc4a630e6f7ff708c6af0802712f1e432",
+      "existed_at_base": true,
+      "base_sha256": "50c373541fd3c83456bf6e43ee21501042caf3ffa1020a20aea528cbd8bfb2a3"
+    },
+    "docs/continuous-capture-monitor.md": {
+      "sha256": "a7e597ab0434037c30628039fc925f910f60d9d4d66f6dbb58e3ba7dc6b8291e",
+      "existed_at_base": false
+    },
+    "include/monaka_bridge/calibration_capture_monitor.hpp": {
+      "sha256": "9e76d58b185dc531e00e6a2ad1a029c9dc5224a8195dad14cb3155ba0bc9af3b",
+      "existed_at_base": false
+    },
+    "include/monaka_bridge/calibration_session.hpp": {
+      "sha256": "17bab348472af0d5caa80eba1bf3ecf9485034e04e9964627915f79705dd9351",
+      "existed_at_base": true,
+      "base_sha256": "25a64986b27aca4d33014545e7a5f6ae648e4489b28100159366ff190ef0e38b"
+    },
+    "src/calibration/calibration_capture_monitor.cpp": {
+      "sha256": "fb5c5c24dabd5a8870dfd56464a80e00f74d4483bb00dbae157c226fe48c387c",
+      "existed_at_base": false
+    },
+    "src/calibration/calibration_session.cpp": {
+      "sha256": "bc8215b6c1bda113ccdbfe91de0db82e316e651bb036dd20f90aa544b06d2b26",
+      "existed_at_base": true,
+      "base_sha256": "d631e101f7670d25af220635fd3084a6978598eea4280b754911ea12fdf5b492"
+    },
+    "tests/calibration_capture_monitor_process.py": {
+      "sha256": "4214974704b49aa939e37774b1a1294ac120dfc0572281e1449cdf709bda45ed",
+      "existed_at_base": false
+    },
+    "tests/calibration_capture_monitor_tests.cpp": {
+      "sha256": "67aaece85b38511312cda497729b0bd57e38385d186b6fab91c2d61ad71baac4",
+      "existed_at_base": false
+    },
+    "tests/calibration_fixture_provider.hpp": {
+      "sha256": "def3351eab1f2ffc26fed2a55faa07d315af582254d173ba6bf0036e9e8d9258",
+      "existed_at_base": true,
+      "base_sha256": "c64ed7296954dccdf1f4651b2dbc9cb387a7618025f17b9e4cbbddc51f78756b"
+    },
+    "tests/calibration_session_process_fixture.cpp": {
+      "sha256": "d068b754077ae8eb2ae2a563cf5412f33d911bc922bdb7446ce0969a4e609e51",
+      "existed_at_base": true,
+      "base_sha256": "1217c78641b91887b4bdd88b7b96d79be957b88f85a6750216cadb1fe7fabd11"
+    },
+    "tests/calibration_session_tests.cpp": {
+      "sha256": "52f8d18af47c9dcd5d6bf2f4bb4183b5b0114eb55ac1f20354b1d04fe88766b6",
+      "existed_at_base": true,
+      "base_sha256": "463ee7c0d189cb0d1bfd61a941b8695c46aeabcf1077b7c47b6628ee39f34ec9"
+    },
+    "tests/continuous_monitor_scope.py": {
+      "sha256": "de70ceb2174dcb5af324761be730ebc3b9ae131575ff3fb1a9c23ec5e462aec0",
+      "existed_at_base": false
+    },
+    "tests/continuous_monitor_scope_tests.py": {
+      "sha256": "e776f0414d0d037eb485e6b0f35428e2169344685a6343778db96377b4a45868",
+      "existed_at_base": false
+    },
+    "tests/writer_fixture_scope.py": {
+      "sha256": "10f3bfc3620b82de878d99a17ef99943f2245f738ced41200f024e404988f56e",
+      "existed_at_base": true,
+      "base_sha256": "2c58729c219c09117d7be67c687408ca174fa437d3f0843b50fd85dbeffb111e"
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "f5c7d80f9f915316b03b81e1ed00afc148f5182d050de8c6951d847221e3a0ea",
+      "existed_at_base": true,
+      "base_sha256": "e62e55f6ee5276f9927c8ff565974fd38043ae0d6a9ca8885d2ad7251581ca11"
+    },
+    "tools/calibration_local_api.cpp": {
+      "sha256": "bad4958907356e2877c0e04a23b5e6c67df4df1ddb3212f7e40e6628b4bc9ea1",
+      "existed_at_base": true,
+      "base_sha256": "e9d09c22b6a5728964a4fec71798fbc4151d3ce59f411482d901cd33eb3431d8"
+    }
+  }
+}

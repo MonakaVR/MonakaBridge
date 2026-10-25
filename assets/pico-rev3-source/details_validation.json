@@ -1,0 +1,87 @@
+{
+  "objects": {
+    "Housing_engraved_PICO": {
+      "valid": true,
+      "solids": 1,
+      "volume": 16592.301153502623
+    },
+    "Button_approx": {
+      "valid": true,
+      "solids": 1,
+      "volume": 7.2523781421862505
+    },
+    "LED_lens_approx": {
+      "valid": true,
+      "solids": 1,
+      "volume": 0.18095573684677208
+    },
+    "USB_C_tongue_approx": {
+      "valid": true,
+      "solids": 1,
+      "volume": 10.335826810088559
+    }
+  },
+  "nominal_envelope_mm": [
+    38.5,
+    38.5,
+    15.2
+  ],
+  "usb_opening_nominal_mm": [
+    8.34,
+    2.56
+  ],
+  "usb_bezel_assumed_mm": [
+    9.2,
+    3.3
+  ],
+  "button_assumed_mm": [
+    6.8,
+    2.3
+  ],
+  "led_assumed_diameter_mm": 0.96,
+  "text": "PICO plain DejaVu Sans, engraved 0.35 mm",
+  "all_positions": "estimated from photos; not mechanically verified",
+  "mesh_facets": 31338,
+  "revision": "3",
+  "button_center_z_mm": -3.0,
+  "usb_center_z_mm": -3.0,
+  "usb_shift_z_mm": -2.2,
+  "seam_z_mm": -0.76,
+  "seam_shift_from_rev2_z_mm": 0.76,
+  "edge_radius_mm": 4.5,
+  "previous_edge_radius_mm": 3.0,
+  "logo_rotation_deg": 180.0,
+  "top_to_seam_mm": 8.36,
+  "seam_to_bottom_mm": 6.84,
+  "ratio_logo_side_to_bottom": 1.2222222222222223,
+  "actual_bounds_mm": [
+    38.5000002,
+    38.5000002,
+    15.2000001
+  ],
+  "fcstd_readback_valid": true,
+  "step_readback_valid": true,
+  "step_solids": 4,
+  "mesh_closed": true,
+  "mesh_vertices": 15677,
+  "edge_surface_verification": [
+    {
+      "major_radius": 14.75,
+      "minor_radius": 4.5
+    },
+    {
+      "major_radius": 14.75,
+      "minor_radius": 4.5
+    }
+  ],
+  "unchanged_detail_geometry": {
+    "Button_approx": true,
+    "LED_lens_approx": true,
+    "USB_C_tongue_approx": true
+  },
+  "fcstd_gui_saved": true,
+  "fcstd_gui_readback_valid": true,
+  "gui_object_count": 4,
+  "gui_verified": "FreeCAD 1.0.0 on dot cloud: rounded housing, seam, USB, button, logo visually inspected.",
+  "stl_readback_closed": true
+}

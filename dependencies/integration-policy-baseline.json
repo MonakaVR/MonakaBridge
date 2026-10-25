@@ -1,0 +1,91 @@
+{
+  "historical_hil_commit": "f4f17bbf2af1a8f1691625a959116b178b7c5d95",
+  "integration_base_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+  "authority": "MonakaVR_Astra_Final_Integration_Blockers_Fix_Codex_20261025",
+  "files": {
+    "AGENTS.md": {
+      "sha256": "cd70b26aeb79b163f9550f612ed15b2eab588f47a47b6e4e00bd29b881cd55ee",
+      "historical_sha256": "069c5e49ec3225481ef8d743c9964b9ed453d5931c68c376e41999df86321159"
+    },
+    "CMakeLists.txt": {
+      "sha256": "9368bed0a510cc2f5a54dff72e5e6ec7baa7edca2ed0e4de0e4199dc5de77571",
+      "historical_sha256": "a3b6b6afc2c8a64db020e95399c83e9fb415df66dae602cdd7decde4fbdc79a5"
+    },
+    "dependencies/current-rule-hierarchy.json": {
+      "sha256": "1631e78ffd51bc60aa356b3a171b164e7edb677a2954e795f646c16514eb994d",
+      "historical_sha256": null
+    },
+    "docs/codex/Task4_MonakaBridge.md": {
+      "sha256": "f4247ab76549e35c0af27e2af5fec50d83d4a2658ab43ae3fc6cd951f3c87228",
+      "historical_sha256": "f4247ab76549e35c0af27e2af5fec50d83d4a2658ab43ae3fc6cd951f3c87228"
+    },
+    "docs/codex/task4/00_upstream_handoff_status.md": {
+      "sha256": "948d068a96b113406996e7da0a83f65cbfdac52098534d735c36c128b9c797b5",
+      "historical_sha256": "948d068a96b113406996e7da0a83f65cbfdac52098534d735c36c128b9c797b5"
+    },
+    "docs/render-model-selection.md": {
+      "sha256": "51928bc6b446ef0fd22c474e6a52e83cda833ad6e0943f1e8dbc9f185ac14edf",
+      "historical_sha256": null
+    },
+    "docs/responsibility-refactor.md": {
+      "sha256": "e5c18a145febce6054b99270764c888836662756e2b838564c25874edbc9d6c2",
+      "historical_sha256": "e5c18a145febce6054b99270764c888836662756e2b838564c25874edbc9d6c2"
+    },
+    "outputs/steamvr/driver/presentation.cpp": {
+      "sha256": "6c4c139ac094383263065883c3e2cd4b8bdfc67624001ae5f45b12fe6bb21d51",
+      "historical_sha256": "b0666f4933a6fbcc9ecdacda4ae406ba2f0181ce2a5083691f6d4f4bcf5f5090"
+    },
+    "outputs/steamvr/driver/presentation.hpp": {
+      "sha256": "dbb6bcc5e743e075c3cadabfc22e9b79abb7a16c409ecd7d3f8b46e480acde37",
+      "historical_sha256": "9af6b48c8121db76d4f001ef0b89258aae89e4aad54da0e6edd84056ac8e5e40"
+    },
+    "outputs/steamvr/driver/render_manifest.hpp.in": {
+      "sha256": "0ef1487d74f438ece8cb65060a35ee28bf7b0087f77d2f9a791136f6190a28ae",
+      "historical_sha256": "5c6b036638215e5ce58c31be1cd20e1c4dd51d463ee8a713df8f6661fb322bfc"
+    },
+    "outputs/steamvr/package/resources/render-catalog.json": {
+      "sha256": "f211d376e8c043fd124ef13c48a4c87a8c9d0c53671e8f2c7856feb968b6041f",
+      "historical_sha256": null
+    },
+    "tests/integration_scope.py": {
+      "sha256": "936da8ea3345757a1d2be37d5e6281bb61d8ee15401ca2706c7097d50e49ef44",
+      "historical_sha256": "936da8ea3345757a1d2be37d5e6281bb61d8ee15401ca2706c7097d50e49ef44"
+    },
+    "tests/integration_scope_tests.py": {
+      "sha256": "3d6460bdffd0fd650c393fc1cdb969bcf5656e68770c1a379c797aa4a49fdc5a",
+      "historical_sha256": "3d6460bdffd0fd650c393fc1cdb969bcf5656e68770c1a379c797aa4a49fdc5a"
+    },
+    "tests/offline_readiness_scope.py": {
+      "sha256": "8ad541263d9fb5fabdd96e10a4d8fee32e4b969e002308af7823a761fa68e739",
+      "historical_sha256": "184bf21bc35aee964ac3816bb7b86d545c6d6462a8206e54b6949a988ba78a00"
+    },
+    "tests/presentation_prepare_tests.py": {
+      "sha256": "1c54f042e894e730efe21282805dc9a8e601b61a316c91940cbdaa5ad6e39f85",
+      "historical_sha256": "6a2255920781f83a62e247fad0fde9373115ee3940e9b3d061a6c397aeeac679"
+    },
+    "tests/render_model/render_model_host.cpp": {
+      "sha256": "6adb60a53a8519e22af3b2fcacecd94cf8ba373a0c1e7ac67c4b7a7c04a1fb36",
+      "historical_sha256": "693f9ee13b2d87878e1643d06186da859928701161a72fb02a8e8b4a96d282e6"
+    },
+    "tests/render_model/run_host.py": {
+      "sha256": "47f0c384f65346481daf1819f19f65fba22968203d94894ec13f51dd109288ed",
+      "historical_sha256": "663618916496546003c875a185eeb43d565536ac1acd788f610224f542d40e21"
+    },
+    "third_party/mbip-p1/AGENTS.md": {
+      "sha256": "fe16290184067a54e9c689149049ba88ca08ce6d787f3af4522f92dd0a94d56e",
+      "historical_sha256": "fe16290184067a54e9c689149049ba88ca08ce6d787f3af4522f92dd0a94d56e"
+    },
+    "tools/prepare_presentation.cpp": {
+      "sha256": "42ae179f36cda499c99c49b2894cdfa0622d6e67404cab348dc2db164ef0ff8c",
+      "historical_sha256": "f6d83b5fc68cf340379889527c78fcb16e3bf527cd168d41173ba412b908da6a"
+    },
+    "tests/final_integration_scope.py": {
+      "sha256": "62c1d6d2190a2ab670da5796058c5d7580b7151751bfbeb3f7cf297089525e43",
+      "historical_sha256": null
+    },
+    "tests/final_integration_scope_tests.py": {
+      "sha256": "2a9b61edb329c141271aa27c4e654622f5bfcf9bb40109d20ea1df1ac04647a5",
+      "historical_sha256": null
+    }
+  }
+}

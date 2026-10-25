@@ -1,0 +1,10 @@
+{
+  "model": "pico_tracker_rev3_identification",
+  "property": "{monaka_bridge}pico_tracker_rev3_identification",
+  "files": {
+    "pico_tracker_rev3_identification.obj": "ba7e33de4d8259c5b8b9f50ac66f57d2273c4a9ddb139a7c55970fa1b86df331",
+    "pico_tracker_rev3_identification.mtl": "79626c0cafba147a936edcd1bc33fbdab7c37dac046150e239315a7443ca4767",
+    "pico_tracker_rev3_identification.png": "7e9922800e0255be6b3bbb2d4720cafa7851e454b4096cd2b3e771da1a58735e"
+  },
+  "source_step_sha256": "436509dd665aeca53d80fa33c35615d4d35834073a9481dcc876447dc65d55cd"
+}

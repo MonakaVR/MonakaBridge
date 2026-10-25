@@ -1,0 +1,440 @@
+{
+  "namespace": "monaka.bridge",
+  "version": 2,
+  "bridge_id": "synthetic-world-approval",
+  "mapping_revision": 10,
+  "policy": "disabled",
+  "pose_timeout_ms": 500,
+  "profiles": {
+    "synthetic": {
+      "convention": "fixture-native",
+      "position_axes": [
+        1,
+        2,
+        3
+      ],
+      "quaternion_axes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "approved": true,
+      "evidence": "SYNTHETIC ONLY; no hardware",
+      "angular_space_verified": false,
+      "unknown_profile_extension": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "mappings": [
+    {
+      "source_id": "pico",
+      "device_id": "device-1",
+      "tracker_id": "logical-pico-device-1",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "device-1"
+        ]
+      }
+    },
+    {
+      "source_id": "pico",
+      "device_id": "device-2",
+      "tracker_id": "logical-pico-device-2",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "device-2"
+        ]
+      }
+    },
+    {
+      "source_id": "pico",
+      "device_id": "device-3",
+      "tracker_id": "logical-pico-device-3",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "device-3"
+        ]
+      }
+    },
+    {
+      "source_id": "pico",
+      "device_id": "device-4",
+      "tracker_id": "logical-pico-device-4",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "device-4"
+        ]
+      }
+    },
+    {
+      "source_id": "other",
+      "device_id": "other-source",
+      "tracker_id": "logical-other-other-source",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "other",
+          "other-source"
+        ]
+      }
+    },
+    {
+      "source_id": "pico",
+      "device_id": "other-space",
+      "tracker_id": "logical-pico-other-space",
+      "profile": "synthetic",
+      "input_space": "other-space",
+      "input_revision": 1,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "other-space"
+        ]
+      }
+    },
+    {
+      "source_id": "pico",
+      "device_id": "other-revision",
+      "tracker_id": "logical-pico-other-revision",
+      "profile": "synthetic",
+      "input_space": "native",
+      "input_revision": 2,
+      "world_space": "synthetic-world",
+      "world_revision": 2,
+      "space_approved": true,
+      "world": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          1,
+          0,
+          0
+        ]
+      },
+      "mount": {
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "translation": [
+          0.25,
+          0,
+          0
+        ]
+      },
+      "runtime_contract": {
+        "id": "synthetic-world-approval",
+        "provenance": "Synthetic software fixture; no physical approval",
+        "input_policy": "STRICT",
+        "output_policy": "STRICT",
+        "input_declaration": [
+          "position",
+          "orientation"
+        ],
+        "output_declaration": [
+          "position",
+          "orientation"
+        ]
+      },
+      "unknown_binding_extension": {
+        "retain": [
+          "pico",
+          "other-revision"
+        ]
+      }
+    }
+  ],
+  "unknown_global_extension": {
+    "retain": [
+      1,
+      2,
+      3
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "base_commit": "959a33e0847007b1d2ab7c5c7c8a12f8ea6554c4",
+  "scope": "N1 lazy Background Standing canonical mirror adapter; same owner/solver/writer; SDK compile-link and fake runtime only",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "4721fd0bf11dc17a7c56d8a29dd6587d5b30499c73e60180e1953965f224ed4e",
+      "existed_at_base": true,
+      "base_sha256": "41599771d2345b77a3ebce407b4a3a8cc4a630e6f7ff708c6af0802712f1e432"
+    },
+    "dependencies/calibration-openvr-sdk.json": {
+      "sha256": "c6e5299dc8b10ff479a164ffbbed10308e97c992d6f2bbaf5eec485050c1547b",
+      "existed_at_base": false
+    },
+    "docs/native-calibration-capture.md": {
+      "sha256": "6c3aee412601c96e4499d9b955de5c4b6e92368a8e84ea6b0a14f8e50d5b7abd",
+      "existed_at_base": false
+    },
+    "include/monaka_bridge/calibration_runtime_provider.hpp": {
+      "sha256": "24958d7a5f0ce2fe442f3d6517b1b8c335157b84d49258a018190badf1172c11",
+      "existed_at_base": false
+    },
+    "scripts/verify_calibration_sdk.py": {
+      "sha256": "6ddd88549e4e10bb8229e19dc397dca4a3e1f4d1f01a7b52450e43188864476c",
+      "existed_at_base": false
+    },
+    "src/calibration/calibration_production_entry.cpp": {
+      "sha256": "53340a6dbd90743bdcb66e29aaff92c3a153d51da2cef06d05b091c008c2825f",
+      "existed_at_base": false
+    },
+    "src/calibration/calibration_runtime_provider.cpp": {
+      "sha256": "760e09ab675ff453252fa03d328ad927e7f86a218594544f8a85ac677a102117",
+      "existed_at_base": false
+    },
+    "tests/calibration_capture_monitor_tests.cpp": {
+      "sha256": "f9cfb91c5e5303d60fc307d6585d839ebafb5aa75d3793c65e7328f1d91157e7",
+      "existed_at_base": true,
+      "base_sha256": "67aaece85b38511312cda497729b0bd57e38385d186b6fab91c2d61ad71baac4"
+    },
+    "tests/calibration_runtime_fake.hpp": {
+      "sha256": "b2d9102ad21775b4a83d30205d7d52527864c28e5e1cbcd362faca2eff27a1ea",
+      "existed_at_base": false
+    },
+    "tests/calibration_runtime_process_fixture.cpp": {
+      "sha256": "822452434c2cc1d88dea6026aa280dc51a09ea0f34a1d719e90197b4d24c0db5",
+      "existed_at_base": false
+    },
+    "tests/calibration_runtime_provider_tests.cpp": {
+      "sha256": "a596b4760d31a2b5ed7f9a4dd2f72d0481dfea5a8184eda7fa90634bbe5115ca",
+      "existed_at_base": false
+    },
+    "tests/calibration_session_process.py": {
+      "sha256": "d60141cca22b88af1a50ffd92f6dbae86ace80abc3a619f2ef89f7c65749d0b6",
+      "existed_at_base": true,
+      "base_sha256": "3758080f09719c50a833456c4d0d2464042c8e23ebd4b33f8699b474e6fad677"
+    },
+    "tests/continuous_monitor_scope.py": {
+      "sha256": "9cf1595a8be14cf08467109a27bcbf748efb3c0256bbbfbcdf2b9ac33678b753",
+      "existed_at_base": true,
+      "base_sha256": "de70ceb2174dcb5af324761be730ebc3b9ae131575ff3fb1a9c23ec5e462aec0"
+    },
+    "tests/continuous_monitor_scope_tests.py": {
+      "sha256": "c359c15620bf2325e9f9d725405145221bc73ace506c52f9fe6dbec070e78c6a",
+      "existed_at_base": true,
+      "base_sha256": "e776f0414d0d037eb485e6b0f35428e2169344685a6343778db96377b4a45868"
+    },
+    "tests/native_capture_scope.py": {
+      "sha256": "9cd4d36f955c5838a680fbebee65bd27cda8c3f646f4dc1ac2fa3ed0705aa5f7",
+      "existed_at_base": false
+    },
+    "tests/native_capture_scope_tests.py": {
+      "sha256": "fe6b10faa5e07cad93a8d06487c1ddfd7e6e1a938d4296b8a8df3217d3f35529",
+      "existed_at_base": false
+    },
+    "tests/trajectory_cli_sentinel.py": {
+      "sha256": "f3b8e969e1a0e06ce22423a5ba63c1844604c68722d532d342b0003b73a4406d",
+      "existed_at_base": false
+    },
+    "tools/calibration_local_api.cpp": {
+      "sha256": "10fe14d962e6ad282e56230f0a2e6e072f08d41e31a4bedd88c28ec1742a8550",
+      "existed_at_base": true,
+      "base_sha256": "bad4958907356e2877c0e04a23b5e6c67df4df1ddb3212f7e40e6628b4bc9ea1"
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Enabled physical criteria policy (disabled template intentionally incomplete)",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema": {
+      "const": "monaka.physical-criteria.v1"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "valid_from_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "valid_until_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "measurement_mode": {
+      "const": "trajectory"
+    },
+    "scope": {
+      "type": "object",
+      "required": [
+        "source",
+        "input_space",
+        "profile",
+        "world_space"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_space": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "world_space": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "required": [
+        "min_pairs",
+        "min_inliers",
+        "min_inlier_ratio",
+        "rms_position",
+        "rms_orientation",
+        "max_position",
+        "max_orientation",
+        "all_max_position",
+        "all_max_orientation"
+      ],
+      "properties": {
+        "min_pairs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "min_inliers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "min_inlier_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rms_position": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rms_orientation": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_position": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_orientation": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_max_position": {
+          "type": "number",
+          "minimum": 0
+        },
+        "all_max_orientation": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "schema",
+    "enabled",
+    "valid_from_utc_ms",
+    "valid_until_utc_ms",
+    "measurement_mode",
+    "scope",
+    "limits"
+  ],
+  "additionalProperties": false
+}

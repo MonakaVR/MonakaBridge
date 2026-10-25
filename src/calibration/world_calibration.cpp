@@ -242,8 +242,10 @@ Config worldCalibrationCandidate(
     for (auto& [key, binding] : candidate.bindings)
         if (binding.source == measured.binding.source &&
             binding.inputSpace == measured.binding.inputSpace &&
-            binding.inputRevision == measured.binding.inputRevision)
+            binding.inputRevision == measured.binding.inputRevision) {
             binding.world = transform;
+            binding.spaceApproved = false;
+        }
     if (candidate.revision == std::numeric_limits<std::uint32_t>::max())
         throw std::invalid_argument("mapping_revision exhausted");
     ++candidate.revision;

@@ -1,0 +1,50 @@
+{
+  "base_commit": "b39216bcc69687ae2c0cce974ba259146c5982d7",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "b71a852536794f2e7f172c4f0fb02b7abcbb4bccdcb7c3ab39c53bb28c550e7a",
+      "existed_at_base": true,
+      "base_sha256": "aa73e0ced15d85ca2813466ab95aa55c59a86d3a0f24223423d2872a5616f811"
+    },
+    "docs/writer-fixture-events.md": {
+      "sha256": "8e3863eb9466e0bd5e277a295c87bddff019cf0767afa888b372fcc38bc6957c",
+      "existed_at_base": false
+    },
+    "tests/calibration_review_events.hpp": {
+      "sha256": "a78e10345cad844b0b642351cf189fc631e97a6aa8e46edfd6cbae6e57bb08a9",
+      "existed_at_base": false
+    },
+    "tests/calibration_review_events.py": {
+      "sha256": "247de32f37c2c940becb44b355d4d050f98278b87d5e3754c03ad6395fa02c4c",
+      "existed_at_base": false
+    },
+    "tests/calibration_session_process.py": {
+      "sha256": "5840d78f515dfdfa4a991a016739772b942d2831433e5a77117091fe0eee9f50",
+      "existed_at_base": true,
+      "base_sha256": "910f10b04828177f748278982032b7e78f5a245e3de2ee0c8501ddd594ed86f6"
+    },
+    "tests/calibration_session_process_fixture.cpp": {
+      "sha256": "e41f17b3c5e3ca92c3e46fe5c6a56dad7d1f765b9ee6b30e7dd9dc9356771580",
+      "existed_at_base": true,
+      "base_sha256": "ff406952126d6cee92986d8e30b0ba60fb64b76f6d54825e918bd71c78be4340"
+    },
+    "tests/calibration_session_scope.py": {
+      "sha256": "11fcde03e60645b9734937d7920f73a2d8add1899d823865d0c6b19dad6a37a7",
+      "existed_at_base": true,
+      "base_sha256": "10a60838ef6fd4017bf577d856adfb0be22353e5be2bb2725b6d5f667c9c017b"
+    },
+    "tests/calibration_session_scope_tests.py": {
+      "sha256": "3d89146d6351400c9415403401f84a0bd0d3962d5c4324fe1ffe0ee59f561074",
+      "existed_at_base": true,
+      "base_sha256": "462619c7247497cdc24861125961d8c7afed39dd20bdaebda1663e2a2484f6a0"
+    },
+    "tests/writer_fixture_scope.py": {
+      "sha256": "2c58729c219c09117d7be67c687408ca174fa437d3f0843b50fd85dbeffb111e",
+      "existed_at_base": false
+    },
+    "tests/writer_fixture_scope_tests.py": {
+      "sha256": "e62e55f6ee5276f9927c8ff565974fd38043ae0d6a9ca8885d2ad7251581ca11",
+      "existed_at_base": false
+    }
+  }
+}
