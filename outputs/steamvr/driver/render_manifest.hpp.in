@@ -1,4 +1,2 @@
 #pragma once
-inline constexpr const char* MonakaRenderManifestSha="@MONAKA_RENDER_MANIFEST_SHA@";
-inline constexpr const char* MonakaIdentificationManifestSha="@MONAKA_IDENTIFICATION_MANIFEST_SHA@";
-inline constexpr const char* MonakaAxisManifestSha="@MONAKA_AXIS_MANIFEST_SHA@";
+inline constexpr const char* MonakaRenderCatalogSha="@MONAKA_RENDER_CATALOG_SHA@";
