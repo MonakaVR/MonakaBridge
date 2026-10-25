@@ -51,7 +51,7 @@ def approved(root,git_root=None):
   if digest((root/rule['path']).read_bytes())!=rule['normalized_sha256']:raise RuntimeError('Integration current rule drift: '+rule['path'])
   if digest(git_bytes(repo,rule['source_commit'],rule['path']))!=rule['normalized_sha256']:raise RuntimeError('Integration rule source mismatch')
  # Include untracked nested instructions in the audit, not only Git's inventory.
- agents={str(x.relative_to(root)).replace('\\','/') for x in root.rglob('AGENTS.md') if '.git' not in x.parts and 'build' not in x.parts}
+ agents={str(x.relative_to(root)).replace('\\','/') for x in root.rglob('AGENTS.md') if '.git' not in x.relative_to(root).parts and 'build' not in x.relative_to(root).parts}
  if agents!={r['path'] for r in hierarchy['rules'] if r['path'].endswith('AGENTS.md')}:raise RuntimeError('Integration instruction hierarchy changed')
  semantic(root)
  return set(p['files'])|{PIN}
