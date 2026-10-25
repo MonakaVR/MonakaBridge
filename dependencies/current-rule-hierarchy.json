@@ -1,0 +1,49 @@
+{
+  "current_source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+  "historical_hil_commit": "f4f17bbf2af1a8f1691625a959116b178b7c5d95",
+  "historical_rules_are_current": false,
+  "precedence": [
+    "active user task",
+    "current root AGENTS invariant",
+    "nested rules within scope",
+    "current pinned contract docs",
+    "non-conflicting historical task constraints"
+  ],
+  "rules": [
+    {
+      "path": "AGENTS.md",
+      "source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+      "normalized_sha256": "cd70b26aeb79b163f9550f612ed15b2eab588f47a47b6e4e00bd29b881cd55ee",
+      "sha256": "cd70b26aeb79b163f9550f612ed15b2eab588f47a47b6e4e00bd29b881cd55ee",
+      "scope": "**"
+    },
+    {
+      "path": "third_party/mbip-p1/AGENTS.md",
+      "source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+      "normalized_sha256": "fe16290184067a54e9c689149049ba88ca08ce6d787f3af4522f92dd0a94d56e",
+      "sha256": "fe16290184067a54e9c689149049ba88ca08ce6d787f3af4522f92dd0a94d56e",
+      "scope": "third_party/mbip-p1/**"
+    },
+    {
+      "path": "docs/codex/Task4_MonakaBridge.md",
+      "source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+      "normalized_sha256": "f4247ab76549e35c0af27e2af5fec50d83d4a2658ab43ae3fc6cd951f3c87228",
+      "sha256": "f4247ab76549e35c0af27e2af5fec50d83d4a2658ab43ae3fc6cd951f3c87228",
+      "scope": "**"
+    },
+    {
+      "path": "docs/codex/task4/00_upstream_handoff_status.md",
+      "source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+      "normalized_sha256": "948d068a96b113406996e7da0a83f65cbfdac52098534d735c36c128b9c797b5",
+      "sha256": "948d068a96b113406996e7da0a83f65cbfdac52098534d735c36c128b9c797b5",
+      "scope": "**"
+    },
+    {
+      "path": "docs/responsibility-refactor.md",
+      "source_commit": "2c6432670c7af3a842d4ebeabf6e159fad835256",
+      "normalized_sha256": "e5c18a145febce6054b99270764c888836662756e2b838564c25874edbc9d6c2",
+      "sha256": "e5c18a145febce6054b99270764c888836662756e2b838564c25874edbc9d6c2",
+      "scope": "**"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "namespace": "monaka.bridge.render-catalog",
+  "version": 1,
+  "models": {
+    "pico_motion_tracker": "8d70ff3c30a3802e3848727eebfe95344d093b53e344f843412dba867cb9da30",
+    "pico_tracker_rev3_axis_debug": "e0cd34b51386f99d3dc4093bcee538408fae842bbdd0ab40d46797f957c32bbe",
+    "pico_tracker_rev3_identification": "602d1eda4293a869c6d7c210ffbd031de89eb8b8ea4252120e1b1f1e292e6742"
+  }
+}

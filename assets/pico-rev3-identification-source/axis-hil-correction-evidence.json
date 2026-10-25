@@ -1,0 +1,154 @@
+{
+  "verdict": "RENDERMODEL_MODEL_LOCAL_OFFSET_CONFIRMED",
+  "measured_source_commit": "5370068b208c703c41e70d87ea91241c198c9378",
+  "hil_ended_utc": "2026-10-24T13:50:37.204736+00:00",
+  "software_modified_during_hil": false,
+  "physical_reference": {
+    "logo": "up",
+    "LED_button": "away",
+    "USB": "right"
+  },
+  "operator_observation": {
+    "physical_LED": "uncorrected green +Y",
+    "USB_marker": "agrees",
+    "pitch_yaw_roll": "same physical rotation directions"
+  },
+  "required_feature_mapping": {
+    "logo": [
+      0,
+      0,
+      -1
+    ],
+    "LED_button": [
+      0,
+      1,
+      0
+    ],
+    "USB": [
+      -1,
+      0,
+      0
+    ]
+  },
+  "correction_matrix": [
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      -1
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "correction_formula": "(x,y,z) -> (x,-z,y)",
+  "nominal_degrees": 90,
+  "axis_residual_degrees": [
+    4.284532559375325,
+    5.103619681425948,
+    7.2562041375981785
+  ],
+  "measurements": {
+    "H2-pitch-repeat1": {
+      "relative_rotation": [
+        [
+          0.994111550889111,
+          -0.06823826657805626,
+          0.08417668580462716
+        ],
+        [
+          -0.08762374255137434,
+          -0.049198126317599566,
+          0.9949379862283275
+        ],
+        [
+          -0.06375150736983347,
+          -0.9964552054605933,
+          -0.05488772048558051
+        ]
+      ],
+      "angle_degrees": 93.15212132019826,
+      "axis_in_neutral_tracking_frame": [
+        -0.9972053382784156,
+        0.07407617166268608,
+        -0.00970742503607019
+      ]
+    },
+    "H3-yaw": {
+      "relative_rotation": [
+        [
+          -0.09379637667023921,
+          0.9933429405374113,
+          0.06687337095441237
+        ],
+        [
+          -0.9883904707330522,
+          -0.10097172992723413,
+          0.11352965378095525
+        ],
+        [
+          0.11952620201067198,
+          -0.05544833482668213,
+          0.9912814360250825
+        ]
+      ],
+      "angle_degrees": 95.83956832933067,
+      "axis_in_neutral_tracking_frame": [
+        -0.08492972139554658,
+        -0.026463744237589994,
+        -0.9960354474940147
+      ]
+    },
+    "H4-roll": {
+      "relative_rotation": [
+        [
+          -0.027467696987452273,
+          0.08531102496826957,
+          0.9959756495148716
+        ],
+        [
+          -0.1571848336102289,
+          0.9835881372137989,
+          -0.08858490995932136
+        ],
+        [
+          -0.9871870850282787,
+          -0.15898550259848213,
+          -0.013607301758684215
+        ]
+      ],
+      "angle_degrees": 91.64710412681059,
+      "axis_in_neutral_tracking_frame": [
+        -0.03521484782740659,
+        0.9919912787079782,
+        -0.12129805216821438
+      ]
+    }
+  },
+  "selected_captures": {
+    "neutral": "H1-neutral-repeat1",
+    "pitch": "H2-pitch-repeat1",
+    "yaw": "H3-yaw",
+    "roll": "H4-roll"
+  },
+  "evidence_sha256": {
+    "hil-ended.json": "f68296bea115f726bb44d1981ba67964e21ad49af1fc0c1d470383474dde5e88",
+    "H1-neutral-repeat1-result.json": "518d7dd6e0a146c46452e6abf631ba8577a164b38b3f513ef629028dc50a9e6e",
+    "H2-pitch-repeat1-result.json": "8e83f7a2caf97f05066d8a898bb0054b19026493e6cd299d9312cb0786221fd3",
+    "H3-yaw-result.json": "9093b793324f8b34003780cee579c377184ae9f56e2286decf054777d3611721",
+    "H4-roll-result.json": "0d588e4bdfe4855761dfffae7f1d5cfcec1a06bcf4b1a094d074604958d3869a",
+    "H1-neutral-repeat1-operator.json": "eab8cff35eb77b6e47c450f4408b471fbbe223dd33a97e00d8daa080954a5020",
+    "global-rotation-observation-operator.json": "70e81b66cbe55526381911025226c033ec9841916086aee1e06830d8ac024e74"
+  },
+  "old_neutral_excluded": "Operator reported possible timing mismatch; original and repeat retained",
+  "tracking_pose_changed": false,
+  "world_changed": false,
+  "approval_changed": false,
+  "corrected_hardware_retest": "NOT_RUN"
+}

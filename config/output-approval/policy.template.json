@@ -1,0 +1,26 @@
+{
+  "schema": "monaka.physical-criteria.v1",
+  "enabled": false,
+  "id": "REQUIRES_OPERATOR_ADOPTION",
+  "version": "1",
+  "valid_from_utc_ms": null,
+  "valid_until_utc_ms": null,
+  "scope": {
+    "source": null,
+    "input_space": null,
+    "profile": null,
+    "world_space": null
+  },
+  "measurement_mode": "trajectory",
+  "limits": {
+    "min_pairs": null,
+    "min_inliers": null,
+    "min_inlier_ratio": null,
+    "rms_position": null,
+    "rms_orientation": null,
+    "max_position": null,
+    "max_orientation": null,
+    "all_max_position": null,
+    "all_max_orientation": null
+  }
+}

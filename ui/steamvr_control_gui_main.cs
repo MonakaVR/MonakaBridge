@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Threading;
 using System.Windows;
 
 namespace MonakaBridge
@@ -11,16 +13,35 @@ namespace MonakaBridge
         {
             try
             {
-                string repoRoot = ResolveRepoRoot(args);
-                if (HasSwitch(args, "--control-window-only"))
+                string serviceExecutable=null;bool trayOnly=false;
+                var guiArguments=new List<string>();
+                for(int i=0;i<args.Length;++i) {
+                    if(args[i]=="--service-exe") {
+                        if(++i==args.Length)throw new ArgumentException("Missing service executable");
+                        serviceExecutable=GuiLaunchOptions.Absolute(args[i],"--service-exe");
+                    }else if(args[i]=="--tray-only")trayOnly=true;
+                    else guiArguments.Add(args[i]);
+                }
+                var options = GuiLaunchOptions.Parse(guiArguments.ToArray(), ResolveDefaultRoot());
+                if (options.ControlWindowOnly)
                 {
-                    SteamVrControlWpf.Run(repoRoot);
+                    SteamVrControlWpf.Run(options);
                     return 0;
                 }
 
-                using (var tray = new SteamVrControlTray(repoRoot))
+                if(serviceExecutable==null)throw new ArgumentException("Managed tray requires --service-exe. Window-only mode never manages a service");
+                bool created;
+                using(var singleton=new Mutex(true,@"Local\MonakaBridge_ServiceTray_29810",out created))
                 {
-                    tray.Run();
+                    bool owned=created;
+                    if(!owned)try{owned=singleton.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
+                    if(!owned) {
+                        PcServiceLifecycle.Control.VerifyExistingTray(@"Local\MonakaBridge_ServiceLifecycle_29810",serviceExecutable,System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+                        if(!trayOnly)using(var request=EventWaitHandle.OpenExisting(@"Local\MonakaBridge_OpenControl_29810"))request.Set();
+                        return 0;
+                    }
+                    try {using(var tray=new SteamVrControlTray(options,serviceExecutable,!trayOnly))tray.Run();}
+                    finally {singleton.ReleaseMutex();}
                 }
                 return 0;
             }
@@ -35,37 +56,8 @@ namespace MonakaBridge
             }
         }
 
-        private static bool HasSwitch(string[] args, string value)
+        private static string ResolveDefaultRoot()
         {
-            if (args == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < args.Length; ++i)
-            {
-                if (string.Equals(args[i], value, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static string ResolveRepoRoot(string[] args)
-        {
-            if (args != null)
-            {
-                for (int i = 0; i < args.Length; ++i)
-                {
-                    string arg = args[i];
-                    if (!string.IsNullOrWhiteSpace(arg) && !arg.StartsWith("--", StringComparison.Ordinal))
-                    {
-                        return Path.GetFullPath(arg);
-                    }
-                }
-            }
-
             string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
             DirectoryInfo buildDirectory = new DirectoryInfo(
                 baseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -82,8 +74,7 @@ namespace MonakaBridge
                 return currentDirectory;
             }
 
-            throw new InvalidOperationException(
-                "Repository root could not be determined. Launch through scripts\\build_gui.ps1 -Run or pass the repository path as the first argument.");
+            return baseDirectory;
         }
     }
 }

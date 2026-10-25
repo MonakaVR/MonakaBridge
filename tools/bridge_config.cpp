@@ -15,7 +15,9 @@ int main(int argc,char** argv)try{
   const auto* selected=&mb::detail::uniqueTracker(c,argv[3]);
   mb::Vec t{std::stod(argv[4]),std::stod(argv[5]),std::stod(argv[6])};
   // Shared source-space alignment; never per-tracker position-zero calibration.
-  for(auto& [k,b]:c.bindings)if(b.source==selected->source&&b.inputSpace==selected->inputSpace&&b.inputRevision==selected->inputRevision)b.world.translation=t;
+  for(auto& [k,b]:c.bindings)if(b.source==selected->source&&b.inputSpace==selected->inputSpace&&b.inputRevision==selected->inputRevision){
+   b.world.translation=t;b.spaceApproved=false;
+  }
  }else if(command=="rename"&&argc==5){const auto& selected=mb::detail::uniqueTracker(c,argv[3]);c.bindings.at({selected.source,selected.device}).tracker=argv[4];}
  else throw std::invalid_argument("unsupported configuration action");
  if(c.revision==UINT32_MAX)throw std::invalid_argument("revision exhausted");++c.revision;mb::saveConfig(argv[1],c);return 0;

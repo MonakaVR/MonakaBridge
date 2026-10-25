@@ -56,7 +56,8 @@ void validateWorldCalibrationTarget(
 
 // Returns a candidate without performing I/O. measure-only returns an unchanged
 // copy. Apply updates world transforms for the existing shared input-map group
-// and increments mapping_revision exactly once.
+// and invalidates every member's space approval on each explicit apply, even
+// for an identical transform. Increments mapping_revision exactly once.
 Config worldCalibrationCandidate(
     const Config& current,
     const WorldCalibrationTarget& measured,

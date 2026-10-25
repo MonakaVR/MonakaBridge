@@ -1,0 +1,22 @@
+{
+  "Button_approx.stl": "ce30b7a0002ef498b046c445239c4b394cf63983ce30ecb0359338e9ac76379c",
+  "FreeCAD_Rev3_perspective.jpg": "0dbed36b1751ee2d1ba271ec4fca5bfbfd3ea40e51d414787ac9a8af8ec31aaa",
+  "FreeCAD_Rev3_side_profile.jpg": "ebea5fe99c45de00d5c21a5829fc8199da1f1fd3f3eb3a4afec1064f66951417",
+  "Housing_engraved_PICO.stl": "89ac9ffb2967755f3474c89c7b7759d72feb2e4ff38a825ed2567368ed7fcb84",
+  "LED_lens_approx.stl": "e9cd86330ceb02a28bfeeac2ad3ed08f3907e4b8d861e7f0fb834b0c7558d41f",
+  "PICO_Tracker_Base_R4p5_mm.step": "533e66166880f6210b81316ba8a6d494fcdba4fd69cd0b6ed8e44806278922ab",
+  "PICO_Tracker_Detailed_APPROX_Rev3.FCStd": "17ad0e32afb885af62610a16228a955c3bb31d661d377b42c2f04abaec7cc4aa",
+  "PICO_Tracker_Detailed_APPROX_Rev3_m.mtl": "864e06b6cd6942b946803c8b521f439c2b9e5af85564115cf955ff4079a05ec4",
+  "PICO_Tracker_Detailed_APPROX_Rev3_m.obj": "de6b82a8705bf4ba9b9a8f81d2c58f4a39ed3a419b176ed8d337cd18f9ff4345",
+  "PICO_Tracker_Detailed_APPROX_Rev3_mm.step": "436509dd665aeca53d80fa33c35615d4d35834073a9481dcc876447dc65d55cd",
+  "PICO_Tracker_Detailed_APPROX_Rev3_mm.stl": "909ea890f0b0adf180993c9ca2e00a4ee567af8ae6330a71d5b4b336e7ea8468",
+  "README_ja.md": "d37d7a07152cd7d42d95c281b539cbcbed619106aad26f4f4cd4f28cc6c32693",
+  "USB_C_tongue_approx.stl": "1daf895ea726f398322c46c97e95ca0341f88136c847e7ae17881d29d4fd813c",
+  "approx_white.png": "ff06f81844982198dc541dd286b282842071f4e56b8c7ce1631ac0becb354f59",
+  "build_details.py": "bdcfb69b368d036386f3b3f197335571e8ace32a84bf1b2523495e644c30fdc4",
+  "details_validation.json": "c8de5083f7554f70d4ca886582fd86131949152333a8dfced08b0a6d0b3b3102",
+  "export_steamvr.py": "36eba714fceafe7e053f26d794237304ab408fc4442d8761ce5b0b9584ebab93",
+  "obj_readback.json": "55d9c83c97fdb605066c606aac9d2cd2de58f715b1d86038e7dabccbb093b06c",
+  "steamvr_mesh_validation.json": "a93d5dbb4f8ca1ac72343bb499ba3eb5a54cbf8bbfbaf8ee99de99920504520e",
+  "text_polygons.json": "7cb1ed0cd44ea35523c914d1cee2b4e49c96c6daf86db2c20388d1b0f5a75936"
+}
