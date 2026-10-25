@@ -1,0 +1,42 @@
+{
+  "parent": "e857c5bcf2e38b9f18a9601f98a12fab21afbb65",
+  "authority": "dependencies/preflight-remediation-authority.md",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "18b490b6fd115028332a30e2bf18e80bbd3ca55ae7c4de1ed00c0a9b00459790",
+      "parent_sha256": "9368bed0a510cc2f5a54dff72e5e6ec7baa7edca2ed0e4de0e4199dc5de77571"
+    },
+    "scripts/hil_preflight.py": {
+      "sha256": "3b9efc891d97b1f0aeb312c4b8aa62e33ee06ea33e552c2508e722a59aa4e579",
+      "parent_sha256": "b5ff013709581ca3daeb359dda73634d51c66d3c01e2c552c95a5030cd75e48e"
+    },
+    "tests/hil_preflight_tests.py": {
+      "sha256": "2dd46e472d7a6b10c06030f0fc01531234ac7289a65b78a6f56a9bd6470d604c",
+      "parent_sha256": "3c91c87f8cad95865d70ba771bececb9a1065535d4f4ec431250cdc6f48c38d5"
+    },
+    "tests/hil_preflight_public_input_tests.py": {
+      "sha256": "9f86b637cfd52d5e6da3c0ba1157c6ef9e406735d8d1b7a6ed88038160c3b4da",
+      "parent_sha256": null
+    },
+    "docs/offline-hil-readiness.md": {
+      "sha256": "bcfcc84a74a5ee841355d2247c166f2958d4f7cba0887b078fb4387694ca1865",
+      "parent_sha256": "4415a192317b62da8ad5eb77bd82ede26daf9426a6cb06e2f82f70d9a8c011fb"
+    },
+    "tests/final_integration_scope.py": {
+      "sha256": "c817135716b602a0bc4a8bd2666f3473ba9763cbc7a0d5275db655ac42c54ff8",
+      "parent_sha256": "62c1d6d2190a2ab670da5796058c5d7580b7151751bfbeb3f7cf297089525e43"
+    },
+    "tests/preflight_remediation_scope.py": {
+      "sha256": "731b4acdc82fb2f24ed6790e7524624b69bb0e29c3e37c6fe2c881867cb4c150",
+      "parent_sha256": null
+    },
+    "tests/preflight_remediation_scope_tests.py": {
+      "sha256": "8404cc3883d6c3ff49c18408fd547f705e897bd652ffdec14f3b529e4b1e52f3",
+      "parent_sha256": null
+    },
+    "dependencies/preflight-remediation-authority.md": {
+      "sha256": "32db548bf13bc79811505f81a7d769c315659db1088cab11115dfc028b25ae4a",
+      "parent_sha256": null
+    }
+  }
+}

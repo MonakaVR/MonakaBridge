@@ -6,6 +6,7 @@ view is supplied to frozen HIL audits. Functional tests use the real sources.
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
+from preflight_remediation_scope import approved as remediation_approved, project as remediation_project, project_text as remediation_text
 PIN='dependencies/integration-policy-baseline.json'
 PARENT='f4f17bbf2af1a8f1691625a959116b178b7c5d95'
 RULES='dependencies/current-rule-hierarchy.json'
@@ -36,13 +37,14 @@ def semantic(root):
   if any(token in text for token in ('pico','altra','vive')):raise RuntimeError('Integration product-specific resolver code: '+name)
 def approved(root,git_root=None):
  root=Path(root)
+ extra=remediation_approved(root,git_root)
  if not (root/PIN).exists():return set()
  repo=repository(git_root or root);raw=(root/PIN).read_bytes()
  if digest(raw)!=digest(git_bytes(repo,'HEAD',PIN)):raise RuntimeError('Integration receipt differs from committed review')
  p=json.loads(raw)
  if p['historical_hil_commit']!=PARENT:raise RuntimeError('Integration historical authority changed')
  for name,e in p['files'].items():
-  try:actual=(root/name).read_bytes()
+  try:actual=remediation_project(root,name,(root/name).read_bytes(),git_root)
   except OSError as exc:raise RuntimeError('Integration missing source: '+name) from exc
   if digest(actual)!=e['sha256']:raise RuntimeError('Integration current source drift: '+name)
   if e['historical_sha256'] is not None and digest(git_bytes(repo,PARENT,name))!=e['historical_sha256']:raise RuntimeError('Integration historical provenance drift: '+name)
@@ -54,9 +56,10 @@ def approved(root,git_root=None):
  agents={str(x.relative_to(root)).replace('\\','/') for x in root.rglob('AGENTS.md') if '.git' not in x.relative_to(root).parts and 'build' not in x.relative_to(root).parts}
  if agents!={r['path'] for r in hierarchy['rules'] if r['path'].endswith('AGENTS.md')}:raise RuntimeError('Integration instruction hierarchy changed')
  semantic(root)
- return set(p['files'])|{PIN}
+ return set(p['files'])|{PIN}|extra
 def project(root,name,raw,git_root=None):
  root=Path(root)
+ raw=remediation_project(root,name,raw,git_root)
  if not (root/PIN).exists():return raw
  e=json.loads((root/PIN).read_bytes())['files'].get(name)
  if e and e['historical_sha256'] is not None and digest(raw)==e['sha256']:
@@ -64,6 +67,7 @@ def project(root,name,raw,git_root=None):
  return raw
 def project_text(root,text):
  root=Path(root)
+ text=remediation_text(root,text)
  if not (root/PIN).exists():return text
  p=json.loads((root/PIN).read_bytes());sha=digest(text.encode())
  values={git_bytes(repository(root),PARENT,n).decode('utf-8-sig') for n,e in p['files'].items() if e['historical_sha256'] is not None and e['sha256']==sha}

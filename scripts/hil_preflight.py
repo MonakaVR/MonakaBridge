@@ -31,6 +31,7 @@ def runtime_path(registry):
 
 def evaluate_environment(actual,expected):
     reasons=[]
+    if 'services' in expected:reasons.append('LEGACY_SERVICES_SCHEMA_UNSUPPORTED')
     for key in ('USERPROFILE','LOCALAPPDATA','TEMP','HOME'):
         if normalized(actual.get(key,''))!=normalized(expected.get(key,'')):reasons.append('ENVIRONMENT_'+key+'_MISMATCH')
     for key in ('vrpaths_sha256','runtime_path','runtime_executable','helper_path','helper_sha256','config_path','config_sha256'):
@@ -42,10 +43,92 @@ def evaluate_environment(actual,expected):
     if actual.get('drivers')!=expected.get('drivers'):reasons.append('DRIVER_REGISTRATION_MISMATCH')
     if any(not d.get('exists',False) for d in actual.get('drivers',[])):reasons.append('STALE_DRIVER_REGISTRATION')
     if actual.get('mirror_port_in_use'):reasons.append('MIRROR_PORT_IN_USE')
-    if actual.get('services')!=expected.get('services'):reasons.append('CURRENT_SERVICE_BUILD_MISMATCH')
+    services=expected.get('bridge_services')
+    if not isinstance(services,list) or len(services)!=1 or not services[0].get('path') or not services[0].get('sha256'):
+        reasons.append('BRIDGE_SERVICE_EXPECTATION_REQUIRED')
+    elif actual.get('bridge_services')!=services:reasons.append('CURRENT_BRIDGE_SERVICE_BUILD_MISMATCH')
     return reasons
 
+
+def evaluate_input_readiness(health,expected,config,now_ms):
+    """Observation-derived diagnostics only; no input implementation inspection."""
+    def require(ok,reason):
+        if not ok:raise ValueError(reason)
+    def integer(value):return type(value) is int and 0<=value<=9223372036854775807
+    def number(value):return type(value) in (int,float) and math.isfinite(value) and value>=0
+    def identity(value):return isinstance(value,str) and bool(value) and len(value)<=4096
+    try:
+        target=expected['input_readiness']
+        require(isinstance(target,dict),'INPUT_EXPECTATION_INVALID')
+        for key in ('source','device','tracker','input_space'):
+            require(identity(target[key]),'INPUT_EXPECTATION_INVALID:'+key)
+        for key in ('input_revision','mapping_revision'):
+            require(integer(target[key]),'INPUT_EXPECTATION_INVALID:'+key)
+        require(isinstance(config,dict) and config['namespace']=='monaka.bridge' and config['version']==2,'INPUT_CONFIG_INVALID')
+        require(identity(config['bridge_id']) and integer(config['mapping_revision']),'INPUT_CONFIG_INVALID')
+        timeout=config['pose_timeout_ms']
+        require(number(timeout) and timeout>0,'INPUT_CONFIG_TIMEOUT_INVALID')
+        require(type(config['mappings']) is list,'INPUT_CONFIG_INVALID')
+        bindings=[b for b in config['mappings'] if b['source_id']==target['source'] and b['device_id']==target['device']]
+        require(len(bindings)==1,'INPUT_CONFIG_MAPPING_NOT_UNIQUE')
+        binding=bindings[0]
+        require(integer(binding['input_revision']) and binding['input_revision']==target['input_revision'] and
+                binding['input_space']==target['input_space'] and binding['tracker_id']==target['tracker'] and
+                config['mapping_revision']==target['mapping_revision'],'INPUT_EXPECTATION_CONFIG_MISMATCH')
+        convention=config['profiles'][binding['profile']]['convention']
+        require(identity(convention),'INPUT_CONFIG_CONVENTION_INVALID')
+        require(isinstance(health,dict),'HEALTH_MISSING_OR_MALFORMED')
+        require(integer(now_ms) and integer(health['snapshot_unix_ms']),'HEALTH_TIME_INVALID')
+        age=now_ms-health['snapshot_unix_ms']
+        require(0<=age<=2000,'HEALTH_STALE_OR_FUTURE')
+        require(integer(health['mapping_revision']) and health['publisher_id']==config['bridge_id'] and
+                health['mapping_revision']==target['mapping_revision'] and
+                number(health['pose_timeout_ms']) and health['pose_timeout_ms']==timeout,'HEALTH_CONFIG_MISMATCH')
+        require(health['pose_stage']=='native_observation' and health['is_final_output'] is False,'HEALTH_STAGE_INVALID')
+        require(type(health['devices']) is list and all(isinstance(row,dict) for row in health['devices']),'HEALTH_DEVICES_INVALID')
+        rows=[row for row in health['devices'] if row['source']==target['source'] and row['device']==target['device']]
+        require(len(rows)==1,'INPUT_NOT_UNIQUE')
+        row=rows[0]
+        require(row['publisher_id']==config['bridge_id'] and row['pose_stage']=='native_observation' and row['is_final_output'] is False,'INPUT_HEALTH_IDENTITY_MISMATCH')
+        for key in ('fresh','has_pose','position_valid','orientation_valid'):
+            require(row[key] is True,'INPUT_INVALID:'+key)
+        for key in ('collision','absent'):
+            require(row[key] is False,'INPUT_INVALID:'+key)
+        require(row['tracking_state']=='tracked','INPUT_NOT_TRACKED')
+        require(integer(row['revision']) and row['space']==target['input_space'] and row['revision']==target['input_revision'] and
+                row['tracker']==target['tracker'] and row['convention']==convention,'INPUT_SPACE_OR_MAPPING_MISMATCH')
+        for key in ('pose_age_ms','source_receive_age_ms'):
+            require(number(row[key]) and row[key]+age<timeout,'INPUT_EXPIRED:'+key)
+    except (KeyError,TypeError,ValueError,OverflowError) as exc:
+        return [str(exc)]
+    return []
+
+
+def input_readiness(expected,now_ms):
+    """Read explicitly selected Bridge-owned files, without probing input software."""
+    def bounded(path):
+        path=Path(path)
+        if not path.is_absolute():raise ValueError('BRIDGE_DIAGNOSTIC_PATH_MUST_BE_ABSOLUTE')
+        if path.stat().st_size>2*1024*1024:raise ValueError('BRIDGE_DIAGNOSTIC_TOO_LARGE')
+        return load(path)
+    config_path=Path(expected['config_path'])
+    before=digest(config_path)
+    if before!=expected['config_sha256']:raise ValueError('INPUT_CONFIG_HASH_MISMATCH')
+    config=bounded(config_path);health=bounded(expected['health_path'])
+    if digest(config_path)!=before:raise ValueError('INPUT_CONFIG_CHANGED_DURING_READ')
+    reasons=evaluate_input_readiness(health,expected,config,now_ms)
+    keys=('publisher_id','publisher_session','mapping_revision','snapshot_unix_ms','pose_timeout_ms','pose_stage','is_final_output')
+    diagnostics={k:health.get(k) for k in keys} if isinstance(health,dict) else {}
+    row_keys=('source','device','input_session','input_clock','space','convention','revision','fresh','tracker','collision',
+              'tracking_state','position_valid','orientation_valid','has_pose','absent','pose_age_ms','source_receive_age_ms','pose_sequence','state_sequence')
+    if isinstance(health,dict) and isinstance(health.get('devices'),list):
+        target=expected.get('input_readiness',{})
+        diagnostics['selected']=[{k:row.get(k) for k in row_keys} for row in health['devices'] if isinstance(row,dict) and
+                                 row.get('source')==target.get('source') and row.get('device')==target.get('device')]
+    return reasons,diagnostics
+
 def inventory(expected,package):
+    if 'services' in expected:raise ValueError('LEGACY_SERVICES_SCHEMA_UNSUPPORTED')
     actual={k:os.environ.get(k,'') for k in ('USERPROFILE','LOCALAPPDATA','TEMP','HOME')}
     identity=subprocess.run(['whoami.exe','/user','/fo','csv','/nh'],capture_output=True,text=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW,check=True)
     actual['windows_identity']=next(csv.reader(identity.stdout.strip().splitlines()))
@@ -70,13 +153,13 @@ def inventory(expected,package):
     script="""[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $ErrorActionPreference='Stop'
 $endpoints=@(Get-NetUDPEndpoint | Select-Object LocalAddress,LocalPort,OwningProcess)
-$services=@(Get-CimInstance Win32_Process | Where-Object {$_.Name -in @('monaka_bridge_service.exe','pico_ot_bridge_service.exe')} | Select-Object ExecutablePath)
-@{endpoints=$endpoints;services=$services} | ConvertTo-Json -Depth 5 -Compress
+$bridge_services=@(Get-CimInstance Win32_Process -Filter "Name = 'monaka_bridge_service.exe'" | Select-Object ExecutablePath)
+@{endpoints=$endpoints;bridge_services=$bridge_services} | ConvertTo-Json -Depth 5 -Compress
 """
     query=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',script],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=30,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     if query.returncode:raise ValueError('WINDOWS_INVENTORY_QUERY_FAILED:'+query.stderr.strip()[:1000])
     state=json.loads(query.stdout);actual['mirror_port_in_use']=any(x['LocalPort']==expected['mirror_port'] for x in state['endpoints'])
-    actual['services']=sorted([{'path':x.get('ExecutablePath'),'sha256':digest(x['ExecutablePath']) if x.get('ExecutablePath') else None} for x in state['services']],key=lambda x:x.get('path') or '')
+    actual['bridge_services']=sorted([{'path':x.get('ExecutablePath'),'sha256':digest(x['ExecutablePath']) if x.get('ExecutablePath') else None} for x in state['bridge_services']],key=lambda x:x.get('path') or '')
     return actual
 
 def time_contract(document,now_ms,semantic,evidence=False):
@@ -185,6 +268,11 @@ def main():
         expectation=load(args.expectation or args.package/'hil-environment.json');actual=inventory(expectation,args.package.resolve());report['environment']=actual;report['reasons']+=evaluate_environment(actual,expectation)
         if actual['windows_identity']!=expectation.get('windows_identity'):report['reasons'].append('WINDOWS_USER_IDENTITY_MISMATCH')
     except Exception as exc:report['reasons'].append('ENVIRONMENT_CHECK_FAILED:'+str(exc))
+    try:
+        expectation=load(args.expectation or args.package/'hil-environment.json')
+        reasons,diagnostics=input_readiness(expectation,int(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000))
+        report['input_readiness']=diagnostics;report['reasons']+=reasons
+    except Exception as exc:report['reasons'].append('INPUT_READINESS_FAILED:'+str(exc))
     report['status']='FAIL' if report['reasons'] else 'PASS';args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n',encoding='utf-8');print(json.dumps(report,ensure_ascii=False));return 0 if report['status']=='PASS' else 1
 
 if __name__=='__main__':sys.exit(main())
