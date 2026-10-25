@@ -80,7 +80,7 @@
       "historical_sha256": "f6d83b5fc68cf340379889527c78fcb16e3bf527cd168d41173ba412b908da6a"
     },
     "tests/final_integration_scope.py": {
-      "sha256": "fce691ca573c5969683729e0ba888066d9f1e55896107bc099ec4d9d5a38e36d",
+      "sha256": "62c1d6d2190a2ab670da5796058c5d7580b7151751bfbeb3f7cf297089525e43",
       "historical_sha256": null
     },
     "tests/final_integration_scope_tests.py": {
