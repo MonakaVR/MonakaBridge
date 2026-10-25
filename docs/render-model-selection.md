@@ -35,7 +35,7 @@ current binaries receive offline validation and require separate hardware cutove
 # Current rules and historical evidence
 
 `dependencies/current-rule-hierarchy.json` identifies effective instructions and
-their immutable source commits. `tests/integration_scope.py` checks their exact
+their immutable source commits. `tests/final_integration_scope.py` checks their exact
 bytes, required architecture clauses, and the absence of product-specific names
 in resolver implementation. The committed integration receipt pins current edits.
 Only after current admission do legacy audits receive their immutable historical

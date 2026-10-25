@@ -8,7 +8,7 @@
       "historical_sha256": "069c5e49ec3225481ef8d743c9964b9ed453d5931c68c376e41999df86321159"
     },
     "CMakeLists.txt": {
-      "sha256": "82cfa772f1ebfaaa436ae315f37c966efe0caee7d31abbccd1ffb468eb1a7a80",
+      "sha256": "9368bed0a510cc2f5a54dff72e5e6ec7baa7edca2ed0e4de0e4199dc5de77571",
       "historical_sha256": "a3b6b6afc2c8a64db020e95399c83e9fb415df66dae602cdd7decde4fbdc79a5"
     },
     "dependencies/current-rule-hierarchy.json": {
@@ -24,7 +24,7 @@
       "historical_sha256": "948d068a96b113406996e7da0a83f65cbfdac52098534d735c36c128b9c797b5"
     },
     "docs/render-model-selection.md": {
-      "sha256": "a710047f61f3c50129212b073a32570daec993c0b61175ad390f16d0ab497228",
+      "sha256": "51928bc6b446ef0fd22c474e6a52e83cda833ad6e0943f1e8dbc9f185ac14edf",
       "historical_sha256": null
     },
     "docs/responsibility-refactor.md": {
@@ -48,15 +48,15 @@
       "historical_sha256": null
     },
     "tests/integration_scope.py": {
-      "sha256": "fce691ca573c5969683729e0ba888066d9f1e55896107bc099ec4d9d5a38e36d",
+      "sha256": "936da8ea3345757a1d2be37d5e6281bb61d8ee15401ca2706c7097d50e49ef44",
       "historical_sha256": "936da8ea3345757a1d2be37d5e6281bb61d8ee15401ca2706c7097d50e49ef44"
     },
     "tests/integration_scope_tests.py": {
-      "sha256": "aacd3f05774e6831d00bab92dc5162f9f9990ac14839e6545052c1f2ded84ebc",
+      "sha256": "3d6460bdffd0fd650c393fc1cdb969bcf5656e68770c1a379c797aa4a49fdc5a",
       "historical_sha256": "3d6460bdffd0fd650c393fc1cdb969bcf5656e68770c1a379c797aa4a49fdc5a"
     },
     "tests/offline_readiness_scope.py": {
-      "sha256": "82eafe296bd773b1f63fd5724cd24061c089dad19da154853752548d13729afa",
+      "sha256": "8ad541263d9fb5fabdd96e10a4d8fee32e4b969e002308af7823a761fa68e739",
       "historical_sha256": "184bf21bc35aee964ac3816bb7b86d545c6d6462a8206e54b6949a988ba78a00"
     },
     "tests/presentation_prepare_tests.py": {
@@ -78,6 +78,14 @@
     "tools/prepare_presentation.cpp": {
       "sha256": "42ae179f36cda499c99c49b2894cdfa0622d6e67404cab348dc2db164ef0ff8c",
       "historical_sha256": "f6d83b5fc68cf340379889527c78fcb16e3bf527cd168d41173ba412b908da6a"
+    },
+    "tests/final_integration_scope.py": {
+      "sha256": "fce691ca573c5969683729e0ba888066d9f1e55896107bc099ec4d9d5a38e36d",
+      "historical_sha256": null
+    },
+    "tests/final_integration_scope_tests.py": {
+      "sha256": "2a9b61edb329c141271aa27c4e654622f5bfcf9bb40109d20ea1df1ac04647a5",
+      "historical_sha256": null
     }
   }
 }

@@ -7,7 +7,7 @@ expand authorization. Functional tests always compile/run current sources.
 from pathlib import Path
 from functools import lru_cache
 import hashlib,json,subprocess
-from integration_scope import approved as integration_approved, project as integration_project, project_text as integration_text
+from final_integration_scope import approved as integration_approved, project as integration_project, project_text as integration_text
 PARENT='8f8ca0d4465ada163a122f174b49be13bf7ea80b'
 PIN='dependencies/offline-readiness-baseline.json'
 def digest(raw):return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
