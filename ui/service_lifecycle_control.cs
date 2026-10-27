@@ -13,6 +13,8 @@ namespace PcServiceLifecycle {
     }
     internal sealed class Control : IDisposable {
         readonly string name, executable, logs, executableSha;
+        readonly object lifetime = new object();
+        bool stopRequested, disposed;
         Process child;
         StreamWriter stdout, stderr;
         internal Control(string mappingName, string serviceExecutable, string logDirectory) {
@@ -78,6 +80,13 @@ namespace PcServiceLifecycle {
                     throw new IOException("Receiver belongs to another controller or a headless session; it will not be stopped or replaced");
         }
         internal void EnsureRunning(string additionalArguments) {
+            lock(lifetime) {
+                if(disposed)throw new ObjectDisposedException("Control");
+                if(stopRequested)throw new InvalidOperationException("Controller shutdown has started; no service will be launched");
+                EnsureRunningOwned(additionalArguments);
+            }
+        }
+        void EnsureRunningOwned(string additionalArguments) {
             var existing=Read(name);
             if(existing!=null) {
                 using(var process=Verified(existing)) {
@@ -114,6 +123,15 @@ namespace PcServiceLifecycle {
             throw new IOException("Service startup confirmation timed out. The tray remains available for stop/retry. Logs: "+logs);
         }
         internal void StopAndWait(int timeoutMs) {
+            lock(lifetime) {
+                if(disposed)throw new ObjectDisposedException("Control");
+                // Exit may run before the queued startup callback. Keep the
+                // launch fence even if stopping an existing child fails.
+                stopRequested=true;
+                StopOwnedAndWait(timeoutMs);
+            }
+        }
+        void StopOwnedAndWait(int timeoutMs) {
             var state=Read(name);
             if(state==null) {
                 if(AnyUnmanagedProcess())throw new IOException("Service identity unavailable; tray retained, no force kill");
@@ -130,6 +148,13 @@ namespace PcServiceLifecycle {
             }
         }
         public void Dispose() {
+            lock(lifetime) {
+                if(disposed)return;
+                disposed=true;stopRequested=true;
+                DisposeOwned();
+            }
+        }
+        void DisposeOwned() {
             // Disposing an exited tray cannot kill any process. Owner death is
             // detected by the native service and follows its normal cleanup path.
             if(child!=null) {
