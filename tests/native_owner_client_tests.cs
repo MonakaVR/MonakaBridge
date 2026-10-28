@@ -13,6 +13,9 @@ internal static class NativeOwnerClientTests {
   var options=GuiLaunchOptions.Parse(new[]{"--installation",Path.GetFullPath(args[2]),"--allow-write","--owner-pipe",pipe,"--owner-identity",identity.Pid+":"+identity.Created,"--owner-executable",owner,"--owner-sha256",Control.Hash(owner)},Path.GetDirectoryName(config));
   Check(options.Calibration!=null,"Native v2 calibration profile missing");
   var selected=options.RetainMatchingOwner(GuiLaunchOptions.Parse(new[]{"--installation",Path.GetFullPath(args[2])},null));Check(selected.OwnerPipe==pipe&&selected.Calibration!=null,"Same installation lost native owner on profile selection");
+  var readOnly=GuiLaunchOptions.Parse(new[]{"--installation",Path.GetFullPath(args[2]),"--read-only","--owner-pipe",pipe,"--owner-identity",identity.Pid+":"+identity.Created,"--owner-executable",owner,"--owner-sha256",Control.Hash(owner)},null);
+  Check(readOnly.RetainMatchingOwner(options).ReadOnly,"Profile selection escalated readonly owner");
+  bool foreign=false;try{options.RetainMatchingOwner(GuiLaunchOptions.Parse(new[]{"--config",config+".foreign","--read-only"},null));}catch(InvalidOperationException){foreign=true;}Check(foreign,"Native GUI accepted foreign installation selection");
   Check(options.ServiceCommand("Stop").StartsWith("STOPPED"),"Native Stop not confirmed");
   Check(options.ServiceCommand("Start").StartsWith("RUNNING"),"Native Start not confirmed");
   Check(options.ServiceCommand("Restart").StartsWith("RUNNING"),"Native Restart not confirmed");
