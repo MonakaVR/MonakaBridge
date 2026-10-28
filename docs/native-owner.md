@@ -4,6 +4,8 @@ The `monaka_bridge_service --native-owner` entry combines the existing Bridge
 runtime loop and Win32 tray in one native process. It starts without a GUI. The
 existing headless service/managed tray remain explicit legacy diagnostic paths;
 this candidate does not install or switch an existing user's launcher.
+Duplicate default/`--tray-only` launch only probes the existing owner. Explicit
+`--open` requests GUI display/focus; quiet duplicate launch never opens a window.
 
 ```
 monaka_bridge_service --native-owner ABS_CONFIG ABS_GUI ABS_CONFIG_HELPER INGRESS MONAKA DIRECT MIRROR [--open] [--read-only]

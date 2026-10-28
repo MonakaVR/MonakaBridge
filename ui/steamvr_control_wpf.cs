@@ -211,7 +211,7 @@ namespace MonakaBridge {
      Dispatcher.BeginInvoke((Action)delegate{
       pending.Dispose();cancellation=null;if(closed)return;busy=false;
       if(task.IsFaulted){needsReload=true;RefreshAvailability();var error=task.Exception.GetBaseException();status.Text=error is OperationCanceledException?"Cancelled before native commit. Reload and review.":"Save rejected or outcome unconfirmed: "+error.Message+" Reload/review before retry. No automatic rollback.";}
-      else {try{if(onSaved!=null)onSaved();Reload(selection);status.Text=BridgeText.T("SAVED. Runtime application unconfirmed; Core/IK/SteamVR output unverified. Review matching-instance health separately. Rebinding may require an owned runtime restart (unsupported here).");}catch(Exception e){needsReload=true;RefreshAvailability();status.Text=BridgeText.T("SAVED; reload failed: ")+e.Message+". Runtime application unconfirmed.";}}
+      else {try{if(onSaved!=null)onSaved();Reload(selection);status.Text=BridgeText.T("SAVED. Runtime application unconfirmed; Core/IK/SteamVR output unverified. Review matching-instance health separately. Rebinding may require an owned runtime restart after review.");}catch(Exception e){needsReload=true;RefreshAvailability();status.Text=BridgeText.T("SAVED; reload failed: ")+e.Message+". Runtime application unconfirmed.";}}
      });
     });
    }
