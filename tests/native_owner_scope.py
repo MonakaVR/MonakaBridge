@@ -29,7 +29,9 @@ def approved(root,git_root=None):
     if digest(raw)!=digest(git_bytes(repo,'HEAD',PIN)): raise RuntimeError('Owner receipt not committed')
     if pin['parent']!=PARENT or pin['authority']!='MONAKA-OFFLINE-PREHIL-CLOSURE-20261028-R3 / SA-01 native successor' or set(pin['files'])!=FILES: raise RuntimeError('Owner exact scope changed')
     for name,entry in pin['files'].items():
-        if digest((root/name).read_bytes())!=entry['sha256']: raise RuntimeError('Owner current source drift: '+name)
+        try: current=(root/name).read_bytes()
+        except OSError as error: raise RuntimeError('Owner current source unavailable: '+name) from error
+        if digest(current)!=entry['sha256']: raise RuntimeError('Owner current source drift: '+name)
         if entry['parent_sha256'] is not None and digest(git_bytes(repo,PARENT,name))!=entry['parent_sha256']: raise RuntimeError('Owner predecessor drift: '+name)
     return FILES|{PIN}
 def project(root,name,raw,git_root=None):
