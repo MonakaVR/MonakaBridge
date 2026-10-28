@@ -5,6 +5,7 @@ and execute the actual tree. Changing either source or receipt fails admission.
 """
 from pathlib import Path
 import hashlib, json, subprocess
+from functools import lru_cache
 
 PARENT = '629e2682e113bd81f4854c470982f68cc3b187dd'
 PIN = 'dependencies/tray-reopen-baseline.json'
@@ -21,6 +22,7 @@ def repository(root):
         if root.parent == root: raise RuntimeError('Tray predecessor history missing')
         root = root.parent
     return str(root)
+@lru_cache(maxsize=None)
 def git_bytes(repo, ref, name):
     return subprocess.check_output(['git', '--no-optional-locks', '-C', repo, 'show', ref + ':' + name])
 def approved(root, git_root=None):

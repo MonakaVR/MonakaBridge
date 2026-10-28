@@ -4,7 +4,7 @@
   "purpose": "Restore only the retained owned control window; isolate test reopen events. Current runtime tests remain unprojected.",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "7c39de576155d1d86c1612fd5ee3d7b6e4d999407b36ff8dd980a40a07893ac5",
+      "sha256": "c74f8ddb89bfd795908f93b4d2cf330aec58e5a7ad469b95a71f23106b6cc411",
       "parent_sha256": "23163b1aed66243efa27a93c7a54dba222e9316e48185594c5ebe666d2ceb86d"
     },
     "tests/control_foundation_tests.cs": {
@@ -24,7 +24,7 @@
       "parent_sha256": null
     },
     "tests/tray_reopen_scope.py": {
-      "sha256": "17574f0d77643997a77ad6f4f125c85e37a833ba805d91b14d996a94f9335601",
+      "sha256": "7271cc3b2647f22eed9738ebed62f2bcaf316068395026bf178c6c149d3736d0",
       "parent_sha256": null
     },
     "tests/tray_reopen_scope_tests.py": {
