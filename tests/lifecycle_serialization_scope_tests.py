@@ -1,9 +1,10 @@
 from pathlib import Path
 import json, shutil, tempfile
 from lifecycle_serialization_scope import approved, project, PIN, PARENT, FILES, digest, git_bytes, repository
+from tray_reopen_scope import approved as reopen_approved
 root = Path(__file__).resolve().parents[1]
 names = approved(root)
-assert names == FILES | {PIN}
+assert names == FILES | {PIN} | reopen_approved(root)
 (root / 'build').mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(dir=root / 'build') as folder:
     scratch = Path(folder)
