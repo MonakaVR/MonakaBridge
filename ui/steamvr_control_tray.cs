@@ -26,13 +26,20 @@ namespace MonakaBridge {
   readonly EventWaitHandle openRequest;
   readonly Forms.ToolStripMenuItem exitItem;
   readonly bool showWindow;
+  readonly string serviceArguments;
+  readonly BridgeOwnerChannel ownerChannel;
   bool exitPending;string lifecycleIssue;
   internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow)
    :this(target,serviceExecutable,openWindow,@"Local\MonakaBridge_OpenControl_29810"){}
-  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow,string openRequestName){
+  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow,string openRequestName)
+   :this(target,serviceExecutable,openWindow,openRequestName,null,null){}
+  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow,string openRequestName,string ports,string logs){
    showWindow=openWindow;
-   serviceControl=new PcServiceLifecycle.Control(@"Local\MonakaBridge_ServiceLifecycle_29810",serviceExecutable,
-    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MonakaBridge","service-logs"));
+   var ingress=ports==null?"29810":ports.Split(' ')[0];
+   serviceArguments=GuiLaunchOptions.Quote(target.ConfigFile)+(ports==null?"":" "+ports);
+   serviceControl=new PcServiceLifecycle.Control(@"Local\MonakaBridge_ServiceLifecycle_"+ingress,serviceExecutable,
+    logs??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MonakaBridge","service-logs"),ports!=null);
+   if(ports!=null){ownerChannel=new BridgeOwnerChannel(target,delegate(string op){if(exitPending)throw new IOException("Tray exit pending");return serviceControl.Command(op,serviceArguments,5000);});}
    openRequest=new EventWaitHandle(false,EventResetMode.AutoReset,openRequestName);
    options=target;dispatcher.CreateControl();var menu=new Forms.ContextMenuStrip();
    menu.Items.Add(new Forms.ToolStripMenuItem(options.InstallationName){Enabled=false});menu.Items.Add(statusItem);
@@ -52,11 +59,11 @@ namespace MonakaBridge {
   }
   internal void Run(){
    ThreadPool.QueueUserWorkItem(delegate{
-    string error=null;try{serviceControl.EnsureRunning(GuiLaunchOptions.Quote(options.ConfigFile));}catch(Exception e){error=e.Message;}
+    string error=null;try{serviceControl.EnsureRunning(serviceArguments);}catch(Exception e){error=e.Message;}
     try{dispatcher.BeginInvoke((Action)delegate{
      lifecycleIssue=error;RefreshRouteUi();
      if(error!=null)icon.ShowBalloonTip(5000,"Monaka Bridge",error,Forms.ToolTipIcon.Error);
-     else if(showWindow)OpenControlWindow();
+     if(showWindow)OpenControlWindow();
     });}catch(InvalidOperationException){}
    });
    Forms.Application.Run(context);
@@ -141,7 +148,7 @@ namespace MonakaBridge {
    });
   }
   void ExitFailed(string error){exitPending=false;exitItem.Enabled=true;lifecycleIssue=error;RefreshRouteUi();icon.ShowBalloonTip(5000,"Bridge stop failed",error,Forms.ToolTipIcon.Error);}
-  public void Dispose(){if(disposed)return;disposed=true;timer.Stop();timer.Dispose();reader.Dispose();openRequest.Dispose();serviceControl.Dispose();icon.Visible=false;icon.Dispose();trayImage.Dispose();dispatcher.Dispose();context.Dispose();if(controlProcess!=null)controlProcess.Dispose();}
+  public void Dispose(){if(disposed)return;disposed=true;if(ownerChannel!=null)ownerChannel.Dispose();timer.Stop();timer.Dispose();reader.Dispose();openRequest.Dispose();serviceControl.Dispose();icon.Visible=false;icon.Dispose();trayImage.Dispose();dispatcher.Dispose();context.Dispose();if(controlProcess!=null)controlProcess.Dispose();}
  }
  internal static class OwnedControlWindow {
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint processId);
