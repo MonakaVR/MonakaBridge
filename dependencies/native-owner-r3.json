@@ -8,7 +8,7 @@
       "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
     },
     "docs/native-owner.md": {
-      "sha256": "cd038b614dd6baec8ce8758897aeb1ee70fdb492e2a3351bdf2e470b3f245488",
+      "sha256": "ddcfba565a9ba03c6b48dce69407319ff695f2d8fd43fa80fe6b2839225f0aa4",
       "parent_sha256": null
     },
     "include/monaka_bridge/native_owner_runtime.hpp": {
@@ -40,7 +40,7 @@
       "parent_sha256": null
     },
     "tests/native_owner_process.py": {
-      "sha256": "b040c871b0b8f79e5aeeba76e57ce16a61558537928bf4354eb7c37617368053",
+      "sha256": "b0821573af4876d8bff0c3a00eb97e23ebb576cab7c86aac3be324ee27313dd4",
       "parent_sha256": null
     },
     "tests/native_owner_runtime_tests.cpp": {
@@ -64,7 +64,7 @@
       "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
     },
     "tools/native_owner.cpp": {
-      "sha256": "c0390bfb11e49481affca7392f00a5ceb3e3270a6c0897586816a27873ad16d9",
+      "sha256": "9c44e1ce382b68a2af1e9b011d4a824a441cd20ed8b226fd05baedaae6c40ba5",
       "parent_sha256": null
     },
     "ui/calibration_panel.cs": {
@@ -84,7 +84,7 @@
       "parent_sha256": "e23377b993482bc784ce1689a0e4081886fa42dfb594e1250d23fc7264424f01"
     },
     "ui/installation_control.cs": {
-      "sha256": "a9de9fda0c04ee680d18c09820c0a47308b832cd5ca77b025419a9aed8659f2f",
+      "sha256": "c5ccabf9ecf9da05f0c5ab784df0afa52ad601df2e2a15a3c6a463f9d685dd65",
       "parent_sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a"
     },
     "ui/steamvr_control_gui_main.cs": {
@@ -92,7 +92,7 @@
       "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
     },
     "ui/steamvr_control_wpf.cs": {
-      "sha256": "a509b65759e707f721ffcdd2e46ffc97f65f58dc1dc8ff83fd3f62f23b4a2165",
+      "sha256": "2de7fc74fe033f23f0c0c49c7cbf875ccfefad589490c52638834200f2463454",
       "parent_sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4"
     }
   }

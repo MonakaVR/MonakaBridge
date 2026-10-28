@@ -100,12 +100,15 @@ def start(label,readonly=False):
     env['MONAKA_CALIBRATION_TEST_ROOT']=str(folder/'physical-fixture');env['MONAKA_CALIBRATION_TEST_MODE']='b4-static';env['MONAKA_CALIBRATION_TEST_MIRROR_PORT']=str(allocated[3])
     for key in ['LOCALAPPDATA','APPDATA','TEMP','TMP']:
         isolated=folder/key.lower();isolated.mkdir();env[key]=str(isolated)
-    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--language','ja' if label=='one' else 'en','--installation',str(profile)]+(['--read-only'] if readonly else []);child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
+    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--language','ja' if label=='one' else 'en','--installation',str(profile)]+(['--read-only'] if readonly else []);child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
     until(lambda:child.poll() is not None or not free(allocated[0]));assert child.poll() is None,(folder/'stderr.log').read_text(errors='replace');return child,config,allocated,args
 status='FAIL'
 try:
     first,config,pp,args=start('one');second,other,qq,_=start('two');firstChildren=children(first.pid);secondChildren=children(second.pid);record('initial_process_tree',first=first.pid,first_children=firstChildren,second=second.pid,second_children=secondChildren);assert firstChildren==[] and secondChildren==[];record('PASS_single_native_resident_per_installation',first=first.pid,second=second.pid)
     assert 'RUNNING' in command(config,'Start');assert children(first.pid)==[]
+    for quietArgs in [args,args+['--tray-only']]:
+        quiet=subprocess.run(quietArgs,capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert quiet.returncode==0 and b'OWNER_READY' in quiet.stdout;assert children(first.pid)==[]
+    record('PASS_default_and_explicit_tray_only_duplicate_do_not_open_GUI')
     reject_aliases(config,args);record('PASS_valid_mixed_and_uppercase_profile_SHA256')
     assert 'STOPPED' in command(config,'Stop');assert free(pp[0]) and not free(qq[0]) and first.poll() is None and second.poll() is None;record('PASS_stop_release_peer_preservation')
     assert command(config,'Status').startswith('OK STOPPED');record('PASS_current_tray_status_after_IPC_stop')
@@ -115,7 +118,7 @@ try:
     command(config,'Bogus',ok=False);absent=out/'unowned.json';absent.write_bytes(config.read_bytes());command(absent,'Stop',ok=False);assert not free(pp[0]);record('PASS_invalid_and_unowned_target_fail_closed')
     standalone=subprocess.run([str(gui),'--native-owner-window','--control-window-only','--config',str(config),'--read-only'],capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert standalone.returncode==1;record('PASS_native_GUI_without_owner_handshake_refused')
     command(config,'Open');guiChildren,guiHandle=retained_gui(first);initialGui=guiChildren[0]['pid'];time.sleep(1)
-    duplicate=subprocess.run(args,capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert duplicate.returncode==0,duplicate.stderr;time.sleep(.25);assert children(first.pid)==guiChildren;record('PASS_duplicate_launch_reopens_same_owned_WPF',gui_pid=initialGui)
+    duplicate=subprocess.run(args+['--open'],capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert duplicate.returncode==0,duplicate.stderr;time.sleep(.25);assert children(first.pid)==guiChildren;record('PASS_explicit_open_duplicate_reopens_same_owned_WPF',gui_pid=initialGui)
     command(config,'Close');until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);until(lambda:children(first.pid)==[]);assert first.poll() is None and not free(pp[0]);record('PASS_owned_WPF_graceful_close_keeps_runtime')
     command(config,'Open');_,guiHandle=retained_gui(first);assert k.TerminateProcess(guiHandle,82);until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert first.poll() is None and not free(pp[0]);record('PASS_owned_GUI_crash_keeps_native_runtime')
     command(config,'Open');_,guiHandle=retained_gui(first);time.sleep(.5)

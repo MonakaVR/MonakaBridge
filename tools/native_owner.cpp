@@ -185,7 +185,7 @@ int nativeOwner(int,char**){
  }
  auto name=L"Local\\MonakaBridge_ServiceTray_"+wide(scope(config));Handle singleton(CreateMutexW(nullptr,TRUE,name.c_str()));need(singleton.value!=nullptr,"Installation mutex unavailable");bool owns=GetLastError()!=ERROR_ALREADY_EXISTS;
  if(!owns){auto wait=WaitForSingleObject(singleton.value,0);owns=wait==WAIT_OBJECT_0||wait==WAIT_ABANDONED;}
- if(!owns){auto result=request(config,4);std::cout<<result<<std::endl;need(result.rfind("OK ",0)==0,"Existing owner did not accept reopen");return 0;}
+ if(!owns){auto result=request(config,trayOnly?6:4);std::cout<<result<<std::endl;need(result.rfind("OK ",0)==0,"Existing owner did not accept request");return 0;}
  try{int result;{Owner owner(config,gui,helper,ports,readOnly,profile,japanese);result=owner.run(trayOnly);}ReleaseMutex(singleton.value);return result;}catch(...){ReleaseMutex(singleton.value);throw;}
 }
 int nativeOwnerCommand(int,char**){auto args=arguments();need(args.size()==4,"Usage: --owner-command CONFIG Start|Stop|Restart|Open|Exit|Probe|Close|Status");const std::vector<std::wstring> names={L"Start",L"Stop",L"Restart",L"Open",L"Exit",L"Probe",L"Close",L"Status"};auto found=std::find(names.begin(),names.end(),args[3]);need(found!=names.end(),"Unknown owner command");auto result=request(fs::canonical(args[2]),static_cast<unsigned char>(found-names.begin()+1));std::cout<<result<<std::endl;return result.rfind("OK ",0)==0?0:2;}
