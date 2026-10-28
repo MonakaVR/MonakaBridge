@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include "monaka_bridge/service_runtime.hpp"
+#include "monaka_bridge/native_owner_runtime.hpp"
 #include "monaka_bridge/service_lifecycle.hpp"
 #include <windows.h>
 #include <shellapi.h>
@@ -18,7 +19,7 @@
 namespace mb { namespace {
 using Handle=pc_service_lifecycle::Handle;
 namespace fs=std::filesystem;
-constexpr UINT OpenMessage=WM_APP+41,ExitMessage=WM_APP+42,TrayMessage=WM_APP+43,CloseMessage=WM_APP+44;
+constexpr UINT OpenMessage=WM_APP+41,ExitMessage=WM_APP+42,TrayMessage=WM_APP+43,CloseMessage=WM_APP+44,StatusMessage=WM_APP+45;
 void need(bool value,const char* reason){if(!value)throw std::runtime_error(reason);}
 void detachConsole(){
  // Detach only our console. Preserve redirected diagnostic handles before
@@ -42,6 +43,7 @@ std::string hash(const std::string& bytes){
  const char* alphabet="0123456789abcdef";std::string out;for(auto c:value){out+=alphabet[c>>4];out+=alphabet[c&15];}return out;
 }
 std::string fileHash(const fs::path& path){need(fs::is_regular_file(path)&&fs::file_size(path)<128*1024*1024,"Invalid executable pin");std::ifstream file(path,std::ios::binary);need(bool(file),"Executable read denied");std::ostringstream bytes;bytes<<file.rdbuf();return hash(bytes.str());}
+std::string normalizedHash(std::string value){need(value.size()==64,"Invalid SHA256 length");for(auto& c:value){need((c>='0'&&c<='9')||(c>='a'&&c<='f')||(c>='A'&&c<='F'),"Invalid SHA256 hexadecimal digit");if(c>='A'&&c<='F')c=static_cast<char>(c-'A'+'a');}return value;}
 std::wstring executable(HANDLE process){std::wstring path(32768,L'\0');DWORD size=static_cast<DWORD>(path.size());need(QueryFullProcessImageNameW(process,0,path.data(),&size)!=0,"Executable identity unavailable");path.resize(size);return path;}
 std::string scope(const fs::path& config){
  auto name=fs::absolute(config).lexically_normal().wstring();int size=LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_UPPERCASE,name.data(),static_cast<int>(name.size()),nullptr,0,nullptr,nullptr,0);need(size>0,"Configuration identity unavailable");std::wstring upper(size,L'\0');need(LCMapStringEx(LOCALE_NAME_INVARIANT,LCMAP_UPPERCASE,name.data(),static_cast<int>(name.size()),upper.data(),size,nullptr,nullptr,0)>0,"Configuration identity unavailable");return hash(utf8(upper));
@@ -71,25 +73,7 @@ std::string request(const fs::path& config,unsigned char op){
  std::array<char,66> message{};message[0]=1;message[1]=static_cast<char>(op);std::copy(key.begin(),key.end(),message.begin()+2);need(transfer(pipe.value,message.data(),66,true,nullptr,12000),"Request not confirmed");DWORD length=0;need(transfer(pipe.value,&length,4,false,nullptr,12000)&&length&&length<=4096,"Owner response unconfirmed");std::string result(length,'\0');need(transfer(pipe.value,result.data(),length,false,nullptr,12000),"Owner response incomplete");unsigned char ack=1;need(transfer(pipe.value,&ack,1,true,nullptr,2000),"Owner acknowledgement unconfirmed");return result;
 }
 
-class Runtime {
- fs::path config_;std::uint16_t ports_[4];std::thread thread_;std::atomic_bool stop_{false};
- std::mutex operation_,state_;std::condition_variable changed_;bool running_=false,done_=true;std::string fault_;
- void stopOwned(){
-  stop_=true;std::unique_lock<std::mutex> lock(state_);
-  need(changed_.wait_for(lock,std::chrono::seconds(5),[&]{return done_;}),"Runtime stop unconfirmed; owner retained");lock.unlock();if(thread_.joinable())thread_.join();
- }
- void startOwned(){
-  {std::lock_guard<std::mutex> lock(state_);if(running_)return;need(done_,"Prior runtime has not exited; no replacement");}
-  if(thread_.joinable())thread_.join();stop_=false;{std::lock_guard<std::mutex> lock(state_);done_=false;fault_.clear();}
-  thread_=std::thread([this]{try{runService(config_,ports_,0,[&]{return stop_.load();},[&]{std::lock_guard<std::mutex> lock(state_);running_=true;changed_.notify_all();});}catch(const std::exception& e){std::lock_guard<std::mutex> lock(state_);fault_=e.what();}{std::lock_guard<std::mutex> lock(state_);running_=false;done_=true;}changed_.notify_all();});
-  std::unique_lock<std::mutex> lock(state_);need(changed_.wait_for(lock,std::chrono::seconds(5),[&]{return running_||done_;}),"Runtime start unconfirmed; owner retained");if(!running_)throw std::runtime_error("Runtime failed: "+fault_);
- }
-public:
- Runtime(fs::path config,const std::uint16_t (&ports)[4]):config_(std::move(config)){std::copy(ports,ports+4,ports_);}
- ~Runtime(){stop_=true;if(thread_.joinable())thread_.join();}
- std::string command(unsigned char op){std::lock_guard<std::mutex> operation(operation_);need(op>=1&&op<=3,"Unknown runtime operation");if(op!=1)stopOwned();if(op!=2)startOwned();return op==2?"STOPPED: native worker exit and sockets released":"RUNNING: native worker ready; tracking/output not verified";}
- bool stopped(){std::lock_guard<std::mutex> lock(state_);return done_;}
-};
+using Runtime=mb::native_owner::Runtime;
 
 class Owner {
  fs::path config_,gui_,helper_,profile_;std::string key_,guiHash_,helperHash_,selfHash_,profileHash_;std::wstring self_,pipeName_;Runtime runtime_;
@@ -104,19 +88,24 @@ class Owner {
   if(message==WM_TIMER)return 0;
   if(message==owner->taskbar_&&owner->taskbar_){owner->addIcon();return 0;}
   try{
+   if(message==StatusMessage){owner->notifyState();return 0;}
    if(message==OpenMessage){owner->openGui();return 0;}
    if(message==CloseMessage){owner->closeGui();return 0;}
    if(message==ExitMessage||message==WM_CLOSE){owner->exit();return 0;}
    if(message==TrayMessage){if(l==WM_LBUTTONDBLCLK)owner->openGui();else if(l==WM_RBUTTONUP||l==WM_CONTEXTMENU)owner->menu();return 0;}
-   if(message==WM_COMMAND){auto id=LOWORD(w);if(id==4)owner->openGui();else if(id==5)owner->exit();else if(id>=1&&id<=3)owner->note(owner->runtimeCommand(static_cast<unsigned char>(id)));return 0;}
+   if(message==WM_COMMAND){auto id=LOWORD(w);if(id==4)owner->openGui();else if(id==5)owner->exit();else if(id>=1&&id<=3)owner->runtimeCommand(static_cast<unsigned char>(id));return 0;}
   }catch(const std::exception& e){owner->note(std::string("UNCONFIRMED: ")+e.what());}
   return DefWindowProcW(window,message,w,l);
  }
- std::string runtimeCommand(unsigned char op){std::lock_guard<std::mutex> lock(runtimeGate_);need(!exiting_,"Native owner exit has started");return runtime_.command(op);}
+ std::string runtimeCommand(unsigned char op,bool internal=false){std::lock_guard<std::mutex> lock(runtimeGate_);try{need(!exiting_,"Native owner exit has started");need(internal||!readOnly_,"Read-only installation: runtime commands refused");auto result=runtime_.command(op);note(result);return result;}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());throw;}}
+ std::string status(){auto current=runtime_.snapshot();std::lock_guard<std::mutex> lock(diagnosticLock_);return diagnostic_.rfind("UNCONFIRMED",0)==0?current+"; last request: "+diagnostic_:current;}
  void note(const std::string& text){
-  {std::lock_guard<std::mutex> lock(diagnosticLock_);diagnostic_=text;}std::cout<<nlohmann::json{{"event","native_owner"},{"state",text},{"pid",GetCurrentProcessId()}}.dump()<<std::endl;
-  if(window_){auto label=wide(text);wcsncpy_s(icon_.szInfo,label.c_str(),_TRUNCATE);wcscpy_s(icon_.szInfoTitle,L"Monaka Bridge");icon_.uFlags=NIF_INFO;Shell_NotifyIconW(NIM_MODIFY,&icon_);}
+  {std::lock_guard<std::mutex> lock(diagnosticLock_);diagnostic_=text;std::cout<<nlohmann::json{{"event","native_owner"},{"state",text},{"pid",GetCurrentProcessId()}}.dump()<<std::endl;}
+  // IPC/runtime threads publish data only. All NOTIFYICONDATA and shell icon
+  // mutation stays on the owning window thread, including failure messages.
+  if(window_)PostMessageW(window_,StatusMessage,0,0);
  }
+ void notifyState(){auto label=wide(status());wcsncpy_s(icon_.szInfo,label.c_str(),_TRUNCATE);wcscpy_s(icon_.szInfoTitle,L"Monaka Bridge");icon_.uFlags=NIF_INFO;Shell_NotifyIconW(NIM_MODIFY,&icon_);}
  void addIcon(){icon_.cbSize=sizeof(icon_);icon_.hWnd=window_;icon_.uID=1;icon_.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;icon_.uCallbackMessage=TrayMessage;icon_.hIcon=LoadIconW(nullptr,MAKEINTRESOURCEW(32512));wcscpy_s(icon_.szTip,L"Monaka Bridge native owner");iconAdded_=Shell_NotifyIconW(NIM_ADD,&icon_)!=FALSE;}
  DWORD jobCount(){if(!job_.value)return 0;JOBOBJECT_BASIC_ACCOUNTING_INFORMATION info{};need(QueryInformationJobObject(job_.value,JobObjectBasicAccountingInformation,&info,sizeof(info),nullptr)!=0,"GUI Job ownership unavailable");return info.ActiveProcesses;}
  static BOOL CALLBACK closeWindow(HWND window,LPARAM parameter){DWORD id=0;GetWindowThreadProcessId(window,&id);if(id==static_cast<DWORD>(parameter))PostMessageW(window,WM_CLOSE,0,0);return TRUE;}
@@ -142,7 +131,7 @@ class Owner {
   if(!AssignProcessToJobObject(job_.value,guiProcess_.value)){need(TerminateProcess(guiProcess_.value,2)&&WaitForSingleObject(guiProcess_.value,5000)==WAIT_OBJECT_0,"Suspended GUI cleanup unconfirmed; retained process handle");releaseGui();throw std::runtime_error("Suspended GUI could not enter owned Job");}
   need(ResumeThread(thread.value)!=static_cast<DWORD>(-1),"Owned GUI resume failed; owner retained");
  }
- void menu(){HMENU menu=CreatePopupMenu();need(menu!=nullptr,"Tray menu unavailable");std::string state;{std::lock_guard<std::mutex> lock(diagnosticLock_);state=diagnostic_;}AppendMenuW(menu,MF_STRING|MF_GRAYED,0,wide(state).c_str());AppendMenuW(menu,MF_STRING,4,L"Open Bridge Control...");AppendMenuW(menu,MF_STRING,1,L"Start Bridge");AppendMenuW(menu,MF_STRING,2,L"Stop Bridge");AppendMenuW(menu,MF_STRING,3,L"Restart Bridge");AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING,5,L"Exit");POINT at{};GetCursorPos(&at);SetForegroundWindow(window_);TrackPopupMenu(menu,TPM_RIGHTBUTTON,at.x,at.y,0,window_,nullptr);DestroyMenu(menu);}
+ void menu(){HMENU menu=CreatePopupMenu();need(menu!=nullptr,"Tray menu unavailable");AppendMenuW(menu,MF_STRING|MF_GRAYED,0,wide(status()).c_str());AppendMenuW(menu,MF_STRING,4,L"Open Bridge Control...");UINT permission=MF_STRING|(readOnly_?MF_GRAYED:0);AppendMenuW(menu,permission,1,L"Start Bridge");AppendMenuW(menu,permission,2,L"Stop Bridge");AppendMenuW(menu,permission,3,L"Restart Bridge");AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING,5,L"Exit");POINT at{};GetCursorPos(&at);SetForegroundWindow(window_);TrackPopupMenu(menu,TPM_RIGHTBUTTON,at.x,at.y,0,window_,nullptr);DestroyMenu(menu);}
  void exit(){
   if(exiting_.exchange(true))return;
   try{closeGui();heartbeat_=GetTickCount64();{std::lock_guard<std::mutex> lock(runtimeGate_);note(runtime_.command(2));}heartbeat_=GetTickCount64();SetEvent(cancel_.value);PostQuitMessage(0);}
@@ -158,14 +147,14 @@ class Owner {
    if(!ready)continue;
    std::array<char,66> incoming{};if(!transfer(pipe.value,incoming.data(),66,false,cancel_.value,3000)){DisconnectNamedPipe(pipe.value);continue;}
    std::string result;UINT requested=0;
-   try{need(incoming[0]==1&&std::string(incoming.data()+2,64)==key_,"Owner target/version mismatch");auto op=static_cast<unsigned char>(incoming[1]);if(op==4){requested=OpenMessage;result="OPEN_REQUESTED";}else if(op==5){requested=ExitMessage;result="EXIT_REQUESTED";}else if(op==6){need(!exiting_,"Native owner exit has started");result="OWNER_READY";}else if(op==7){requested=CloseMessage;result="CLOSE_REQUESTED";}else result=runtimeCommand(op);result="OK "+result;}
-   catch(const std::exception& e){result=std::string("UNCONFIRMED ")+e.what();}
+   try{need(incoming[0]==1&&std::string(incoming.data()+2,64)==key_,"Owner target/version mismatch");auto op=static_cast<unsigned char>(incoming[1]);if(op==4){requested=OpenMessage;result="OPEN_REQUESTED";}else if(op==5){requested=ExitMessage;result="EXIT_REQUESTED";}else if(op==6){need(!exiting_,"Native owner exit has started");result="OWNER_READY";}else if(op==7){requested=CloseMessage;result="CLOSE_REQUESTED";}else if(op==8)result=status();else result=runtimeCommand(op);result="OK "+result;}
+   catch(const std::exception& e){result=std::string("UNCONFIRMED ")+e.what();note(result);}
    if(result.size()>4096)result="UNCONFIRMED Diagnostic exceeds bound";DWORD length=static_cast<DWORD>(result.size());unsigned char ack=0;bool sent=transfer(pipe.value,&length,4,true,cancel_.value,3000)&&transfer(pipe.value,result.data(),length,true,cancel_.value,3000)&&transfer(pipe.value,&ack,1,false,cancel_.value,2000)&&ack==1;DisconnectNamedPipe(pipe.value);if(sent&&requested)PostMessageW(window_,requested,0,0);
   }}catch(const std::exception& e){note(std::string("UNCONFIRMED owner IPC: ")+e.what());}
  }
 public:
- Owner(fs::path config,fs::path gui,fs::path helper,const std::uint16_t (&ports)[4],bool readOnly,fs::path profile):config_(std::move(config)),gui_(std::move(gui)),helper_(std::move(helper)),profile_(std::move(profile)),key_(scope(config_)),guiHash_(fileHash(gui_)),helperHash_(fileHash(helper_)),self_(executable(GetCurrentProcess())),runtime_(config_,ports),readOnly_(readOnly){if(!profile_.empty())profileHash_=fileHash(profile_);selfHash_=fileHash(self_);auto nonce=uuid();nonce.erase(std::remove(nonce.begin(),nonce.end(),'-'),nonce.end());pipeName_=L"MonakaBridgeOwnerV1_"+wide(nonce);cancel_.value=CreateEventW(nullptr,TRUE,FALSE,nullptr);need(cancel_.value!=nullptr,"Native owner stop event unavailable");}
- ~Owner(){SetEvent(cancel_.value);if(watchdog_.joinable())watchdog_.join();if(pipeWorker_.joinable())pipeWorker_.join();if(iconAdded_)Shell_NotifyIconW(NIM_DELETE,&icon_);if(view_)UnmapViewOfFile(view_);if(window_)DestroyWindow(window_);}
+ Owner(fs::path config,fs::path gui,fs::path helper,const std::uint16_t (&ports)[4],bool readOnly,fs::path profile):config_(std::move(config)),gui_(std::move(gui)),helper_(std::move(helper)),profile_(std::move(profile)),key_(scope(config_)),guiHash_(fileHash(gui_)),helperHash_(fileHash(helper_)),self_(executable(GetCurrentProcess())),runtime_([this,values=std::array<std::uint16_t,4>{ports[0],ports[1],ports[2],ports[3]}](const auto& stop,const auto& ready){const std::uint16_t copied[4]={values[0],values[1],values[2],values[3]};runService(config_,copied,0,stop,ready);},[this]{if(window_)PostMessageW(window_,StatusMessage,0,0);}),readOnly_(readOnly){if(!profile_.empty())profileHash_=fileHash(profile_);selfHash_=fileHash(self_);auto nonce=uuid();nonce.erase(std::remove(nonce.begin(),nonce.end(),'-'),nonce.end());pipeName_=L"MonakaBridgeOwnerV1_"+wide(nonce);cancel_.value=CreateEventW(nullptr,TRUE,FALSE,nullptr);need(cancel_.value!=nullptr,"Native owner stop event unavailable");}
+ ~Owner(){exiting_=true;{std::lock_guard<std::mutex> lock(runtimeGate_);runtime_.finish();}SetEvent(cancel_.value);if(watchdog_.joinable())watchdog_.join();if(pipeWorker_.joinable())pipeWorker_.join();if(iconAdded_)Shell_NotifyIconW(NIM_DELETE,&icon_);if(view_)UnmapViewOfFile(view_);if(window_)DestroyWindow(window_);}
  int run(bool trayOnly){
   WNDCLASSW type{};type.lpfnWndProc=Window;type.hInstance=GetModuleHandleW(nullptr);type.lpszClassName=L"MonakaBridgeNativeOwnerV1";need(RegisterClassW(&type)!=0||GetLastError()==ERROR_CLASS_ALREADY_EXISTS,"Native owner window class unavailable");
   taskbar_=RegisterWindowMessageW(L"TaskbarCreated");need(CreateWindowExW(0,type.lpszClassName,wide(key_).c_str(),WS_OVERLAPPED,0,0,0,0,nullptr,nullptr,type.hInstance,this)!=nullptr,"Native owner window unavailable");addIcon();need(iconAdded_,"Native tray icon unavailable");
@@ -173,7 +162,7 @@ public:
   Identity record{};record.state.magic=pc_service_lifecycle::kMagic;record.state.version=1;record.state.generation=1;record.state.pid=record.state.ownerPid=GetCurrentProcessId();record.state.created=record.state.ownerCreated=pc_service_lifecycle::Creation(GetCurrentProcess());record.state.ready=1;wcscpy_s(record.pipe,pipeName_.c_str());std::memcpy(view_,&record,sizeof(record));MemoryBarrier();view_->state.generation=2;
   heartbeat_=GetTickCount64();need(SetTimer(window_,1,1000,nullptr)!=0,"Native owner heartbeat unavailable");
   watchdog_=std::thread([this]{while(WaitForSingleObject(cancel_.value,250)==WAIT_TIMEOUT)if(GetTickCount64()-heartbeat_.load()>15000){std::cerr<<"Native tray message loop unresponsive; terminating this owner and its Job"<<std::endl;TerminateProcess(GetCurrentProcess(),71);return;}});
-  pipeWorker_=std::thread(&Owner::serve,this);try{note(runtimeCommand(1));}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());}if(!trayOnly)try{openGui();}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());}
+  pipeWorker_=std::thread(&Owner::serve,this);try{runtimeCommand(1,true);}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());}if(!trayOnly)try{openGui();}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());}
   MSG message{};BOOL next;while((next=GetMessageW(&message,nullptr,0,0))>0){TranslateMessage(&message);DispatchMessageW(&message);}need(next==0,"Native owner message loop failed");return 0;
  }
 };
@@ -181,21 +170,21 @@ public:
 int nativeOwner(int,char**){
  detachConsole();
  auto args=arguments();need(args.size()>=9&&args.size()<=13,"Usage: --native-owner CONFIG GUI CONFIG_HELPER INGRESS MONAKA DIRECT MIRROR [--open] [--read-only] [--installation PROFILE]");
- fs::path config=args[2],gui=args[3],helper=args[4];need(config.is_absolute()&&gui.is_absolute()&&helper.is_absolute(),"Native owner requires explicit absolute paths");config=fs::canonical(config);gui=fs::canonical(gui);helper=fs::canonical(helper);loadConfig(config);
+ fs::path config=args[2],gui=args[3],helper=args[4];need(config.is_absolute()&&gui.is_absolute()&&helper.is_absolute(),"Native owner requires explicit absolute paths");auto originalConfig=config;config=fs::canonical(config);need(scope(originalConfig)==scope(config),"Native owner configuration path alias refused");gui=fs::canonical(gui);helper=fs::canonical(helper);loadConfig(config);
  {Handle file(CreateFileW(config.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr));BY_HANDLE_FILE_INFORMATION info{};need(file.value!=INVALID_HANDLE_VALUE&&GetFileInformationByHandle(file.value,&info)&&info.nNumberOfLinks==1&&!(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT),"Native owner configuration alias refused");}
  std::uint16_t ports[4];for(int i=0;i<4;i++){size_t used=0;auto number=std::stoul(args[i+5],&used);need(used==args[i+5].size()&&number>0&&number<=65535,"Invalid explicit runtime port");ports[i]=static_cast<std::uint16_t>(number);}
- bool trayOnly=true,readOnly=false,selected=false;fs::path profile;for(size_t i=9;i<args.size();i++){if((args[i]==L"--tray-only"||args[i]==L"--open")&&!selected){trayOnly=args[i]==L"--tray-only";selected=true;}else if(args[i]==L"--read-only"&&!readOnly)readOnly=true;else if(args[i]==L"--installation"&&profile.empty()&&i+1<args.size()){profile=args[++i];need(profile.is_absolute(),"Installation profile must be absolute");profile=fs::canonical(profile);}else throw std::invalid_argument("Unknown/duplicate native owner option");}
+ bool trayOnly=true,readOnly=false,selected=false;fs::path profile;for(size_t i=9;i<args.size();i++){if((args[i]==L"--tray-only"||args[i]==L"--open")&&!selected){trayOnly=args[i]==L"--tray-only";selected=true;}else if(args[i]==L"--read-only"&&!readOnly)readOnly=true;else if(args[i]==L"--installation"&&profile.empty()&&i+1<args.size()){profile=args[++i];need(profile.is_absolute(),"Installation profile must be absolute");auto originalProfile=profile;profile=fs::canonical(profile);need(scope(originalProfile)==scope(profile),"Native owner profile path alias refused");}else throw std::invalid_argument("Unknown/duplicate native owner option");}
  if(!profile.empty()){
   need(fs::file_size(profile)<=65536,"Installation profile exceeds bound");std::ifstream input(profile);nlohmann::json value;input>>value;need(value.at("schema")=="monaka.bridge.installation.v2","Native owner requires a version2 calibration installation profile");
   auto resolve=[&](const char* key){auto path=fs::u8path(value.at(key).get<std::string>());return fs::absolute(path.is_absolute()?path:profile.parent_path()/path).lexically_normal();};
-  need(fs::equivalent(resolve("config"),config)&&fs::equivalent(resolve("config_helper"),helper)&&scope(resolve("health"))==scope(fs::path(config.wstring()+L".status.json")),"Profile targets do not match this native installation");
-  need(value.at("helper_sha256")==fileHash(helper)&&value.at("mirror_port").get<unsigned>()==ports[3],"Profile helper/mirror differs from native runtime");readOnly=readOnly||value.at("read_only").get<bool>();
+  need(scope(resolve("config"))==scope(config)&&fs::equivalent(resolve("config"),config)&&fs::equivalent(resolve("config_helper"),helper)&&scope(resolve("health"))==scope(fs::path(config.wstring()+L".status.json")),"Profile targets do not match this native installation or use an alias");
+  need(normalizedHash(value.at("helper_sha256").get<std::string>())==fileHash(helper)&&value.at("mirror_port").get<unsigned>()==ports[3],"Profile helper/mirror differs from native runtime");readOnly=readOnly||value.at("read_only").get<bool>();
  }
  auto name=L"Local\\MonakaBridge_ServiceTray_"+wide(scope(config));Handle singleton(CreateMutexW(nullptr,TRUE,name.c_str()));need(singleton.value!=nullptr,"Installation mutex unavailable");bool owns=GetLastError()!=ERROR_ALREADY_EXISTS;
  if(!owns){auto wait=WaitForSingleObject(singleton.value,0);owns=wait==WAIT_OBJECT_0||wait==WAIT_ABANDONED;}
  if(!owns){auto result=request(config,4);std::cout<<result<<std::endl;need(result.rfind("OK ",0)==0,"Existing owner did not accept reopen");return 0;}
  try{int result;{Owner owner(config,gui,helper,ports,readOnly,profile);result=owner.run(trayOnly);}ReleaseMutex(singleton.value);return result;}catch(...){ReleaseMutex(singleton.value);throw;}
 }
-int nativeOwnerCommand(int,char**){auto args=arguments();need(args.size()==4,"Usage: --owner-command CONFIG Start|Stop|Restart|Open|Exit|Probe|Close");const std::vector<std::wstring> names={L"Start",L"Stop",L"Restart",L"Open",L"Exit",L"Probe",L"Close"};auto found=std::find(names.begin(),names.end(),args[3]);need(found!=names.end(),"Unknown owner command");auto result=request(fs::canonical(args[2]),static_cast<unsigned char>(found-names.begin()+1));std::cout<<result<<std::endl;return result.rfind("OK ",0)==0?0:2;}
+int nativeOwnerCommand(int,char**){auto args=arguments();need(args.size()==4,"Usage: --owner-command CONFIG Start|Stop|Restart|Open|Exit|Probe|Close|Status");const std::vector<std::wstring> names={L"Start",L"Stop",L"Restart",L"Open",L"Exit",L"Probe",L"Close",L"Status"};auto found=std::find(names.begin(),names.end(),args[3]);need(found!=names.end(),"Unknown owner command");auto result=request(fs::canonical(args[2]),static_cast<unsigned char>(found-names.begin()+1));std::cout<<result<<std::endl;return result.rfind("OK ",0)==0?0:2;}
 }
 #endif

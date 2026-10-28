@@ -17,8 +17,12 @@ internal static class NativeOwnerClientTests {
   Check(readOnly.RetainMatchingOwner(options).ReadOnly,"Profile selection escalated readonly owner");
   bool foreign=false;try{options.RetainMatchingOwner(GuiLaunchOptions.Parse(new[]{"--config",config+".foreign","--read-only"},null));}catch(InvalidOperationException){foreign=true;}Check(foreign,"Native GUI accepted foreign installation selection");
   Check(options.ServiceCommand("Stop").StartsWith("STOPPED"),"Native Stop not confirmed");
+  Check(BridgeOwnerChannel.Request(options,"Status").StartsWith("STOPPED"),"WPF IPC Stop left stale tray state");
   Check(options.ServiceCommand("Start").StartsWith("RUNNING"),"Native Start not confirmed");
   Check(options.ServiceCommand("Restart").StartsWith("RUNNING"),"Native Restart not confirmed");
+  Check(BridgeOwnerChannel.Request(options,"Status").StartsWith("RUNNING"),"WPF IPC Restart omitted tray state");
+  var bad=GuiLaunchOptions.Parse(new[]{"--config",config+".foreign","--allow-write","--owner-pipe",pipe,"--owner-identity",identity.Pid+":"+identity.Created,"--owner-executable",owner,"--owner-sha256",Control.Hash(owner)},null);
+  bool mismatch=false;try{bad.ServiceCommand("Stop");}catch(IOException){mismatch=true;}Check(mismatch,"Foreign IPC target accepted");Check(BridgeOwnerChannel.Request(options,"Status").Contains("UNCONFIRMED"),"Failed IPC command omitted tray diagnostic");options.ServiceCommand("Start");
   options.OwnerSha256=new string('0',64);bool refused=false;try{options.ServiceCommand("Stop");}catch(IOException e){refused=e.Message.Contains("identity changed");}Check(refused,"Wrong native owner hash accepted");
   Console.WriteLine("PASS actual WPF product owner client -> native parent pipe; Stop/Start/Restart and wrong build hash refusal");return 0;
  }catch(Exception e){Console.WriteLine(e);return 1;}}

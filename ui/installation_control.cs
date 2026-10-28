@@ -71,7 +71,7 @@ namespace MonakaBridge {
     pipe.Connect(2000);uint server;
     if(!GetNamedPipeServerProcessId(pipe.SafePipeHandle,out server)||server!=(uint)owner.Id)throw new IOException("Owner pipe belongs to another process");
     using(var timeout=new Timer(delegate{try{pipe.Dispose();}catch{}},null,12000,Timeout.Infinite)){
-     byte opcode=operation=="Start"?(byte)1:operation=="Stop"?(byte)2:operation=="Restart"?(byte)3:operation=="Probe"?(byte)6:(byte)0;
+     byte opcode=operation=="Start"?(byte)1:operation=="Stop"?(byte)2:operation=="Restart"?(byte)3:operation=="Probe"?(byte)6:operation=="Status"?(byte)8:(byte)0;
      if(opcode==0)throw new ArgumentException("Unsupported service command");
      byte[] request=new byte[66];request[0]=1;request[1]=opcode;Encoding.ASCII.GetBytes(Scope(options.ConfigFile,"")).CopyTo(request,2);pipe.Write(request,0,request.Length);pipe.Flush();
      var reader=new BinaryReader(pipe,Encoding.UTF8);int length=reader.ReadInt32();if(length<1||length>4096)throw new IOException("Owner response length invalid");

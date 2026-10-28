@@ -45,6 +45,16 @@ a graceful exit confirmation. Explorer restart handling does not restart or
 kill the runtime. The watchdog deadline exceeds bounded GUI-close/runtime-stop
 operations combined (Restart can wait up to ten seconds); acceptance must report any untested failure injection.
 
+The menu and `Status` command read the worker's current synchronized state,
+including post-ready failure, rather than a cached startup message. Worker and
+IPC threads publish a window message; only the window thread mutates the shell
+icon. Read-only policy is enforced by the native external-command boundary as
+well as by WPF/menu availability. Internal startup and owned Exit remain allowed.
+Native config/profile path aliases (including junctions) are explicitly refused
+before starting the runtime, keeping the C++/WPF installation identity identical.
+SHA256 pins accept validated upper/lower/mixed hexadecimal case; opaque IDs do
+not receive hash-specific normalization.
+
 `native_owner_process` exercises actual Windows processes, actual product WPF
 client code and real isolated loopback sockets. It is not physical HIL or visual
 UI acceptance. Historical immutable scope receipts stay intact; a new exact
