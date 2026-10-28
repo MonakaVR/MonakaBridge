@@ -11,6 +11,7 @@ namespace MonakaBridge
         [STAThread]
         private static int Main(string[] args)
         {
+            bool nativeWindow=Array.IndexOf(args,"--native-owner-window")>=0;
             try
             {
                 string serviceExecutable=null,ports=null,logs=null;bool trayOnly=false;
@@ -24,6 +25,7 @@ namespace MonakaBridge
                         var values=new List<string>();for(int k=0;k<4;k++){int port;if(!int.TryParse(args[++i],out port)||port<1||port>65535)throw new ArgumentException("Invalid runtime port");values.Add(port.ToString(System.Globalization.CultureInfo.InvariantCulture));}ports=string.Join(" ",values);
                     }else if(args[i]=="--runtime-logs") {if(logs!=null||++i==args.Length)throw new ArgumentException("Runtime log directory required");logs=GuiLaunchOptions.Absolute(args[i],"--runtime-logs");}
                     else if(args[i]=="--tray-only")trayOnly=true;
+                    else if(args[i]=="--native-owner-window"){}
                     else guiArguments.Add(args[i]);
                 }
                 var options = GuiLaunchOptions.Parse(guiArguments.ToArray(), ResolveDefaultRoot());
@@ -31,6 +33,7 @@ namespace MonakaBridge
                 if(ports!=null&&options.HealthFile!=options.ConfigFile+".status.json")throw new ArgumentException("Native runtime health must be CONFIG.status.json");
                 if (options.ControlWindowOnly)
                 {
+                    if(nativeWindow&&(options.OwnerExecutable==null||BridgeOwnerChannel.Request(options,"Probe")!="OWNER_READY"))throw new IOException("Native management GUI requires its owning Agent handshake");
                     SteamVrControlWpf.Run(options);
                     return 0;
                 }
@@ -56,6 +59,7 @@ namespace MonakaBridge
             }
             catch (Exception ex)
             {
+                if(nativeWindow){Console.Error.WriteLine(ex);return 1;}
                 MessageBox.Show(
                     ex.ToString(),
                     "Monaka Bridge",
