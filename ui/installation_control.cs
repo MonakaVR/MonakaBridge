@@ -182,6 +182,12 @@ namespace MonakaBridge {
    b.Append('\\',slashes*2);return b.Append('"').ToString();
   }
   internal string OwnerArguments(){return OwnerPipe==null?"":" --owner-pipe "+Quote(OwnerPipe)+" --owner-identity "+Quote(OwnerIdentity)+(OwnerExecutable==null?"":" --owner-executable "+Quote(OwnerExecutable)+" --owner-sha256 "+OwnerSha256);}
+  internal GuiLaunchOptions RetainMatchingOwner(GuiLaunchOptions next){
+   if(OwnerPipe==null)return next;
+   bool same=string.Equals(ConfigFile,next.ConfigFile,StringComparison.OrdinalIgnoreCase)&&string.Equals(HealthFile,next.HealthFile,StringComparison.OrdinalIgnoreCase)&&string.Equals(ConfigHelper,next.ConfigHelper,StringComparison.OrdinalIgnoreCase)&&string.Equals(HelperSha256,next.HelperSha256,StringComparison.OrdinalIgnoreCase);
+   if(!same){if(OwnerExecutable!=null)throw new InvalidOperationException("Selected profile targets another installation; open through its own Agent");return next;}
+   return new GuiLaunchOptions(next.Root,next.ConfigFile,next.HealthFile,next.ConfigHelper,next.HelperSha256,next.InstallationName,ReadOnly||next.ReadOnly,next.ControlWindowOnly,next.Calibration){OwnerPipe=OwnerPipe,OwnerIdentity=OwnerIdentity,OwnerExecutable=OwnerExecutable,OwnerSha256=OwnerSha256};
+  }
   internal string WindowArguments(){return WindowTargetArguments()+OwnerArguments();}
   string WindowTargetArguments(){if(Calibration!=null)return Quote(Root)+" --control-window-only --installation "+Quote(Calibration.ProfilePath)+" --profile-sha256 "+Calibration.ProfileSha256+(ReadOnly?" --read-only":" --allow-write");return Quote(Root)+" --control-window-only --installation-name "+Quote(InstallationName)+" --config "+Quote(ConfigFile)+" --health "+Quote(HealthFile)+" --config-helper "+Quote(ConfigHelper)+(HelperSha256==null?"":" --helper-sha256 "+HelperSha256)+(ReadOnly?" --read-only":" --allow-write");}
   internal string EditBlockReason(){

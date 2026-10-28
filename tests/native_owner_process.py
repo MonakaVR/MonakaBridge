@@ -2,9 +2,9 @@
 from pathlib import Path
 import argparse,ctypes,hashlib,json,os,socket,subprocess,time,uuid
 from ctypes import wintypes
-p=argparse.ArgumentParser();p.add_argument('--service',type=Path,required=True);p.add_argument('--gui',type=Path,required=True);p.add_argument('--helper',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--service',type=Path,required=True);p.add_argument('--gui',type=Path,required=True);p.add_argument('--helper',type=Path,required=True);p.add_argument('--calibrator',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args()
 out=a.out.resolve()/uuid.uuid4().hex;out.mkdir(parents=True);root=Path(__file__).resolve().parents[1]
-service=a.service.resolve();gui=a.gui.resolve();helper=a.helper.resolve();records=[];processes=[];streams=[]
+service=a.service.resolve();gui=a.gui.resolve();helper=a.helper.resolve();calibrator=a.calibrator.resolve();records=[];processes=[];streams=[]
 def record(name,**data):records.append(dict(name=name,**data));(out/'events.json').write_text(json.dumps(records,indent=2),encoding='utf-8')
 def ports():
     sockets=[]
@@ -79,10 +79,11 @@ def command(config,op,ok=True):
     return r.stdout.decode(errors='replace')
 def start(label):
     folder=out/label;folder.mkdir();config=folder/'configuration 日本語.json';document=json.loads((root/'config/bridge.example.json').read_text(encoding='utf-8-sig'));document.update(policy='disabled',bridge_id='native-owner-'+label,mapping_revision=10);config.write_text(json.dumps(document),encoding='utf-8');allocated=ports()
+    profile=folder/'installation.json';profile.write_text(json.dumps(dict(schema='monaka.bridge.installation.v2',name='R3 native owner '+label,config=str(config),health=str(config)+'.status.json',config_helper=str(helper),helper_sha256=hashlib.sha256(helper.read_bytes()).hexdigest(),read_only=False,calibration_helper=str(calibrator),calibration_helper_sha256=hashlib.sha256(calibrator.read_bytes()).hexdigest(),calibration_api=1,calibration_software_policy=1,calibration_gui_contract=1,bridge_id=document['bridge_id'],installation_path=str(folder),association='operator_declared_process_owner_unverified',single_bridge_no_relay=True,mirror_address='127.0.0.1',mirror_port=allocated[3],source='synthetic-source',device='synthetic-device',tracker='synthetic-tracker',input_space='synthetic-space',input_revision=1,reference_role='hmd')),encoding='utf-8')
     env=os.environ.copy()
     for key in ['LOCALAPPDATA','APPDATA','TEMP','TMP']:
         isolated=folder/key.lower();isolated.mkdir();env[key]=str(isolated)
-    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only'];child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
+    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--installation',str(profile)];child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
     until(lambda:child.poll() is not None or not free(allocated[0]));assert child.poll() is None,(folder/'stderr.log').read_text(errors='replace');return child,config,allocated,args
 status='FAIL'
 try:
@@ -90,7 +91,7 @@ try:
     assert 'RUNNING' in command(config,'Start');assert children(first.pid)==[]
     assert 'STOPPED' in command(config,'Stop');assert free(pp[0]) and not free(qq[0]) and first.poll() is None and second.poll() is None;record('PASS_stop_release_peer_preservation')
     assert 'RUNNING' in command(config,'Start');assert not free(pp[0]);assert 'RUNNING' in command(config,'Restart');record('PASS_restart_same_native_owner',pid=first.pid)
-    client=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'tests/run_native_owner_client.ps1'),'-Gui',str(gui),'-Service',str(service),'-Config',str(config),'-OutputDirectory',str(out/'managed-client')],capture_output=True,timeout=45,creationflags=subprocess.CREATE_NO_WINDOW)
+    client=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'tests/run_native_owner_client.ps1'),'-Gui',str(gui),'-Service',str(service),'-Config',str(config),'-Profile',str(config.parent/'installation.json'),'-OutputDirectory',str(out/'managed-client')],capture_output=True,timeout=45,creationflags=subprocess.CREATE_NO_WINDOW)
     record('product_WPF_client',exit=client.returncode,stdout=client.stdout.decode(errors='replace'),stderr=client.stderr.decode(errors='replace'));assert client.returncode==0,records[-1]
     command(config,'Bogus',ok=False);absent=out/'unowned.json';absent.write_bytes(config.read_bytes());command(absent,'Stop',ok=False);assert not free(pp[0]);record('PASS_invalid_and_unowned_target_fail_closed')
     standalone=subprocess.run([str(gui),'--native-owner-window','--control-window-only','--config',str(config),'--read-only'],capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert standalone.returncode==1;record('PASS_native_GUI_without_owner_handshake_refused')

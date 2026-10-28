@@ -4,11 +4,11 @@
   "purpose": "Existing runtime loop and native Win32 tray share one owner; exact current functional tests remain unprojected. Historical receipts unchanged.",
   "files": {
     "CMakeLists.txt": {
-      "sha256": "f75b44b1308df50909279619eb786ebee49afa4ed2164d6208e6ff1ed533a83f",
+      "sha256": "cd10a3f8ca2b15f1c0ca1c67ca08869c9a3b54d1d776e2684367f64e9ec282da",
       "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
     },
     "docs/native-owner.md": {
-      "sha256": "1b88f192a29e60d2bab9f6784ef72d0f2cfeb41af0876c623a73e7a40245b91b",
+      "sha256": "b42a16b73e4048f9063b2a5b0a442051c837a32ffeaaed9f4d1305f804923c60",
       "parent_sha256": null
     },
     "include/monaka_bridge/service_runtime.hpp": {
@@ -24,15 +24,15 @@
       "parent_sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470"
     },
     "tests/native_owner_client_tests.cs": {
-      "sha256": "6d27bddb5345a9e5a08d2a0c0c6a11ae4dc1f9cc64a77e9d724943f1ca4344d7",
+      "sha256": "3383382f86ee43e1a7ce64a3e4c5e275fe0db8553e0dbfb86d977fd861621233",
       "parent_sha256": null
     },
     "tests/native_owner_process.py": {
-      "sha256": "a184613107c494255375bfdd1268b78d984d058aff579e9ef29fdf76789863a5",
+      "sha256": "7348897234c32d83328787762b51e8f325023ebdf7fc1e254bc18fff2e11334a",
       "parent_sha256": null
     },
     "tests/native_owner_scope.py": {
-      "sha256": "b43ac6d1fa4282718e4b868bfa37fe8ea86327941a8e69646da5e03fc82b964f",
+      "sha256": "f3bb1383d0b771c9215737a6475e9505b5f6cdb03554b574d9bbe37019f0aa42",
       "parent_sha256": null
     },
     "tests/native_owner_scope_tests.py": {
@@ -40,7 +40,7 @@
       "parent_sha256": null
     },
     "tests/run_native_owner_client.ps1": {
-      "sha256": "86263f8622672c1322724feaaf4841e5716396f0848fb50351deea66407963b3",
+      "sha256": "390b55fe83266280777e0aff696bf384b0da343b6ad94f7c17b1167f30e4aa74",
       "parent_sha256": null
     },
     "tools/bridge_service.cpp": {
@@ -48,16 +48,20 @@
       "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
     },
     "tools/native_owner.cpp": {
-      "sha256": "537046a9b68cbe90dc009a68c45210e777e803c27bf740c8557eb973b5186609",
+      "sha256": "8df9910429f83e03713ef6f448877487c83b87a9bfb393a3eb600ac79b9d518e",
       "parent_sha256": null
     },
     "ui/installation_control.cs": {
-      "sha256": "8aad4839d873a4fa56171fdec616671247328a6fe1e9524e10ac08694ca9cc27",
+      "sha256": "4b33cbf0fad163586b6757eea9b06b615a972645d8466df35053391a4589c9d6",
       "parent_sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a"
     },
     "ui/steamvr_control_gui_main.cs": {
       "sha256": "e9af085e6dc78425eabf47eda18efbd79ba39e1e192fa28e28eb5b27c9f97b96",
       "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "6240c072f63b6940ee036f91ed9bd901eaf1f1eca0a82ce3985653bf6dc944c6",
+      "parent_sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4"
     }
   }
 }
