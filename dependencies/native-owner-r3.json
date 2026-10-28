@@ -24,7 +24,7 @@
       "parent_sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470"
     },
     "tests/native_owner_client_tests.cs": {
-      "sha256": "3383382f86ee43e1a7ce64a3e4c5e275fe0db8553e0dbfb86d977fd861621233",
+      "sha256": "5c50aaa95dfa469df55b32e9c2a7f8520c5bfe8232ae0da268098ad8ab7989e7",
       "parent_sha256": null
     },
     "tests/native_owner_process.py": {
@@ -60,7 +60,7 @@
       "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
     },
     "ui/steamvr_control_wpf.cs": {
-      "sha256": "6240c072f63b6940ee036f91ed9bd901eaf1f1eca0a82ce3985653bf6dc944c6",
+      "sha256": "f44d8886cd029b3c8c469c9ee768abcae6ffcaf73ac44745711d5fbe8bf758ba",
       "parent_sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4"
     }
   }

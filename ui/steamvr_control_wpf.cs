@@ -105,9 +105,8 @@ namespace MonakaBridge {
     SwitchInstallation(GuiLaunchOptions.Parse(new[]{"--installation",dialog.Created.ProfilePath,"--profile-sha256",dialog.Created.ProfileSha256},null));
    }
    async void SwitchInstallation(GuiLaunchOptions next){
-    next=options.RetainMatchingOwner(next);
     if(switching||closing)return;switching=true;RefreshAvailability();
-    try{await calibration.StopAsync();if(closed||closing)return;calibration.SetTarget(next);options=next;config=null;configBytes=null;map=null;healthAvailable=false;DiscoveryTargetChanged();observations.Clear();devices.Items.Clear();editor.Select(null,-1,RenderMapping);Reload();}
+    try{next=options.RetainMatchingOwner(next);await calibration.StopAsync();if(closed||closing)return;calibration.SetTarget(next);options=next;config=null;configBytes=null;map=null;healthAvailable=false;DiscoveryTargetChanged();observations.Clear();devices.Items.Clear();editor.Select(null,-1,RenderMapping);Reload();}
     catch(Exception e){if(!closed){needsReload=true;status.Text="Target change stopped: "+e.Message;}}
     finally{switching=false;if(!closed)RefreshAvailability();}
    }
