@@ -2,6 +2,7 @@
 from pathlib import Path
 from functools import lru_cache
 import hashlib, json, subprocess
+from tray_reopen_scope import approved as reopen_approved, project as reopen_project, project_text as reopen_text
 PARENT = '0c874d34d2f68b92c167a7b2e5025fb95ec367da'
 PIN = 'dependencies/lifecycle-serialization-baseline.json'
 FILES = {'ui/service_lifecycle_control.cs', 'tests/service_lifecycle_fixture.cs',
@@ -20,17 +21,19 @@ def git_bytes(repo, ref, name):
     return subprocess.check_output(['git', '--no-optional-locks', '-C', repo, 'show', ref + ':' + name])
 def approved(root, git_root=None):
     root = Path(root)
+    extra = reopen_approved(root, git_root)
     if not (root / PIN).exists(): return set()
     repo = repository(git_root or root); raw = (root / PIN).read_bytes(); pin = json.loads(raw)
     if digest(raw) != digest(git_bytes(repo, 'HEAD', PIN)): raise RuntimeError('Lifecycle receipt not committed')
     if pin['parent'] != PARENT or pin['authority'] != 'MONAKA-ORCH-HIL-SW-20261028-R1 / SA-01' or set(pin['files']) != FILES:
         raise RuntimeError('Lifecycle exact scope changed')
     for name, entry in pin['files'].items():
-        if digest((root / name).read_bytes()) != entry['sha256']: raise RuntimeError('Lifecycle source drift: ' + name)
+        if digest(reopen_project(root, name, (root / name).read_bytes(), git_root)) != entry['sha256']: raise RuntimeError('Lifecycle source drift: ' + name)
         if entry['parent_sha256'] is not None and digest(git_bytes(repo, PARENT, name)) != entry['parent_sha256']:
             raise RuntimeError('Lifecycle predecessor drift: ' + name)
-    return FILES | {PIN}
+    return FILES | {PIN} | extra
 def project(root, name, raw, git_root=None):
+    raw = reopen_project(root, name, raw, git_root)
     if name not in FILES: return raw
     root = Path(root)
     if not (root / PIN).exists(): return raw
@@ -40,6 +43,7 @@ def project(root, name, raw, git_root=None):
     return raw
 def project_text(root, text):
     root = Path(root)
+    text = reopen_text(root, text)
     if not (root / PIN).exists(): return text
     matches = {git_bytes(repository(root), PARENT, name).decode('utf-8-sig')
                for name, entry in json.loads((root / PIN).read_bytes())['files'].items()

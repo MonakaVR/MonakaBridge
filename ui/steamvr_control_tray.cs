@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Forms = System.Windows.Forms;
@@ -26,11 +27,13 @@ namespace MonakaBridge {
   readonly Forms.ToolStripMenuItem exitItem;
   readonly bool showWindow;
   bool exitPending;string lifecycleIssue;
-  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow){
+  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow)
+   :this(target,serviceExecutable,openWindow,@"Local\MonakaBridge_OpenControl_29810"){}
+  internal SteamVrControlTray(GuiLaunchOptions target,string serviceExecutable,bool openWindow,string openRequestName){
    showWindow=openWindow;
    serviceControl=new PcServiceLifecycle.Control(@"Local\MonakaBridge_ServiceLifecycle_29810",serviceExecutable,
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MonakaBridge","service-logs"));
-   openRequest=new EventWaitHandle(false,EventResetMode.AutoReset,@"Local\MonakaBridge_OpenControl_29810");
+   openRequest=new EventWaitHandle(false,EventResetMode.AutoReset,openRequestName);
    options=target;dispatcher.CreateControl();var menu=new Forms.ContextMenuStrip();
    menu.Items.Add(new Forms.ToolStripMenuItem(options.InstallationName){Enabled=false});menu.Items.Add(statusItem);
    var output=new Forms.ToolStripMenuItem("Save output policy");
@@ -112,7 +115,10 @@ namespace MonakaBridge {
    if(exitPending)return;
    try{
     if(busy)throw new InvalidOperationException("Wait for the pending tray save");
-    if(ControlAlive()){icon.ShowBalloonTip(1500,"Monaka Bridge","Bridge Control is already open.",Forms.ToolTipIcon.Info);return;}
+    if(ControlAlive()){
+     if(!OwnedControlWindow.TryActivate(controlProcess))icon.ShowBalloonTip(1500,"Monaka Bridge","Bridge Control could not be brought forward. Select its window from the taskbar.",Forms.ToolTipIcon.Info);
+     return;
+    }
     if(controlProcess!=null)controlProcess.Dispose();
     controlProcess=Process.Start(new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,options.WindowArguments()){UseShellExecute=false,CreateNoWindow=true});RefreshRouteUi();
    }catch(Exception e){Forms.MessageBox.Show(e.Message,"Bridge Control",Forms.MessageBoxButtons.OK,Forms.MessageBoxIcon.Error);}
@@ -136,5 +142,25 @@ namespace MonakaBridge {
   }
   void ExitFailed(string error){exitPending=false;exitItem.Enabled=true;lifecycleIssue=error;RefreshRouteUi();icon.ShowBalloonTip(5000,"Bridge stop failed",error,Forms.ToolTipIcon.Error);}
   public void Dispose(){if(disposed)return;disposed=true;timer.Stop();timer.Dispose();reader.Dispose();openRequest.Dispose();serviceControl.Dispose();icon.Visible=false;icon.Dispose();trayImage.Dispose();dispatcher.Dispose();context.Dispose();if(controlProcess!=null)controlProcess.Dispose();}
+ }
+ internal static class OwnedControlWindow {
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint processId);
+  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr window);
+  [DllImport("user32.dll")] static extern bool ShowWindowAsync(IntPtr window,int command);
+  [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr window);
+  static bool Matches(Process retainedProcess,IntPtr window){
+   uint id;return !retainedProcess.HasExited&&GetWindowThreadProcessId(window,out id)!=0&&id==(uint)retainedProcess.Id;
+  }
+  internal static bool TryActivate(Process retainedProcess){
+   if(retainedProcess==null)return false;
+   try{
+    if(retainedProcess.HasExited)return false;
+    retainedProcess.Refresh();var window=retainedProcess.MainWindowHandle;
+    if(window==IntPtr.Zero||!Matches(retainedProcess,window))return false;
+    if(IsIconic(window)&&Matches(retainedProcess,window))ShowWindowAsync(window,9);
+    return Matches(retainedProcess,window)&&SetForegroundWindow(window);
+   }catch(InvalidOperationException){return false;}
+    catch(System.ComponentModel.Win32Exception){return false;}
+  }
  }
 }
