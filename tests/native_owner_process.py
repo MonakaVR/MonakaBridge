@@ -100,7 +100,7 @@ def start(label,readonly=False):
     env['MONAKA_CALIBRATION_TEST_ROOT']=str(folder/'physical-fixture');env['MONAKA_CALIBRATION_TEST_MODE']='b4-static';env['MONAKA_CALIBRATION_TEST_MIRROR_PORT']=str(allocated[3])
     for key in ['LOCALAPPDATA','APPDATA','TEMP','TMP']:
         isolated=folder/key.lower();isolated.mkdir();env[key]=str(isolated)
-    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--installation',str(profile)]+(['--read-only'] if readonly else []);child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
+    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--language','ja' if label=='one' else 'en','--installation',str(profile)]+(['--read-only'] if readonly else []);child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
     until(lambda:child.poll() is not None or not free(allocated[0]));assert child.poll() is None,(folder/'stderr.log').read_text(errors='replace');return child,config,allocated,args
 status='FAIL'
 try:

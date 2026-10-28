@@ -8,7 +8,7 @@
       "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
     },
     "docs/native-owner.md": {
-      "sha256": "1388d1e070a5a3c4db0ca11dde17e03483c4e2489a28f7061b94a21b2db83f75",
+      "sha256": "cd038b614dd6baec8ce8758897aeb1ee70fdb492e2a3351bdf2e470b3f245488",
       "parent_sha256": null
     },
     "include/monaka_bridge/native_owner_runtime.hpp": {
@@ -36,11 +36,11 @@
       "parent_sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470"
     },
     "tests/native_owner_client_tests.cs": {
-      "sha256": "bcbe125c60522d9b3c85d61e92f8d749debe66881d02f64d80ab499d5aa83209",
+      "sha256": "f3d1158ad762974d5e1550a2698ad4d5f6e2b23686c7b028a50c8967d24bdf2a",
       "parent_sha256": null
     },
     "tests/native_owner_process.py": {
-      "sha256": "b75bfd4a688001b594a7cc725dc13548292067bc746e5860f595bf5b188d1232",
+      "sha256": "b040c871b0b8f79e5aeeba76e57ce16a61558537928bf4354eb7c37617368053",
       "parent_sha256": null
     },
     "tests/native_owner_runtime_tests.cpp": {
@@ -48,7 +48,7 @@
       "parent_sha256": null
     },
     "tests/native_owner_scope.py": {
-      "sha256": "03f192cda23efd885d6b5a3cfcc2911f60f346c35c89566b46ec6bcbda2b1c1d",
+      "sha256": "71cf8e52a5b6c93af548d3d0ae413b9826cac9dccdcf62df8c94b2bc918014ed",
       "parent_sha256": null
     },
     "tests/native_owner_scope_tests.py": {
@@ -64,19 +64,35 @@
       "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
     },
     "tools/native_owner.cpp": {
-      "sha256": "eec2de7c8284386f3b8c639453299cac2df5dd0ccb14dfae5fc88bf930f0485c",
+      "sha256": "c0390bfb11e49481affca7392f00a5ceb3e3270a6c0897586816a27873ad16d9",
       "parent_sha256": null
     },
+    "ui/calibration_panel.cs": {
+      "sha256": "34eae4e740d0b1ea0b27ad3e6abcf0167b1e2e919c7c102e019eb793b45cec42",
+      "parent_sha256": "17a1ba6f1459bf891b90dd24517ff4f7c0ff7ea94a255360b8505983f13e8091"
+    },
+    "ui/calibration_profile_dialog.cs": {
+      "sha256": "7aa5aee2754cd214c2f08e2dff2df37e6d72a75675f837b8682ad2afd0ac638f",
+      "parent_sha256": "a3ab7c46fe008aab55af8bdf99b882607af6579750394a69fdb222b0964a0434"
+    },
+    "ui/discovery_panel.cs": {
+      "sha256": "ff3fd4ef35bcc5298a1d5aa92ddfb7b9f6807fdf5ba8e11cc171bb8b116e98da",
+      "parent_sha256": "791aaf2f2cf17ddbd955a0068ca3cf6a2034f4a7f191dcb349e059c84bf71404"
+    },
+    "ui/discovery_window.cs": {
+      "sha256": "3a8cff459353d8b9ee8d8b564cc6dbb81b80e55179f5bd38d164e2b9bcdc522c",
+      "parent_sha256": "e23377b993482bc784ce1689a0e4081886fa42dfb594e1250d23fc7264424f01"
+    },
     "ui/installation_control.cs": {
-      "sha256": "d894be284ea91c6e95c0833d8bb963e4f59e8a9a1b82fc7e10df88321a2f8e53",
+      "sha256": "a9de9fda0c04ee680d18c09820c0a47308b832cd5ca77b025419a9aed8659f2f",
       "parent_sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a"
     },
     "ui/steamvr_control_gui_main.cs": {
-      "sha256": "e9af085e6dc78425eabf47eda18efbd79ba39e1e192fa28e28eb5b27c9f97b96",
+      "sha256": "200e05768736e287bc73981e56ebe20bce26c77cb9fa359a7a6e9eef368e98cc",
       "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
     },
     "ui/steamvr_control_wpf.cs": {
-      "sha256": "f44d8886cd029b3c8c469c9ee768abcae6ffcaf73ac44745711d5fbe8bf758ba",
+      "sha256": "a509b65759e707f721ffcdd2e46ffc97f65f58dc1dc8ff83fd3f62f23b4a2165",
       "parent_sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4"
     }
   }

@@ -29,6 +29,7 @@ namespace MonakaBridge
                     else guiArguments.Add(args[i]);
                 }
                 var options = GuiLaunchOptions.Parse(guiArguments.ToArray(), ResolveDefaultRoot());
+                BridgeText.Language=options.Language;
                 if((ports==null)!=(logs==null))throw new ArgumentException("Explicit runtime ports and owned log directory must be selected together");
                 if(ports!=null&&options.HealthFile!=options.ConfigFile+".status.json")throw new ArgumentException("Native runtime health must be CONFIG.status.json");
                 if (options.ControlWindowOnly)
@@ -61,7 +62,7 @@ namespace MonakaBridge
             {
                 if(nativeWindow){Console.Error.WriteLine(ex);return 1;}
                 MessageBox.Show(
-                    ex.ToString(),
+                    BridgeText.Diagnostic(ex.ToString()),
                     "Monaka Bridge",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);

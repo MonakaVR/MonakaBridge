@@ -21,7 +21,7 @@ namespace MonakaBridge {
     discoveryPanel.Create.Click+=delegate{Safe(delegate{SaveDiscovery(DiscoveryAction.Create);});};
     discoveryPanel.Replace.Click+=delegate{Safe(delegate{SaveDiscovery(DiscoveryAction.Replace);});};
     discoveryPanel.Revision.Click+=delegate{Safe(delegate{SaveDiscovery(DiscoveryAction.UpdateRevision);});};
-    discoveryPanel.Ignore.Click+=delegate{discoveryPanel.Candidates.SelectedIndex=-1;discoveryPanel.Details.Text="Ignored locally. Configuration bytes and revision unchanged.";};
+    discoveryPanel.Ignore.Click+=delegate{discoveryPanel.Candidates.SelectedIndex=-1;discoveryPanel.Details.Text=BridgeText.T("Ignored locally. Configuration bytes and revision unchanged.");};
    }
    DiscoverySnapshot DiscoveryView(){return DiscoveryModel.Read(config,healthAvailable?discoveryHealth:null,DateTime.UtcNow);}
    bool DiscoveryBusy(){return busy||needsReload||closing||switching||calibration!=null&&calibration.Active;}
@@ -43,7 +43,7 @@ namespace MonakaBridge {
    void SelectDiscovery(){
     var row=discoveryPanel.Candidates.SelectedItem as DiscoveryObservation;
     discoveryPanel.Contracts.Items.Clear();discoveryPanel.Profiles.Items.Clear();discoveryPanel.Slots.Items.Clear();discoveryPanel.Logical.Text="";
-    if(row==null||config==null){discoveryPanel.Details.Text="Select an unmapped claim or a known input revision mismatch.";return;}
+    if(row==null||config==null){discoveryPanel.Details.Text=BridgeText.T("Select an unmapped claim or a known input revision mismatch.");return;}
     foreach(var c in DiscoveryModel.Contracts(config,row.Source))discoveryPanel.Contracts.Items.Add(c);
     foreach(var name in ((Dictionary<string,object>)config["profiles"]).Keys){var p=MappingEditor.RequireProfile(config,name);if(DiscoveryModel.Flag(p,"approved")&&DiscoveryModel.Text(p,"evidence")!=""&&DiscoveryModel.Text(p,"convention")==row.Convention)discoveryPanel.Profiles.Items.Add(name);}
     for(int n=0;n<map.Count;++n){var b=(Dictionary<string,object>)map[n];if(DiscoveryModel.Text(b,"source_id")==row.Source)discoveryPanel.Slots.Items.Add(new DiscoverySlot{Index=n,Label=DiscoveryModel.Text(b,"tracker_id")+" | "+DiscoveryModel.Text(b,"device_id")+" | "+DiscoveryModel.Text(b,"input_space")+" @"+DiscoveryModel.Text(b,"input_revision")});}
