@@ -21,6 +21,11 @@ with tempfile.TemporaryDirectory(dir=root/'build') as folder:
             else: raise AssertionError('Mutant accepted: '+name)
             (scratch/PIN).write_bytes(receipt)
         path.write_bytes(original)
+        path.unlink()
+        try: approved(scratch,root)
+        except RuntimeError as error: assert 'Owner current source unavailable: '+name in str(error)
+        else: raise AssertionError('Missing source accepted: '+name)
+        path.write_bytes(original)
     for name,entry in json.loads((root/PIN).read_bytes())['files'].items():
         if entry['parent_sha256'] is not None: assert project(root,name,(root/name).read_bytes())==git_bytes(repository(root),PARENT,name)
-print('PASS exact owner admission, source/forged receipt mutants, exact managed predecessor projection')
+print('PASS exact owner admission, source/missing-input/forged receipt mutants, exact managed predecessor projection')

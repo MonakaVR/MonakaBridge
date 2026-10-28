@@ -48,11 +48,11 @@
       "parent_sha256": null
     },
     "tests/native_owner_scope.py": {
-      "sha256": "71cf8e52a5b6c93af548d3d0ae413b9826cac9dccdcf62df8c94b2bc918014ed",
+      "sha256": "e9e7c36134346a7875e5307f13f8a0f272cc253f5b9bee807f941fbe120ff5e2",
       "parent_sha256": null
     },
     "tests/native_owner_scope_tests.py": {
-      "sha256": "dc1fca0dd17000107dc85c79788675529f62387dcb42dc1e8510b6316f219d34",
+      "sha256": "026e86f29d748e11a29b11a390cdbe76d382d521cda8252899568cd4b0820b5e",
       "parent_sha256": null
     },
     "tests/run_native_owner_client.ps1": {
