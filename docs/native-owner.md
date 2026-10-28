@@ -39,11 +39,11 @@ and its descendants before stopping the runtime; failure retains ownership and
 reports UNCONFIRMED. No same-name process termination is used.
 
 The native loop refreshes a heartbeat and re-registers its tray icon on
-TaskbarCreated. A ten-second loop stall causes the watchdog to terminate only its
+TaskbarCreated. A fifteen-second loop stall causes the watchdog to terminate only its
 own native process, releasing sockets and its GUI Job. This is a fatal path, not
 a graceful exit confirmation. Explorer restart handling does not restart or
 kill the runtime. The watchdog deadline exceeds bounded GUI-close/runtime-stop
-operations individually; acceptance must report any untested failure injection.
+operations combined (Restart can wait up to ten seconds); acceptance must report any untested failure injection.
 
 `native_owner_process` exercises actual Windows processes, actual product WPF
 client code and real isolated loopback sockets. It is not physical HIL or visual
