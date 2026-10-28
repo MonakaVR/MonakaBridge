@@ -37,7 +37,7 @@ namespace MonakaBridge {
    GuiLaunchOptions options;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly TextBlock accessStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly List<Control> editControls=new List<Control>();readonly List<Button> serviceControls=new List<Button>();
-   Button openInstallation,createCalibration,reloadConfiguration,cancelSave;bool busy,closed,needsReload,closing,closingReady,switching;CancellationTokenSource cancellation;Task pendingSave;readonly CalibrationPanel calibration;
+   Button openInstallation,createCalibration,reloadConfiguration,cancelSave;bool busy,closed,needsReload,closing,closingReady,switching;CancellationTokenSource cancellation;Task pendingSave,pendingService;readonly CalibrationPanel calibration;
    readonly TextBlock livePose=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(2,4,2,8)};
    readonly TextBlock healthStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};readonly HealthReader healthReader=new HealthReader();
    DateTime healthSnapshotUtc=DateTime.MinValue;bool healthAvailable;string currentPolicy="unknown",healthPublisher;object healthRevision;double poseTimeoutMs=500;
@@ -68,10 +68,20 @@ namespace MonakaBridge {
     panel.Children.Add(new TextBlock{Text="Shared alignment for the selected source map (metres)",FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
     AddEdit(panel,"Apply shared translation",delegate{double.Parse(x.Text,CultureInfo.InvariantCulture);double.Parse(y.Text,CultureInfo.InvariantCulture);double.Parse(z.Text,CultureInfo.InvariantCulture);SaveNativeDraft("align "+Quote(tracker.Text)+" "+Quote(x.Text)+" "+Quote(y.Text)+" "+Quote(z.Text),false);});
     panel.Children.Add(routes);AddEdit(panel,"Apply output policy",delegate{if(routes.SelectedItem==null)throw new InvalidOperationException("Select an output policy.");SaveNativeDraft("policy "+routes.SelectedItem,false);});
-    foreach(string operation in new[]{"Start","Stop","Restart"})serviceControls.Add(Add(panel,operation+" Bridge (unsupported)",options.RequireServiceControl));
+    foreach(string operation in new[]{"Start","Stop","Restart"}){string selected=operation;serviceControls.Add(Add(panel,operation+" Bridge",delegate{ControlService(selected);}));}
     editControls.AddRange(new Control[]{source,device,tracker,space,revision,world,profile,x,y,z,approved,routes});
     cancelSave=Add(panel,"Cancel pending save",delegate{if(cancellation!=null)cancellation.Cancel();status.Text="Cancellation requested. A native commit already started may finish; wait for its result.";});
     calibration=new CalibrationPanel(options,delegate{return !busy&&!closing&&!switching&&!needsReload&&config!=null;},delegate(bool active,bool mayCommit){if(!active&&mayCommit)needsReload=true;RefreshAvailability();});panel.Children.Add(calibration);panel.Children.Add(status);RefreshAvailability();timer.Interval=TimeSpan.FromSeconds(1);timer.Tick+=delegate{Health();};timer.Start();Closing+=CloseSafely;Closed+=delegate{closed=true;calibration.Dispose();if(cancellation!=null)cancellation.Cancel();timer.Stop();healthReader.Dispose();};Loaded+=delegate{Safe(Reload);};
+   }
+   async void ControlService(string operation){
+    bool entered=false;
+    try{
+     if(busy||closing||switching||calibration.Active)throw new InvalidOperationException("Finish the pending operation or calibration first");
+     options.RequireServiceControl();var selected=options;busy=true;entered=true;status.Text=operation+" requested; awaiting owned process confirmation";RefreshAvailability();
+     var work=Task.Run(delegate{return selected.ServiceCommand(operation);});pendingService=work;status.Text=await work;
+    }
+    catch(Exception e){status.Text="UNCONFIRMED: "+e.Message;}
+    finally{if(entered)busy=false;if(!closed)RefreshAvailability();}
    }
    // WPF button/error pattern migrated from Task2 SteamVrControlWpf.
    static Button MakeButton(string text,double width){return new Button{Content=text,Width=width,MinHeight=28,Margin=new Thickness(3)};}
@@ -102,14 +112,14 @@ namespace MonakaBridge {
    }
    async void CloseSafely(object sender,System.ComponentModel.CancelEventArgs e){
     if(closingReady)return;e.Cancel=true;if(closing)return;closing=true;RefreshAvailability();if(cancellation!=null)cancellation.Cancel();
-    try{var work=pendingSave;if(work!=null)try{await work;}catch{}await calibration.StopAsync();closingReady=true;await Dispatcher.InvokeAsync(new Action(Close));}
+    try{var work=pendingSave;if(work!=null)try{await work;}catch{}work=pendingService;if(work!=null)try{await work;}catch{}await calibration.StopAsync();closingReady=true;await Dispatcher.InvokeAsync(new Action(Close));}
     catch(Exception error){closing=false;needsReload=true;status.Text="Owned shutdown unconfirmed; window retained: "+error.Message;RefreshAvailability();}
    }
    void RefreshAvailability(){
     string reason=closing||switching?"Owned shutdown / target change in progress":busy?"Save in progress":calibration.Active?"Calibration session owns this window; close it before config edits":needsReload?"Reload/review required":options.ValidateEditing();
     foreach(Control control in editControls){control.IsEnabled=reason==null;control.ToolTip=reason;}
     approved.IsEnabled=false;
-    foreach(Button button in serviceControls){button.IsEnabled=false;button.ToolTip=options.ServiceBlockReason();}
+    foreach(Button button in serviceControls){button.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&options.ServiceBlockReason()==null;button.ToolTip=options.ServiceBlockReason();}
     cancelSave.IsEnabled=busy&&!closing;openInstallation.IsEnabled=!busy&&!closing&&!switching;createCalibration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&!needsReload;reloadConfiguration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active;
     Title="Monaka Bridge | "+options.InstallationName+(options.ReadOnly?" | READ ONLY":"");
     accessStatus.Text="Installation: "+options.InstallationName+"\nConfig: "+options.ConfigFile+"\nHealth: "+options.HealthFile+"\nHelper: "+options.ConfigHelper+"\n"+(reason??"Writable; compatible transaction helper. Native commit checks directory permission, lock and exact snapshot.")+"\n"+options.ServiceBlockReason();

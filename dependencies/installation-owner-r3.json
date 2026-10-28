@@ -1,0 +1,59 @@
+{
+  "parent": "0bda5a09a3af187cf1af230b741e596932ebadc8",
+  "authority": "MONAKA-OFFLINE-PREHIL-CLOSURE-20261028-R3 / SA-01",
+  "purpose": "Explicit installation runtime ownership; current product functional tests remain unprojected; immutable R2 receipts unchanged.",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f",
+      "parent_sha256": "c74f8ddb89bfd795908f93b4d2cf330aec58e5a7ad469b95a71f23106b6cc411"
+    },
+    "docs/installation-owner.md": {
+      "sha256": "2eb9fd66393f1a7d61541491faa3c75e954fce8a7ebee14a20e74ee74c46b27a",
+      "parent_sha256": null
+    },
+    "tests/installation_owner_scope.py": {
+      "sha256": "623a06f0d4f6f0ef4169891c5e00821af7940c50732c13083e737b55b86a39c9",
+      "parent_sha256": null
+    },
+    "tests/installation_owner_scope_tests.py": {
+      "sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470",
+      "parent_sha256": null
+    },
+    "tests/installation_owner_tests.cs": {
+      "sha256": "b0d289efd0105f997e1b94b644600c53e549766dfdbb8f8c1e0095c4c60c72bf",
+      "parent_sha256": null
+    },
+    "tests/run_installation_owner.ps1": {
+      "sha256": "9646923611b6812a6b7573a46ab184bfe13b7bb1641669110513e866b437b1ff",
+      "parent_sha256": null
+    },
+    "tests/tray_reopen_scope.py": {
+      "sha256": "ec0daa333949d60922a7ba3c3a8e34d334ec911c3ab0450228036b49458731e3",
+      "parent_sha256": "7271cc3b2647f22eed9738ebed62f2bcaf316068395026bf178c6c149d3736d0"
+    },
+    "tests/tray_reopen_scope_tests.py": {
+      "sha256": "3900f2490a8a126ccfe0df702ebd5b8cc34a033c5744cee04d38ceb9eff8aa19",
+      "parent_sha256": "cc10486f0dc28516f640f490a29dc0a3f72bd41f8f11ada42a24b1a186cc7015"
+    },
+    "ui/installation_control.cs": {
+      "sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a",
+      "parent_sha256": "60308c6319c1defcbe104275bca29d39d6ea8addd31c97314629d28e32c8b737"
+    },
+    "ui/service_lifecycle_control.cs": {
+      "sha256": "7141bb7e2b1c93ab0b5cbe6b8e08283bee10d3f87efc7a3db2dcdaf62dcdda0e",
+      "parent_sha256": "18939e13b18009e634f413e0a3ad447acd09eed2d677f7c21bc5e060aa9d61ff"
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24",
+      "parent_sha256": "d8a59f8670b81b7ed3c5e8d2390f731b9ca009ea6ef0d1c36d75edebbb4568ef"
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "8475e8fc9351c9025303146c80c625a2e4cf043b4b0d9133c9391038a64295d0",
+      "parent_sha256": "bf8c3917dded9e01931cd1d7d901ac0b231b90a433c9b3e4d55fded2b86ee3f7"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4",
+      "parent_sha256": "0d10a1f5491e61e4df0330f43237673122aebf7b647e6c90a4fa36b42bbf719f"
+    }
+  }
+}
