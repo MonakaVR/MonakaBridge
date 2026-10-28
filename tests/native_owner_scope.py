@@ -9,6 +9,7 @@ from functools import lru_cache
 PARENT='7371bb842ae84523e7195740deb6ea2247c99b39'
 PIN='dependencies/native-owner-r3.json'
 FILES={'tests/native_owner_scope.py', 'tests/native_owner_scope_tests.py', 'tools/native_owner.cpp', 'tests/installation_owner_scope_tests.py', 'tests/run_native_owner_client.ps1', 'ui/installation_control.cs', 'tools/bridge_service.cpp', 'include/monaka_bridge/service_runtime.hpp', 'tests/native_owner_process.py', 'CMakeLists.txt', 'tests/installation_owner_scope.py', 'ui/steamvr_control_gui_main.cs', 'docs/native-owner.md', 'tests/native_owner_client_tests.cs'}
+FILES.add('ui/steamvr_control_wpf.cs')
 
 def digest(raw): return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def repository(root):

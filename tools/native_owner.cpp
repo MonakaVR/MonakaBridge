@@ -92,7 +92,7 @@ public:
 };
 
 class Owner {
- fs::path config_,gui_,helper_;std::string key_,guiHash_,helperHash_,selfHash_;std::wstring self_,pipeName_;Runtime runtime_;
+ fs::path config_,gui_,helper_,profile_;std::string key_,guiHash_,helperHash_,selfHash_,profileHash_;std::wstring self_,pipeName_;Runtime runtime_;
  Handle mapping_,cancel_,job_,guiProcess_;Identity* view_=nullptr;std::thread pipeWorker_,watchdog_;std::mutex guiLock_;
  std::atomic<ULONGLONG> heartbeat_{0};std::mutex runtimeGate_;
  HWND window_=nullptr;NOTIFYICONDATAW icon_{};UINT taskbar_=0;std::atomic_bool exiting_{false};bool iconAdded_=false,readOnly_=false;
@@ -132,9 +132,11 @@ class Owner {
   std::lock_guard<std::mutex> lock(guiLock_);need(!exiting_,"Native owner exit has started");
   if(guiProcess_.value){if(WaitForSingleObject(guiProcess_.value,0)!=WAIT_OBJECT_0){Focus focus{GetProcessId(guiProcess_.value)};EnumWindows(focusWindow,reinterpret_cast<LPARAM>(&focus));need(focus.found,"Owned GUI is starting or unavailable; no duplicate launched");return;}need(jobCount()==0,"GUI exited with owned descendants active; Job retained");releaseGui();}
   need(fileHash(gui_)==guiHash_&&fileHash(helper_)==helperHash_,"GUI/helper build changed; relaunch explicitly");
+  if(!profile_.empty())need(fileHash(profile_)==profileHash_,"Selected installation profile changed; relaunch explicitly");
   job_.value=CreateJobObjectW(nullptr,nullptr);need(job_.value!=nullptr,"GUI Job unavailable");JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};limits.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;need(SetInformationJobObject(job_.value,JobObjectExtendedLimitInformation,&limits,sizeof(limits))!=0,"GUI Job limits unavailable");
   auto owner=std::to_wstring(GetCurrentProcessId())+L":"+std::to_wstring(pc_service_lifecycle::Creation(GetCurrentProcess()));
-  auto command=quote(gui_.wstring())+L" --native-owner-window --control-window-only --config "+quote(config_.wstring())+L" --health "+quote(config_.wstring()+L".status.json")+L" --config-helper "+quote(helper_.wstring())+L" --helper-sha256 "+wide(helperHash_)+L" --installation-name \"Native Bridge owner\" "+(readOnly_?L"--read-only":L"--allow-write")+L" --owner-pipe "+quote(pipeName_)+L" --owner-identity "+owner+L" --owner-executable "+quote(self_)+L" --owner-sha256 "+wide(selfHash_);
+  auto target=profile_.empty()?L" --config "+quote(config_.wstring())+L" --health "+quote(config_.wstring()+L".status.json")+L" --config-helper "+quote(helper_.wstring())+L" --helper-sha256 "+wide(helperHash_)+L" --installation-name \"Native Bridge owner\"":L" --installation "+quote(profile_.wstring())+L" --profile-sha256 "+wide(profileHash_);
+  auto command=quote(gui_.wstring())+L" --native-owner-window --control-window-only"+target+L" "+(readOnly_?L"--read-only":L"--allow-write")+L" --owner-pipe "+quote(pipeName_)+L" --owner-identity "+owner+L" --owner-executable "+quote(self_)+L" --owner-sha256 "+wide(selfHash_);
   STARTUPINFOW startup{};startup.cb=sizeof(startup);PROCESS_INFORMATION child{};
   need(CreateProcessW(gui_.c_str(),command.data(),nullptr,nullptr,FALSE,CREATE_SUSPENDED|CREATE_NO_WINDOW,nullptr,config_.parent_path().c_str(),&startup,&child)!=0,"GUI launch failed");Handle thread(child.hThread);guiProcess_.value=child.hProcess;
   if(!AssignProcessToJobObject(job_.value,guiProcess_.value)){need(TerminateProcess(guiProcess_.value,2)&&WaitForSingleObject(guiProcess_.value,5000)==WAIT_OBJECT_0,"Suspended GUI cleanup unconfirmed; retained process handle");releaseGui();throw std::runtime_error("Suspended GUI could not enter owned Job");}
@@ -162,7 +164,7 @@ class Owner {
   }}catch(const std::exception& e){note(std::string("UNCONFIRMED owner IPC: ")+e.what());}
  }
 public:
- Owner(fs::path config,fs::path gui,fs::path helper,const std::uint16_t (&ports)[4],bool readOnly):config_(std::move(config)),gui_(std::move(gui)),helper_(std::move(helper)),key_(scope(config_)),guiHash_(fileHash(gui_)),helperHash_(fileHash(helper_)),self_(executable(GetCurrentProcess())),runtime_(config_,ports),readOnly_(readOnly){selfHash_=fileHash(self_);auto nonce=uuid();nonce.erase(std::remove(nonce.begin(),nonce.end(),'-'),nonce.end());pipeName_=L"MonakaBridgeOwnerV1_"+wide(nonce);cancel_.value=CreateEventW(nullptr,TRUE,FALSE,nullptr);need(cancel_.value!=nullptr,"Native owner stop event unavailable");}
+ Owner(fs::path config,fs::path gui,fs::path helper,const std::uint16_t (&ports)[4],bool readOnly,fs::path profile):config_(std::move(config)),gui_(std::move(gui)),helper_(std::move(helper)),profile_(std::move(profile)),key_(scope(config_)),guiHash_(fileHash(gui_)),helperHash_(fileHash(helper_)),self_(executable(GetCurrentProcess())),runtime_(config_,ports),readOnly_(readOnly){if(!profile_.empty())profileHash_=fileHash(profile_);selfHash_=fileHash(self_);auto nonce=uuid();nonce.erase(std::remove(nonce.begin(),nonce.end(),'-'),nonce.end());pipeName_=L"MonakaBridgeOwnerV1_"+wide(nonce);cancel_.value=CreateEventW(nullptr,TRUE,FALSE,nullptr);need(cancel_.value!=nullptr,"Native owner stop event unavailable");}
  ~Owner(){SetEvent(cancel_.value);if(watchdog_.joinable())watchdog_.join();if(pipeWorker_.joinable())pipeWorker_.join();if(iconAdded_)Shell_NotifyIconW(NIM_DELETE,&icon_);if(view_)UnmapViewOfFile(view_);if(window_)DestroyWindow(window_);}
  int run(bool trayOnly){
   WNDCLASSW type{};type.lpfnWndProc=Window;type.hInstance=GetModuleHandleW(nullptr);type.lpszClassName=L"MonakaBridgeNativeOwnerV1";need(RegisterClassW(&type)!=0||GetLastError()==ERROR_CLASS_ALREADY_EXISTS,"Native owner window class unavailable");
@@ -178,15 +180,21 @@ public:
 }
 int nativeOwner(int,char**){
  detachConsole();
- auto args=arguments();need(args.size()>=9&&args.size()<=11,"Usage: --native-owner CONFIG GUI CONFIG_HELPER INGRESS MONAKA DIRECT MIRROR [--tray-only] [--read-only]");
+ auto args=arguments();need(args.size()>=9&&args.size()<=13,"Usage: --native-owner CONFIG GUI CONFIG_HELPER INGRESS MONAKA DIRECT MIRROR [--open] [--read-only] [--installation PROFILE]");
  fs::path config=args[2],gui=args[3],helper=args[4];need(config.is_absolute()&&gui.is_absolute()&&helper.is_absolute(),"Native owner requires explicit absolute paths");config=fs::canonical(config);gui=fs::canonical(gui);helper=fs::canonical(helper);loadConfig(config);
  {Handle file(CreateFileW(config.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr));BY_HANDLE_FILE_INFORMATION info{};need(file.value!=INVALID_HANDLE_VALUE&&GetFileInformationByHandle(file.value,&info)&&info.nNumberOfLinks==1&&!(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT),"Native owner configuration alias refused");}
  std::uint16_t ports[4];for(int i=0;i<4;i++){size_t used=0;auto number=std::stoul(args[i+5],&used);need(used==args[i+5].size()&&number>0&&number<=65535,"Invalid explicit runtime port");ports[i]=static_cast<std::uint16_t>(number);}
- bool trayOnly=true,readOnly=false,selected=false;for(size_t i=9;i<args.size();i++){if((args[i]==L"--tray-only"||args[i]==L"--open")&&!selected){trayOnly=args[i]==L"--tray-only";selected=true;}else if(args[i]==L"--read-only"&&!readOnly)readOnly=true;else throw std::invalid_argument("Unknown/duplicate native owner option");}
+ bool trayOnly=true,readOnly=false,selected=false;fs::path profile;for(size_t i=9;i<args.size();i++){if((args[i]==L"--tray-only"||args[i]==L"--open")&&!selected){trayOnly=args[i]==L"--tray-only";selected=true;}else if(args[i]==L"--read-only"&&!readOnly)readOnly=true;else if(args[i]==L"--installation"&&profile.empty()&&i+1<args.size()){profile=args[++i];need(profile.is_absolute(),"Installation profile must be absolute");profile=fs::canonical(profile);}else throw std::invalid_argument("Unknown/duplicate native owner option");}
+ if(!profile.empty()){
+  need(fs::file_size(profile)<=65536,"Installation profile exceeds bound");std::ifstream input(profile);nlohmann::json value;input>>value;need(value.at("schema")=="monaka.bridge.installation.v2","Native owner requires a version2 calibration installation profile");
+  auto resolve=[&](const char* key){auto path=fs::u8path(value.at(key).get<std::string>());return fs::absolute(path.is_absolute()?path:profile.parent_path()/path).lexically_normal();};
+  need(fs::equivalent(resolve("config"),config)&&fs::equivalent(resolve("config_helper"),helper)&&scope(resolve("health"))==scope(fs::path(config.wstring()+L".status.json")),"Profile targets do not match this native installation");
+  need(value.at("helper_sha256")==fileHash(helper)&&value.at("mirror_port").get<unsigned>()==ports[3],"Profile helper/mirror differs from native runtime");readOnly=readOnly||value.at("read_only").get<bool>();
+ }
  auto name=L"Local\\MonakaBridge_ServiceTray_"+wide(scope(config));Handle singleton(CreateMutexW(nullptr,TRUE,name.c_str()));need(singleton.value!=nullptr,"Installation mutex unavailable");bool owns=GetLastError()!=ERROR_ALREADY_EXISTS;
  if(!owns){auto wait=WaitForSingleObject(singleton.value,0);owns=wait==WAIT_OBJECT_0||wait==WAIT_ABANDONED;}
  if(!owns){auto result=request(config,4);std::cout<<result<<std::endl;need(result.rfind("OK ",0)==0,"Existing owner did not accept reopen");return 0;}
- try{int result;{Owner owner(config,gui,helper,ports,readOnly);result=owner.run(trayOnly);}ReleaseMutex(singleton.value);return result;}catch(...){ReleaseMutex(singleton.value);throw;}
+ try{int result;{Owner owner(config,gui,helper,ports,readOnly,profile);result=owner.run(trayOnly);}ReleaseMutex(singleton.value);return result;}catch(...){ReleaseMutex(singleton.value);throw;}
 }
 int nativeOwnerCommand(int,char**){auto args=arguments();need(args.size()==4,"Usage: --owner-command CONFIG Start|Stop|Restart|Open|Exit|Probe|Close");const std::vector<std::wstring> names={L"Start",L"Stop",L"Restart",L"Open",L"Exit",L"Probe",L"Close"};auto found=std::find(names.begin(),names.end(),args[3]);need(found!=names.end(),"Unknown owner command");auto result=request(fs::canonical(args[2]),static_cast<unsigned char>(found-names.begin()+1));std::cout<<result<<std::endl;return result.rfind("OK ",0)==0?0:2;}
 }

@@ -10,6 +10,13 @@ monaka_bridge_service --native-owner ABS_CONFIG ABS_GUI ABS_CONFIG_HELPER INGRES
 monaka_bridge_service --owner-command ABS_CONFIG Start|Stop|Restart|Open|Close|Exit|Probe
 ```
 
+Add `--installation ABS_PROFILE` for a version2 calibration profile. Its config,
+health, config-helper hash and mirror port must match this native installation.
+The profile is hash-pinned across GUI reopen. The existing product profile parser
+retains World/Mount calibration selection and helper pins. Selecting/creating a
+matching profile in WPF retains the verified owner; a native window refuses a
+different installation rather than applying commands to the wrong runtime.
+
 Use independently reserved endpoints and a copied `policy=disabled` configuration
 for offline tests. The runtime uses exactly the same codec, calibration, routing,
 health and configuration reload loop as the headless service. No producer process,

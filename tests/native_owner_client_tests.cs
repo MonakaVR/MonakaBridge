@@ -10,7 +10,9 @@ internal static class NativeOwnerClientTests {
   string config=Path.GetFullPath(args[0]),owner=Path.GetFullPath(args[1]);string mapping=@"Local\MonakaBridge_Controller_"+BridgeOwnerChannel.Scope(config,"");
   var identity=Control.Read(mapping);Check(identity!=null&&identity.Ready,"Native owner not ready");string pipe;
   using(var map=MemoryMappedFile.OpenExisting(mapping,MemoryMappedFileRights.Read))using(var view=map.CreateViewAccessor(48,160,MemoryMappedFileAccess.Read)){byte[] bytes=new byte[160];view.ReadArray(0,bytes,0,bytes.Length);pipe=Encoding.Unicode.GetString(bytes).TrimEnd('\0');}
-  var options=GuiLaunchOptions.Parse(new[]{"--config",config,"--allow-write","--owner-pipe",pipe,"--owner-identity",identity.Pid+":"+identity.Created,"--owner-executable",owner,"--owner-sha256",Control.Hash(owner)},Path.GetDirectoryName(config));
+  var options=GuiLaunchOptions.Parse(new[]{"--installation",Path.GetFullPath(args[2]),"--allow-write","--owner-pipe",pipe,"--owner-identity",identity.Pid+":"+identity.Created,"--owner-executable",owner,"--owner-sha256",Control.Hash(owner)},Path.GetDirectoryName(config));
+  Check(options.Calibration!=null,"Native v2 calibration profile missing");
+  var selected=options.RetainMatchingOwner(GuiLaunchOptions.Parse(new[]{"--installation",Path.GetFullPath(args[2])},null));Check(selected.OwnerPipe==pipe&&selected.Calibration!=null,"Same installation lost native owner on profile selection");
   Check(options.ServiceCommand("Stop").StartsWith("STOPPED"),"Native Stop not confirmed");
   Check(options.ServiceCommand("Start").StartsWith("RUNNING"),"Native Start not confirmed");
   Check(options.ServiceCommand("Restart").StartsWith("RUNNING"),"Native Restart not confirmed");
