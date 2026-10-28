@@ -77,19 +77,38 @@ def command(config,op,ok=True):
     record('command',command=cmd,exit=r.returncode,stdout=r.stdout.decode(errors='replace'),stderr=r.stderr.decode(errors='replace'))
     assert (r.returncode==0)==ok,records[-1]
     return r.stdout.decode(errors='replace')
-def start(label):
+def reject_aliases(config,args):
+    junction=out/'owned-junction';maker=out/'make-junction.ps1';maker.write_text('param([string]$Link,[string]$Target)\n$ErrorActionPreference="Stop"\nNew-Item -ItemType Junction -Path $Link -Target $Target|Out-Null\n',encoding='utf-8')
+    made=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(maker),'-Link',str(junction),'-Target',str(config.parent)],capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);assert made.returncode==0,made.stderr
+    try:
+        assert junction.parent==out and junction.resolve()==config.parent
+        badConfig=list(args);badConfig[2]=str(junction/config.name)
+        badProfile=list(args);badProfile[-1]=str(junction/'installation.json')
+        document=json.loads((config.parent/'installation.json').read_bytes());document['config']=str(junction/config.name);profile=out/'profile-alias-target.json';profile.write_text(json.dumps(document),encoding='utf-8');badTarget=list(args);badTarget[-1]=str(profile)
+        for bad in [badConfig,badProfile,badTarget]:
+            rejected=subprocess.run(bad,capture_output=True,timeout=10,creationflags=subprocess.CREATE_NO_WINDOW);record('alias_refusal',args=bad,exit=rejected.returncode,stderr=rejected.stderr.decode(errors='replace'));assert rejected.returncode!=0 and b'alias' in rejected.stderr.lower()
+        record('PASS_directory_junction_config_profile_and_profile_target_refused')
+    finally:
+        # Removes only this owned junction entry, never traverses/deletes target.
+        assert junction.parent==out and junction.resolve()==config.parent;os.rmdir(junction)
+def start(label,readonly=False):
     folder=out/label;folder.mkdir();config=folder/'configuration 日本語.json';document=json.loads((root/'config/bridge.example.json').read_text(encoding='utf-8-sig'));document.update(policy='disabled',bridge_id='native-owner-'+label,mapping_revision=10);config.write_text(json.dumps(document),encoding='utf-8');allocated=ports()
     profile=folder/'installation.json';profile.write_text(json.dumps(dict(schema='monaka.bridge.installation.v2',name='R3 native owner '+label,config=str(config),health=str(config)+'.status.json',config_helper=str(helper),helper_sha256=hashlib.sha256(helper.read_bytes()).hexdigest(),read_only=False,calibration_helper=str(calibrator),calibration_helper_sha256=hashlib.sha256(calibrator.read_bytes()).hexdigest(),calibration_api=1,calibration_software_policy=1,calibration_gui_contract=1,bridge_id=document['bridge_id'],installation_path=str(folder),association='operator_declared_process_owner_unverified',single_bridge_no_relay=True,mirror_address='127.0.0.1',mirror_port=allocated[3],source='synthetic-source',device='synthetic-device',tracker='synthetic-tracker',input_space='synthetic-space',input_revision=1,reference_role='hmd')),encoding='utf-8')
+    if label in ['one','two']:
+        selected=json.loads(profile.read_bytes());pin=selected['helper_sha256'];selected['helper_sha256']=pin.upper() if label=='two' else ''.join(c.upper() if i%2 else c for i,c in enumerate(pin));profile.write_text(json.dumps(selected),encoding='utf-8')
     env=os.environ.copy()
+    env['MONAKA_CALIBRATION_TEST_ROOT']=str(folder/'physical-fixture');env['MONAKA_CALIBRATION_TEST_MODE']='b4-static';env['MONAKA_CALIBRATION_TEST_MIRROR_PORT']=str(allocated[3])
     for key in ['LOCALAPPDATA','APPDATA','TEMP','TMP']:
         isolated=folder/key.lower();isolated.mkdir();env[key]=str(isolated)
-    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--installation',str(profile)];child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
+    stdout=(folder/'stdout.log').open('wb');stderr=(folder/'stderr.log').open('wb');streams.extend([stdout,stderr]);args=[str(service),'--native-owner',str(config),str(gui),str(helper),*map(str,allocated),'--tray-only','--installation',str(profile)]+(['--read-only'] if readonly else []);child=subprocess.Popen(args,stdout=stdout,stderr=stderr,env=env,creationflags=subprocess.CREATE_NO_WINDOW);processes.append((child,config));record('launch',pid=child.pid,args=args)
     until(lambda:child.poll() is not None or not free(allocated[0]));assert child.poll() is None,(folder/'stderr.log').read_text(errors='replace');return child,config,allocated,args
 status='FAIL'
 try:
     first,config,pp,args=start('one');second,other,qq,_=start('two');firstChildren=children(first.pid);secondChildren=children(second.pid);record('initial_process_tree',first=first.pid,first_children=firstChildren,second=second.pid,second_children=secondChildren);assert firstChildren==[] and secondChildren==[];record('PASS_single_native_resident_per_installation',first=first.pid,second=second.pid)
     assert 'RUNNING' in command(config,'Start');assert children(first.pid)==[]
+    reject_aliases(config,args);record('PASS_valid_mixed_and_uppercase_profile_SHA256')
     assert 'STOPPED' in command(config,'Stop');assert free(pp[0]) and not free(qq[0]) and first.poll() is None and second.poll() is None;record('PASS_stop_release_peer_preservation')
+    assert command(config,'Status').startswith('OK STOPPED');record('PASS_current_tray_status_after_IPC_stop')
     assert 'RUNNING' in command(config,'Start');assert not free(pp[0]);assert 'RUNNING' in command(config,'Restart');record('PASS_restart_same_native_owner',pid=first.pid)
     client=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'tests/run_native_owner_client.ps1'),'-Gui',str(gui),'-Service',str(service),'-Config',str(config),'-Profile',str(config.parent/'installation.json'),'-OutputDirectory',str(out/'managed-client')],capture_output=True,timeout=45,creationflags=subprocess.CREATE_NO_WINDOW)
     record('product_WPF_client',exit=client.returncode,stdout=client.stdout.decode(errors='replace'),stderr=client.stderr.decode(errors='replace'));assert client.returncode==0,records[-1]
@@ -104,6 +123,10 @@ try:
     assert gone(guiHandle);k.CloseHandle(guiHandle)
     command(other,'Open');_,guiHandle=retained_gui(second);time.sleep(.5);second.terminate();second.wait(10);until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert free(qq[0]);record('PASS_native_crash_reaps_owned_GUI_job_and_udp')
     command(other,'Start',ok=False);record('PASS_exit_releases_identity_and_udp')
+    readonly,roConfig,roPorts,_=start('readonly',True)
+    for op in ['Start','Stop','Restart']:
+        command(roConfig,op,ok=False);assert readonly.poll() is None and not free(roPorts[0]);assert command(roConfig,'Status').startswith('OK RUNNING')
+    command(roConfig,'Exit');assert readonly.wait(10)==0 and free(roPorts[0]);record('PASS_readonly_native_lifecycle_refused_internal_exit_released')
     hung,hungConfig,hungPorts,_=start('watchdog');command(hungConfig,'Open');_,guiHandle=retained_gui(hung);time.sleep(.5);suspend_owned_main(hung);assert hung.wait(20)==71;until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert free(hungPorts[0]);record('PASS_real_native_main_thread_hang_watchdog_reaps_GUI_and_udp')
     status='PASS'
 finally:

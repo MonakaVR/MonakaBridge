@@ -12,6 +12,7 @@ int main(int argc,char** argv)try{
  auto base=local||seed?std::filesystem::path(environment(L"MONAKA_CALIBRATION_TEST_ROOT",true)):std::filesystem::u8path(argv[1]);
  fixture::Run run(std::filesystem::absolute(base));
  runtime_fixture::State state(run.time);auto provider=runtime_fixture::provider(state,true);
+ auto selectedPort=environment(L"MONAKA_CALIBRATION_TEST_MIRROR_PORT",false);if(!selectedPort.empty()){size_t used=0;auto port=std::stoul(selectedPort,&used);CHECK(used==selectedPort.size()&&port>0&&port<=65535);state.expectedMirrorPort=static_cast<std::uint16_t>(port);}
  wchar_t self[32768];auto n=GetModuleFileNameW(nullptr,self,32768);CHECK(n&&n<32768);
  run.env.helperPath=std::filesystem::path(self).u8string();run.env.helperSha256=lc::sha256(mb::readConfigBytes(std::filesystem::path(self)));
  std::string mode=local||seed?std::filesystem::path(environment(L"MONAKA_CALIBRATION_TEST_MODE",false)).u8string():(argc==3?argv[2]:"");

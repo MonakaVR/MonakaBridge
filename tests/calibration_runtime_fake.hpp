@@ -12,6 +12,7 @@ struct State {
  bool generate=true,valid=true,connected=true,initialized=false,bound=false,failInit=false,failBind=false,ambiguous=false;
  std::string serial="fake-controller",peer="127.0.0.1:41000";std::uint64_t generation=1,universe=7;std::int64_t sequence=0,queryDelay=0;
  unsigned initCalls=0,bindCalls=0,poseCalls=0,shutdownCalls=0,transportCloses=0,eventCalls=0;bool packetSent=false;
+ std::uint16_t expectedMirrorPort=49123; // Test-only transport, never binds a socket.
  vr::ETrackedControllerRole controllerRole=vr::TrackedControllerRole_LeftHand;
  vr::EVRApplicationType application=vr::VRApplication_Other;vr::ETrackingUniverseOrigin origin=vr::TrackingUniverseRawAndUncalibrated;float prediction=-1;
  vr::HmdMatrix34_t frame=matrix({});std::thread::id owner;std::function<void()> poseHook;
@@ -39,7 +40,7 @@ struct Api final:lc::CalibrationReferenceApi {
 };
 struct Transport final:lc::CalibrationMirrorTransport {
  State& s;explicit Transport(State& value):s(value){}
- void open(std::uint16_t port)override{s.thread();CHECK(port==49123);++s.bindCalls;if(s.failBind)throw std::runtime_error("MIRROR_BIND_FAILED");s.bound=true;}
+ void open(std::uint16_t port)override{s.thread();CHECK(port==s.expectedMirrorPort);++s.bindCalls;if(s.failBind)throw std::runtime_error("MIRROR_BIND_FAILED");s.bound=true;}
  std::optional<mb::Datagram> receive()override{s.thread();CHECK(s.bound);if(!s.datagrams.empty()){auto p=s.datagrams.front();s.datagrams.pop_front();return p;}if(!s.generate)return {};if(s.packetSent){s.packetSent=false;return {};}s.packetSent=true;return s.packet();}
  void shutdown()override{if(!s.bindCalls)return;s.thread();++s.transportCloses;s.bound=false;}
 };
