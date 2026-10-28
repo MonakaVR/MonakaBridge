@@ -11,6 +11,7 @@ PIN='dependencies/native-owner-r3.json'
 FILES={'tests/native_owner_scope.py', 'tests/native_owner_scope_tests.py', 'tools/native_owner.cpp', 'tests/installation_owner_scope_tests.py', 'tests/run_native_owner_client.ps1', 'ui/installation_control.cs', 'tools/bridge_service.cpp', 'include/monaka_bridge/service_runtime.hpp', 'tests/native_owner_process.py', 'CMakeLists.txt', 'tests/installation_owner_scope.py', 'ui/steamvr_control_gui_main.cs', 'docs/native-owner.md', 'tests/native_owner_client_tests.cs'}
 FILES.add('ui/steamvr_control_wpf.cs')
 FILES.update({'include/monaka_bridge/native_owner_runtime.hpp','tests/native_owner_runtime_tests.cpp','tests/calibration_runtime_fake.hpp','tests/calibration_runtime_process_fixture.cpp'})
+FILES.update({'ui/calibration_panel.cs','ui/calibration_profile_dialog.cs','ui/discovery_panel.cs','ui/discovery_window.cs'})
 
 def digest(raw): return hashlib.sha256(raw.replace(b'\r\n',b'\n')).hexdigest()
 def repository(root):

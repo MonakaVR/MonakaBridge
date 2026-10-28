@@ -17,6 +17,15 @@ retains World/Mount calibration selection and helper pins. Selecting/creating a
 matching profile in WPF retains the verified owner; a native window refuses a
 different installation rather than applying commands to the wrong runtime.
 
+`--language en|ja` selects English/Japanese presentation, defaulting to English.
+The native tray also offers English and Japanese selections while WPF is closed;
+it refuses to discard an open window's edits or active work to change language.
+Reopen forwards the chosen language. Controls, calibration instructions and
+profile-dialog labels are translated. Native contract states/JSON and technical
+diagnostics remain verbatim under a translated diagnostic heading. Config data,
+opaque identities, policy values, numeric parsing and protocol bytes are not
+translated or rewritten; the language choice is process-local and not saved.
+
 Use independently reserved endpoints and a copied `policy=disabled` configuration
 for offline tests. The runtime uses exactly the same codec, calibration, routing,
 health and configuration reload loop as the headless service. No producer process,
