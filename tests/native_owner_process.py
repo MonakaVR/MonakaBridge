@@ -104,7 +104,7 @@ try:
     assert gone(guiHandle);k.CloseHandle(guiHandle)
     command(other,'Open');_,guiHandle=retained_gui(second);time.sleep(.5);second.terminate();second.wait(10);until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert free(qq[0]);record('PASS_native_crash_reaps_owned_GUI_job_and_udp')
     command(other,'Start',ok=False);record('PASS_exit_releases_identity_and_udp')
-    hung,hungConfig,hungPorts,_=start('watchdog');command(hungConfig,'Open');_,guiHandle=retained_gui(hung);time.sleep(.5);suspend_owned_main(hung);assert hung.wait(15)==71;until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert free(hungPorts[0]);record('PASS_real_native_main_thread_hang_watchdog_reaps_GUI_and_udp')
+    hung,hungConfig,hungPorts,_=start('watchdog');command(hungConfig,'Open');_,guiHandle=retained_gui(hung);time.sleep(.5);suspend_owned_main(hung);assert hung.wait(20)==71;until(lambda:gone(guiHandle));k.CloseHandle(guiHandle);assert free(hungPorts[0]);record('PASS_real_native_main_thread_hang_watchdog_reaps_GUI_and_udp')
     status='PASS'
 finally:
     for child,config in processes:

@@ -8,7 +8,7 @@
       "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
     },
     "docs/native-owner.md": {
-      "sha256": "b42a16b73e4048f9063b2a5b0a442051c837a32ffeaaed9f4d1305f804923c60",
+      "sha256": "58074bb1a96f96e9a1fa6604730b9fecb0fe423ad316c1179620b5ffa8c097b7",
       "parent_sha256": null
     },
     "include/monaka_bridge/service_runtime.hpp": {
@@ -28,7 +28,7 @@
       "parent_sha256": null
     },
     "tests/native_owner_process.py": {
-      "sha256": "7348897234c32d83328787762b51e8f325023ebdf7fc1e254bc18fff2e11334a",
+      "sha256": "9c3600147e7df4d3e1b4044afae5112477bfb466f55656a0f3db3c72702f4135",
       "parent_sha256": null
     },
     "tests/native_owner_scope.py": {
@@ -48,7 +48,7 @@
       "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
     },
     "tools/native_owner.cpp": {
-      "sha256": "8df9910429f83e03713ef6f448877487c83b87a9bfb393a3eb600ac79b9d518e",
+      "sha256": "5a7948150a28e2fc32a5a6bf5b152998ace58db18172d12d46c42362f96e68dc",
       "parent_sha256": null
     },
     "ui/installation_control.cs": {
