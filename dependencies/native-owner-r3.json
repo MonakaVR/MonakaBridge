@@ -1,0 +1,63 @@
+{
+  "parent": "7371bb842ae84523e7195740deb6ea2247c99b39",
+  "authority": "MONAKA-OFFLINE-PREHIL-CLOSURE-20261028-R3 / SA-01 native successor",
+  "purpose": "Existing runtime loop and native Win32 tray share one owner; exact current functional tests remain unprojected. Historical receipts unchanged.",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "f75b44b1308df50909279619eb786ebee49afa4ed2164d6208e6ff1ed533a83f",
+      "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
+    },
+    "docs/native-owner.md": {
+      "sha256": "1b88f192a29e60d2bab9f6784ef72d0f2cfeb41af0876c623a73e7a40245b91b",
+      "parent_sha256": null
+    },
+    "include/monaka_bridge/service_runtime.hpp": {
+      "sha256": "f15bff41d31ca3b1d478880100c90a58a2183d8a375a82f205c8d0668300200a",
+      "parent_sha256": null
+    },
+    "tests/installation_owner_scope.py": {
+      "sha256": "1223493d222f9a75b6649a76be1a214240d3bcbafa00550fb25977ee8b0cd22f",
+      "parent_sha256": "623a06f0d4f6f0ef4169891c5e00821af7940c50732c13083e737b55b86a39c9"
+    },
+    "tests/installation_owner_scope_tests.py": {
+      "sha256": "670a425e65f950809b58b834b97a8dbc08d283a4ee9d18ba386aa3d309a267ac",
+      "parent_sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470"
+    },
+    "tests/native_owner_client_tests.cs": {
+      "sha256": "6d27bddb5345a9e5a08d2a0c0c6a11ae4dc1f9cc64a77e9d724943f1ca4344d7",
+      "parent_sha256": null
+    },
+    "tests/native_owner_process.py": {
+      "sha256": "a184613107c494255375bfdd1268b78d984d058aff579e9ef29fdf76789863a5",
+      "parent_sha256": null
+    },
+    "tests/native_owner_scope.py": {
+      "sha256": "b43ac6d1fa4282718e4b868bfa37fe8ea86327941a8e69646da5e03fc82b964f",
+      "parent_sha256": null
+    },
+    "tests/native_owner_scope_tests.py": {
+      "sha256": "dc1fca0dd17000107dc85c79788675529f62387dcb42dc1e8510b6316f219d34",
+      "parent_sha256": null
+    },
+    "tests/run_native_owner_client.ps1": {
+      "sha256": "86263f8622672c1322724feaaf4841e5716396f0848fb50351deea66407963b3",
+      "parent_sha256": null
+    },
+    "tools/bridge_service.cpp": {
+      "sha256": "49b1f4f6084f329e025025800c5d20e2f2f38f26593f29f562e7cc5a80c52f94",
+      "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
+    },
+    "tools/native_owner.cpp": {
+      "sha256": "537046a9b68cbe90dc009a68c45210e777e803c27bf740c8557eb973b5186609",
+      "parent_sha256": null
+    },
+    "ui/installation_control.cs": {
+      "sha256": "8aad4839d873a4fa56171fdec616671247328a6fe1e9524e10ac08694ca9cc27",
+      "parent_sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a"
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "e9af085e6dc78425eabf47eda18efbd79ba39e1e192fa28e28eb5b27c9f97b96",
+      "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
+    }
+  }
+}

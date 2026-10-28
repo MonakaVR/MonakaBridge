@@ -18,6 +18,7 @@ namespace MonakaBridge {
   System.IO.Pipes.NamedPipeServerStream active;bool disposed;
   [System.Runtime.InteropServices.DllImport("kernel32.dll",SetLastError=true)]
   static extern bool GetNamedPipeServerProcessId(Microsoft.Win32.SafeHandles.SafePipeHandle pipe,out uint pid);
+  static string ExecutableHash(string path){using(var input=File.OpenRead(path))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(input)).Replace("-","").ToLowerInvariant();}
   internal static string Scope(string config,string ingress){
    // Same configuration cannot acquire a second owner by changing endpoints.
    using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(Path.GetFullPath(config).ToUpperInvariant()))).Replace("-","").ToLowerInvariant();
@@ -53,7 +54,7 @@ namespace MonakaBridge {
       result="OK "+command(operation);
      }catch(Exception e){result="UNCONFIRMED "+e.Message;}
      byte[] response=Encoding.UTF8.GetBytes(result);if(response.Length>4096)response=Encoding.UTF8.GetBytes("UNCONFIRMED Owner diagnostic exceeds bound");
-     byte[] length=BitConverter.GetBytes(response.Length);pipe.Write(length,0,4);pipe.Write(response,0,response.Length);pipe.Flush();
+     byte[] length=BitConverter.GetBytes(response.Length);pipe.Write(length,0,4);pipe.Write(response,0,response.Length);pipe.Flush();if(pipe.ReadByte()!=1)throw new IOException("Owner response acknowledgement missing");
     }}catch(IOException){}catch(ObjectDisposedException){}
     finally{lock(gate){if(object.ReferenceEquals(active,pipe))active=null;}pipe.Dispose();}
    }
@@ -63,16 +64,19 @@ namespace MonakaBridge {
    using(var owner=Process.GetProcessById(int.Parse(identity[0])))
    using(var self=Process.GetCurrentProcess())
    using(var pipe=new System.IO.Pipes.NamedPipeClientStream(".",options.OwnerPipe,System.IO.Pipes.PipeDirection.InOut,System.IO.Pipes.PipeOptions.Asynchronous)){
+    string expected=options.OwnerExecutable??self.MainModule.FileName;
+    string expectedHash=options.OwnerSha256??ExecutableHash(self.MainModule.FileName);
     if(owner.Handle==IntPtr.Zero||owner.StartTime.ToUniversalTime().ToFileTimeUtc()!=long.Parse(identity[1])||owner.HasExited||
-      !string.Equals(owner.MainModule.FileName,self.MainModule.FileName,StringComparison.OrdinalIgnoreCase)||PcServiceLifecycle.Control.Hash(owner.MainModule.FileName)!=PcServiceLifecycle.Control.Hash(self.MainModule.FileName))throw new IOException("Owning tray process identity changed");
+      !string.Equals(owner.MainModule.FileName,expected,StringComparison.OrdinalIgnoreCase)||ExecutableHash(owner.MainModule.FileName)!=expectedHash)throw new IOException("Owning tray process identity changed");
     pipe.Connect(2000);uint server;
     if(!GetNamedPipeServerProcessId(pipe.SafePipeHandle,out server)||server!=(uint)owner.Id)throw new IOException("Owner pipe belongs to another process");
     using(var timeout=new Timer(delegate{try{pipe.Dispose();}catch{}},null,12000,Timeout.Infinite)){
-     byte opcode=operation=="Start"?(byte)1:operation=="Stop"?(byte)2:operation=="Restart"?(byte)3:(byte)0;
+     byte opcode=operation=="Start"?(byte)1:operation=="Stop"?(byte)2:operation=="Restart"?(byte)3:operation=="Probe"?(byte)6:(byte)0;
      if(opcode==0)throw new ArgumentException("Unsupported service command");
      byte[] request=new byte[66];request[0]=1;request[1]=opcode;Encoding.ASCII.GetBytes(Scope(options.ConfigFile,"")).CopyTo(request,2);pipe.Write(request,0,request.Length);pipe.Flush();
      var reader=new BinaryReader(pipe,Encoding.UTF8);int length=reader.ReadInt32();if(length<1||length>4096)throw new IOException("Owner response length invalid");
      byte[] response=reader.ReadBytes(length);if(response.Length!=length)throw new IOException("Owner response incomplete; outcome unknown");
+     pipe.WriteByte(1);pipe.Flush();
      string result=Encoding.UTF8.GetString(response);if(!result.StartsWith("OK ",StringComparison.Ordinal))throw new IOException(result);return result.Substring(3);
     }
    }
@@ -84,7 +88,7 @@ namespace MonakaBridge {
   internal readonly string Root,ConfigFile,HealthFile,ConfigHelper,HelperSha256,InstallationName;
   internal readonly bool ReadOnly,ControlWindowOnly;
   internal readonly CalibrationInstallation Calibration;
-  internal string OwnerPipe,OwnerIdentity;
+  internal string OwnerPipe,OwnerIdentity,OwnerExecutable,OwnerSha256;
   GuiLaunchOptions(string root,string config,string health,string helper,string hash,string name,bool readOnly,bool window,CalibrationInstallation calibration=null){
    Root=root;ConfigFile=config;HealthFile=health;ConfigHelper=helper;HelperSha256=hash;InstallationName=name;ReadOnly=readOnly;ControlWindowOnly=window;Calibration=calibration;
   }
@@ -101,7 +105,7 @@ namespace MonakaBridge {
    return Absolute(Path.IsPathRooted(value)?value:Path.Combine(directory,value),key);
   }
   internal static GuiLaunchOptions Parse(string[] args,string defaultRoot){
-   string root=null,config=null,health=null,helper=null,hash=null,installation=null,name=null,profileHash=null,ownerPipe=null,ownerIdentity=null;
+   string root=null,config=null,health=null,helper=null,hash=null,installation=null,name=null,profileHash=null,ownerPipe=null,ownerIdentity=null,ownerExecutable=null,ownerSha256=null;
    bool readOnly=false,allowWrite=false,window=false,profileReadOnly=true;
    var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
    for(int i=0;args!=null&&i<args.Length;i++){
@@ -112,11 +116,13 @@ namespace MonakaBridge {
      case "--read-only":readOnly=true;break;
      case "--allow-write":allowWrite=true;break;
      case "--control-window-only":window=true;break;
-     case "--owner-pipe":case "--owner-identity":case "--installation":case "--config":case "--health":case "--config-helper":case "--helper-sha256":case "--installation-name":case "--profile-sha256":
+     case "--owner-executable":case "--owner-sha256":case "--owner-pipe":case "--owner-identity":case "--installation":case "--config":case "--health":case "--config-helper":case "--helper-sha256":case "--installation-name":case "--profile-sha256":
       if(++i>=args.Length||string.IsNullOrWhiteSpace(args[i])||args[i].StartsWith("--",StringComparison.Ordinal))throw new ArgumentException("Missing value for "+arg);
       switch(arg.ToLowerInvariant()){
        case "--owner-pipe":ownerPipe=args[i];break;
        case "--owner-identity":ownerIdentity=args[i];break;
+       case "--owner-executable":ownerExecutable=Absolute(args[i],arg);break;
+       case "--owner-sha256":ownerSha256=args[i].ToLowerInvariant();break;
        case "--installation":installation=Absolute(args[i],arg);break;
        case "--config":config=Absolute(args[i],arg);break;
        case "--health":health=Absolute(args[i],arg);break;
@@ -129,6 +135,8 @@ namespace MonakaBridge {
     }
    }
    if((ownerPipe==null)!=(ownerIdentity==null))throw new ArgumentException("Incomplete owner endpoint");
+   if((ownerExecutable==null)!=(ownerSha256==null)||ownerExecutable!=null&&ownerPipe==null)throw new ArgumentException("Incomplete native owner pin");
+   if(ownerSha256!=null){if(ownerSha256.Length!=64)throw new ArgumentException("Invalid native owner SHA256");foreach(char c in ownerSha256)if(!Uri.IsHexDigit(c))throw new ArgumentException("Invalid native owner SHA256");}
    if(ownerPipe!=null)BridgeOwnerChannel.Validate(ownerPipe,ownerIdentity);
    if(readOnly&&allowWrite)throw new ArgumentException("Read-only and allow-write conflict");
    bool explicitPaths=config!=null||health!=null||helper!=null||hash!=null;
@@ -145,7 +153,7 @@ namespace MonakaBridge {
      var selected=CalibrationInstallation.Parse(installation,profileBytes);
      if(profileHash!=null&&!string.Equals(profileHash,selected.ProfileSha256,StringComparison.OrdinalIgnoreCase))throw new ArgumentException("Selected profile changed since launch; reopen explicitly");
      bool effectiveReadonly=readOnly||selected.ReadOnly;
-     return new GuiLaunchOptions(Path.GetFullPath(root??Path.GetDirectoryName(installation)),selected.ConfigFile,selected.HealthFile,selected.ConfigHelper,selected.ConfigHelperSha256,selected.Name,effectiveReadonly,window,selected){OwnerPipe=ownerPipe,OwnerIdentity=ownerIdentity};
+     return new GuiLaunchOptions(Path.GetFullPath(root??Path.GetDirectoryName(installation)),selected.ConfigFile,selected.HealthFile,selected.ConfigHelper,selected.ConfigHelperSha256,selected.Name,effectiveReadonly,window,selected){OwnerPipe=ownerPipe,OwnerIdentity=ownerIdentity,OwnerExecutable=ownerExecutable,OwnerSha256=ownerSha256};
     }
     if(profileHash!=null)throw new ArgumentException("Profile snapshot requires the selected v2 schema; no fallback");
     var keys=new HashSet<string>(new[]{"schema","name","config","health","config_helper","helper_sha256","read_only"});
@@ -165,7 +173,7 @@ namespace MonakaBridge {
    if(hash!=null){if(hash.Length!=64)throw new ArgumentException("Helper SHA256 must have64 hexadecimal characters");foreach(char c in hash)if(!Uri.IsHexDigit(c))throw new ArgumentException("Invalid helper SHA256");hash=hash.ToLowerInvariant();}
    if(name!=null&&(name.Length>128||name.IndexOfAny(new[]{'\r','\n','\0'})>=0))throw new ArgumentException("Invalid installation name");
    bool ro=readOnly||(!allowWrite&&(installation!=null?profileReadOnly:explicitPaths));
-   return new GuiLaunchOptions(root,config,health,helper,hash,name??"Legacy root target",ro,window){OwnerPipe=ownerPipe,OwnerIdentity=ownerIdentity};
+   return new GuiLaunchOptions(root,config,health,helper,hash,name??"Legacy root target",ro,window){OwnerPipe=ownerPipe,OwnerIdentity=ownerIdentity,OwnerExecutable=ownerExecutable,OwnerSha256=ownerSha256};
   }
   internal static string Quote(string value){
    if(value==null||value.IndexOf('\0')>=0)throw new ArgumentException("Invalid command argument");
@@ -173,7 +181,7 @@ namespace MonakaBridge {
    foreach(char c in value){if(c=='\\'){slashes++;continue;}if(c=='"'){b.Append('\\',slashes*2+1);b.Append(c);}else{b.Append('\\',slashes);b.Append(c);}slashes=0;}
    b.Append('\\',slashes*2);return b.Append('"').ToString();
   }
-  internal string OwnerArguments(){return OwnerPipe==null?"":" --owner-pipe "+Quote(OwnerPipe)+" --owner-identity "+Quote(OwnerIdentity);}
+  internal string OwnerArguments(){return OwnerPipe==null?"":" --owner-pipe "+Quote(OwnerPipe)+" --owner-identity "+Quote(OwnerIdentity)+(OwnerExecutable==null?"":" --owner-executable "+Quote(OwnerExecutable)+" --owner-sha256 "+OwnerSha256);}
   internal string WindowArguments(){return WindowTargetArguments()+OwnerArguments();}
   string WindowTargetArguments(){if(Calibration!=null)return Quote(Root)+" --control-window-only --installation "+Quote(Calibration.ProfilePath)+" --profile-sha256 "+Calibration.ProfileSha256+(ReadOnly?" --read-only":" --allow-write");return Quote(Root)+" --control-window-only --installation-name "+Quote(InstallationName)+" --config "+Quote(ConfigFile)+" --health "+Quote(HealthFile)+" --config-helper "+Quote(ConfigHelper)+(HelperSha256==null?"":" --helper-sha256 "+HelperSha256)+(ReadOnly?" --read-only":" --allow-write");}
   internal string EditBlockReason(){
