@@ -238,13 +238,23 @@ Config worldCalibrationCandidate(
     if (!apply) return current;
     if (!finite(transform.rotation) || !finite(transform.translation))
         throw std::invalid_argument("world calibration transform must be finite");
+    // Re-saving an identical W is a no-op: do not revoke legacy status or advance the mapping generation.
+    bool changed = false;
+    for (const auto& [key, binding] : current.bindings)
+        if (binding.source == measured.binding.source &&
+            binding.inputSpace == measured.binding.inputSpace &&
+            binding.inputRevision == measured.binding.inputRevision &&
+            !sameRigid(binding.world, transform)) changed = true;
+    if (!changed) return current;
     Config candidate = current;
     for (auto& [key, binding] : candidate.bindings)
         if (binding.source == measured.binding.source &&
             binding.inputSpace == measured.binding.inputSpace &&
             binding.inputRevision == measured.binding.inputRevision) {
-            binding.world = transform;
-            binding.spaceApproved = false;
+            if (!sameRigid(binding.world, transform)) {
+                binding.world = transform;
+                binding.spaceApproved = false; // Retained for legacy display only, not an output permission gate.
+            }
         }
     if (candidate.revision == std::numeric_limits<std::uint32_t>::max())
         throw std::invalid_argument("mapping_revision exhausted");
