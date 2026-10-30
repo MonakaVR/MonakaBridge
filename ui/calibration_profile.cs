@@ -68,6 +68,28 @@ namespace MonakaBridge {
     if(actual!=CalibrationHelperSha256)throw new InvalidOperationException("Calibration helper SHA256 mismatch");
    }
   }
+  internal Dictionary<string,object> OpenMeasurementRequest(bool effectiveReadOnly) {
+   // Resolve only the selected opaque identity in the current saved snapshot.
+   // A successful recalibration may have advanced its stored frame since this
+   // installation profile was created. Native Open still validates and freezes
+   // the complete current config; subsequent changes remain CAS conflicts.
+   byte[] bytes;
+   using(var file=new FileStream(ConfigFile,FileMode.Open,FileAccess.Read,FileShare.Read)){
+    if(file.Length>2*1024*1024)throw new InvalidOperationException("Calibration config byte limit");
+    bytes=new byte[(int)file.Length];int at=0,n;
+    while(at<bytes.Length&&(n=file.Read(bytes,at,bytes.Length-at))>0)at+=n;
+    if(at!=bytes.Length||file.ReadByte()!=-1)throw new InvalidOperationException("Calibration config changed during read");
+   }
+   var config=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=2*1024*1024,RecursionLimit=16}.Deserialize<Dictionary<string,object>>(CalibrationJson.Utf8.GetString(bytes).TrimStart('\uFEFF'));
+   if(CalibrationJson.Text(config,"bridge_id",4096)!=BridgeId)throw new InvalidOperationException("Calibration config bridge differs from selected target");
+   Dictionary<string,object> selected=null;
+   foreach(Dictionary<string,object> row in (System.Collections.IEnumerable)config["mappings"])
+    if(CalibrationJson.Text(row,"source_id",4096)==Source&&CalibrationJson.Text(row,"device_id",4096)==Device){
+     if(selected!=null||CalibrationJson.Text(row,"tracker_id",4096)!=Tracker)throw new InvalidOperationException("Calibration mapping differs from selected target");selected=row;
+    }
+   if(selected==null)throw new InvalidOperationException("Calibration mapping missing for selected target");
+   var request=OpenRequest(effectiveReadOnly);request["input_space"]=CalibrationJson.Text(selected,"input_space",4096);request["input_revision"]=CalibrationJson.Integer(selected,"input_revision",0,UInt32.MaxValue);return request;
+  }
   internal Dictionary<string,object> OpenRequest(bool effectiveReadOnly) {
    // Request ID is added by the one native client. No pose/world numeric data.
    return new Dictionary<string,object>{{"config_path",ConfigFile},{"source",Source},{"device",Device},{"tracker",Tracker},

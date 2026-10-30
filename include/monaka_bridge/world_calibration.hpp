@@ -3,6 +3,7 @@
 #include "config.hpp"
 
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace mb {
@@ -54,14 +55,15 @@ void validateWorldCalibrationTarget(
     const Config& current,
     const WorldCalibrationTarget& measured);
 
-// Returns a candidate without performing I/O. measure-only returns an unchanged
-// copy. Apply updates world transforms for the existing shared input-map group
-// and invalidates every member's space approval on each explicit apply, even
-// for an identical transform. Increments mapping_revision exactly once.
+// Returns a candidate without I/O. Apply updates the existing saved World group
+// and, when supplied, binds its changed World to the frozen observed input frame.
+// Other groups and Mounts are retained. Equivalent Worlds are exact no-ops,
+// including frame metadata; a changed World increments mapping_revision once.
 Config worldCalibrationCandidate(
     const Config& current,
     const WorldCalibrationTarget& measured,
     const Rigid& transform,
-    bool apply);
+    bool apply,
+    std::optional<std::pair<std::string, std::uint32_t>> observedFrame = {});
 
 } // namespace mb
