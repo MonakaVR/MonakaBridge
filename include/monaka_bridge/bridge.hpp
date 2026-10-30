@@ -34,7 +34,7 @@ class Bridge {
  std::map<Key,Logical> logical_;
  std::map<Key,Key> trackerOwners_;
  c1::Envelope publish(const c1::Envelope&,std::int64_t now);
- bool approved(const Binding&,const Device&)const;
+ bool usableWithProfile(const Binding&,const Device&)const;
 public:
  Registry registry;
  Fanout fanout;
