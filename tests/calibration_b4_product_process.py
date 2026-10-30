@@ -18,7 +18,7 @@ def run(label,args,payload=None):
  records.append({'label':label,'exit_code':result.returncode,'command':[str(executable),*args]});assert result.returncode==0,(label,result.stderr)
  assert not (output/'sdk-called.marker').exists() and not Path(env['LOCALAPPDATA']).exists()
  return [json.loads(line) for line in result.stdout.splitlines()]
-version=run('version',['--local-api-version'])[0];assert version['static_supported'] and version['output_approval'];assert {'static_points_policy1','independent_output_review'}<=set(version['features'])
+version=run('version',['--local-api-version'])[0];assert version['static_supported'] and version['output_approval'] is False;assert 'static_points_policy1' in version['features'] and 'independent_output_review' not in version['features']
 for mode,readonly in [('static',False),('static',True),('output_approval',False),('output_approval',True)]:
  request=dict(opening,op='open',request_id='open',helper_path=str(executable),helper_sha256=sha(executable),readonly=readonly)
  if mode=='static':request['mode']='static'

@@ -65,16 +65,21 @@ try:
  # Partial components remain partial in MTP and Direct.
  fixture.update(sequence='1',position=None,modality='rotation_only',validity=dict(position=False,orientation=True),tracking_state='degraded',linear_velocity=None);send(s1,fixture)
  assert poses()[-1]['validity']==dict(position=False,orientation=True)
- # Actual v2 adapter output from synthetic VIVE status fixtures: mirror admission, with native profile blocked by default.
+ # An explicitly defined native profile is usable without physical-quality approval.
  vive=[json.loads(x) for x in (root/'tests/fixtures/vive-v2-synthetic-status-samples.jsonl').read_text().splitlines()]
  for v in vive:send(sv,v)
  assert sum(x['source_id']=='vive-installation-a' for x in mirrored)==7
- assert not any(x['tracker_id']=='logical-vive' for x in poses())
- # Explicit synthetic-only profile approval exercises downstream fixture compatibility.
+ native_before=next(x for x in poses() if x['tracker_id']=='logical-vive' and x['validity']['position'])
+ assert config['profiles']['vive-unverified']['approved'] is False
+ # Updating quality metadata alone does not change the selected conversion.
  config['profiles']['vive-unverified'].update(approved=True,evidence='Synthetic Task3 fixture only; no hardware approval');config['mapping_revision']+=1;save();collect(.6)
+ native_start=len(poses())
  for v in vive:
   v=copy.deepcopy(v);v['sequence']=str(int(v['sequence'])+256);send(sv,v)
- assert any(x['tracker_id']=='logical-vive' and x['validity']['position'] for x in poses())
+ native_after=next(x for x in poses()[native_start:] if x['tracker_id']=='logical-vive' and x['validity']['position'])
+ assert int(native_after['input']['sequence'])==int(native_before['input']['sequence'])+256
+ assert native_after['input']['session_id']==native_before['input']['session_id'] and native_after['mapping_revision']==config['mapping_revision']
+ assert native_after['position']==native_before['position'] and native_after['orientation']==native_before['orientation']
  # Disabled policy preserves utility mirror; wait for reconfiguration invalidations.
  config['policy']='disabled';config['mapping_revision']+=1;save();collect(.65);n=len(poses());m=len(mirrored)
  other['sequence']='2';send(s2,other);assert len(poses())==n and len(mirrored)>m
@@ -106,7 +111,7 @@ try:
  assert any(x['tracker']=='logical-other' and x['input_sequence']==4 for x in rows)
  assert any(x['tracker']=='logical-other' and x['input_sequence']==5 for x in rows)
  (run/'observations-and-mtp.json').write_text(json.dumps(dict(mtp=received,mirror=mirrored),indent=2))
- report=dict(result='PASS',direct_mtp_matches=matched,task2_fixture='verified extraction tests/protocol_tests.cpp TestPoseRoundTrip values',synthetic_vive_v2_samples=7,hardware='NOT RUN',cases=['separate service and Direct adapter','multi-source epochs','duplicate/reorder','source restart/retired session','explicit rotation_only','VIVE blocked and explicit synthetic profile','disabled mirror','route change','duplicate bind','consumer reopen','Bridge restart'])
+ report=dict(result='PASS',direct_mtp_matches=matched,task2_fixture='verified extraction tests/protocol_tests.cpp TestPoseRoundTrip values',synthetic_vive_v2_samples=7,hardware='NOT RUN',cases=['separate service and Direct adapter','multi-source epochs','duplicate/reorder','source restart/retired session','explicit rotation_only','defined unapproved profile and quality-only metadata invariance','disabled mirror','route change','duplicate bind','consumer reopen','Bridge restart'])
  (root/'build/udp-regression-results.json').write_text(json.dumps(report,indent=2));print(json.dumps(report))
 finally:
  for proc,f in processes:
