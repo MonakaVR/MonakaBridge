@@ -11,9 +11,14 @@ int main(int argc,char** argv)try{
  if(command=="validate"){std::cout<<"valid\n";return 0;}
  if(command=="migrate"&&argc==6){mb::migrateLegacy(argv[3],argv[4],argv[5],c);return 0;}
  if(command=="policy"&&argc==4)c.policy=mb::parsePolicy(argv[3]);
- else if(command=="align"&&argc==7){
-  const auto* selected=&mb::detail::uniqueTracker(c,argv[3]);
-  mb::Vec t{std::stod(argv[4]),std::stod(argv[5]),std::stod(argv[6])};
+ else if((command=="align"&&argc==7)||(command=="align-binding"&&argc==8)){
+  const mb::Binding* selected=nullptr;int first=4;
+  if(command=="align-binding"){
+   auto found=c.bindings.find({argv[3],argv[4]});
+   if(found==c.bindings.end())throw std::invalid_argument("source/device not mapped");
+   selected=&found->second;first=5;
+  }else selected=&mb::detail::uniqueTracker(c,argv[3]);
+  mb::Vec t{std::stod(argv[first]),std::stod(argv[first+1]),std::stod(argv[first+2])};
   // Shared source-space alignment; never per-tracker position-zero calibration.
   bool changed=false;
   for(auto& [k,b]:c.bindings)if(b.source==selected->source&&b.inputSpace==selected->inputSpace&&b.inputRevision==selected->inputRevision){

@@ -79,7 +79,7 @@ class P0GuiTests {
    Invoke(host,"Reload");((ListBox)Field(host,"mappings")).SelectedIndex=selectedIndex;
    ((TextBox)Field(host,"x")).Text=worldX.ToString(CultureInfo.InvariantCulture);((TextBox)Field(host,"y")).Text="0";((TextBox)Field(host,"z")).Text="0";
    Action(host,"Apply shared translation").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Until(delegate{return !(bool)Field(host,"busy");});
-   Check(!(bool)Field(host,"needsReload"),"normal World save failed");
+   Check(!(bool)Field(host,"needsReload"),"normal World save failed: "+((TextBlock)Field(host,"status")).Text+"; tracker="+((TextBox)Field(host,"tracker")).Text+"; config="+path);
    byte[] geometric=File.ReadAllBytes(path);var applied=Read(path);var kept=(Dictionary<string,object>)DiscoveryModel.Mappings(applied)[selectedIndex];
    Check(IsRigid(kept["world"],worldX)&&IsRigid(kept["mount"],mountX),"ordinary GUI World save did not preserve Mount");
    // Same normal handler again must preserve exact bytes/revision.
