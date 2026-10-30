@@ -42,6 +42,18 @@ int main()try{
  CHECK(bridge.receive(wire(sample("other",1)),"b",510000000));auto restart=sample();restart.session_id=restart.clock_id=S2;bridge.receive(wire(restart),"a",520000000);CHECK(bridge.logical().at({"other","device"}).pose);CHECK(!bridge.logical().at({"pico","device"}).pose->angular_velocity);
  bridge.tick(1100000000);CHECK(!bridge.logical().at({"pico","device"}).pose);
  mb::Bridge unknown(c,SB);auto v=sample();v.coordinate_space.convention="vut-native-v1";CHECK(unknown.receive(wire(v),"a",10000000));CHECK(!unknown.logical().at({"pico","device"}).pose);
+ // A mapped, structurally valid source must work without physical approval or revision matching.
+ auto unapprovedConfig=c;auto& unapprovedBinding=unapprovedConfig.bindings.at({"pico","device"});
+ unapprovedConfig.profiles.at("pico").approved=false;unapprovedConfig.profiles.at("pico").evidence.clear();
+ unapprovedBinding.spaceApproved=false;unapprovedBinding.inputRevision=999;unapprovedBinding.inputSpace="old-saved-map";
+ unapprovedBinding.world.translation={4,0,0};mb::validateConfig(unapprovedConfig);
+ mb::Bridge unapproved(unapprovedConfig,SB);
+ CHECK(unapproved.receive(wire(sample()),"a",10000000));
+ const auto unapprovedPose=unapproved.logical().at({"pico","device"}).pose;
+ CHECK(unapprovedPose&&unapprovedPose->modality=="full"&&unapprovedPose->validity.position);
+ CHECK(unapprovedPose->position&&near((*unapprovedPose->position)[0],5));
+ CHECK(unapprovedPose->coordinate_space.id=="world");
+ CHECK(unapprovedConfig.bindings.at({"pico","device"}).world.translation==mb::Vec({4,0,0}));
  c.policy=mb::Policy::Disabled;mb::Bridge disabled(c,SB);disabled.receive(wire(sample()),"a",10000000);CHECK(disabled.fanout.pending(mb::Channel::Mirror)==1);CHECK(disabled.fanout.pending(mb::Channel::Monaka)==0);
  mb::Fanout q;q.capacity=1;q.put(mb::Channel::Mirror,sample(),10);q.put(mb::Channel::Mirror,sample("other"),10);CHECK(q.dropped==1);q.flush([](auto,auto){return false;},20);CHECK(q.errors==1&&q.pending(mb::Channel::Mirror)==0);
  mb::Udp owner(0);bool bindRejected=false;try{mb::Udp duplicateBind(owner.port());}catch(...){bindRejected=true;}CHECK(bindRejected);
