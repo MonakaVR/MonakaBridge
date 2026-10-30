@@ -233,7 +233,8 @@ Config worldCalibrationCandidate(
     const Config& current,
     const WorldCalibrationTarget& measured,
     const Rigid& transform,
-    bool apply) {
+    bool apply,
+    std::optional<std::pair<std::string, std::uint32_t>> observedFrame) {
     validateWorldCalibrationTarget(current, measured);
     if (!apply) return current;
     if (!finite(transform.rotation) || !finite(transform.translation))
@@ -249,6 +250,25 @@ Config worldCalibrationCandidate(
             if(!equivalentRigid(binding.world,transform)){binding.world = transform;changed=true;}
         }
     if(!changed)return current;
+    if (observedFrame) {
+        if (observedFrame->first.empty())
+            throw std::invalid_argument("measured input frame must be nonempty");
+        const auto& selected = measured.binding;
+        const auto savedMember = [&](const Binding& b) {
+            return b.source == selected.source && b.inputSpace == selected.inputSpace &&
+                   b.inputRevision == selected.inputRevision;
+        };
+        // Never merge an independently saved World group into the measured one.
+        for (const auto& [key, binding] : current.bindings)
+            if (!savedMember(binding) && binding.source == selected.source &&
+                binding.inputSpace == observedFrame->first && binding.inputRevision == observedFrame->second)
+                throw std::invalid_argument("measured input frame collides with another World group");
+        for (const auto& [key, binding] : current.bindings) if (savedMember(binding)) {
+            auto& updated = candidate.bindings.at(key);
+            updated.inputSpace = observedFrame->first;
+            updated.inputRevision = observedFrame->second;
+        }
+    }
     if (candidate.revision == std::numeric_limits<std::uint32_t>::max())
         throw std::invalid_argument("mapping_revision exhausted");
     ++candidate.revision;

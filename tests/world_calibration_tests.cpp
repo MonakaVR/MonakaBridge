@@ -120,6 +120,20 @@ int main() try {
     const auto& sibling=applied.bindings.at({"other","device"});
     CHECK(sibling.world.rotation==mb::Quat({0,0,0,1}));
 
+    const auto reboundFrame = mb::worldCalibrationCandidate(configValue,target,arbitrary,true,std::make_pair(std::string("current-frame"),2U));
+    const auto& reboundBinding = reboundFrame.bindings.at({"pico","device"});
+    CHECK(reboundBinding.inputSpace=="current-frame"&&reboundBinding.inputRevision==2);
+    CHECK(reboundFrame.bindings.at({"pico","device-shared"}).inputRevision==2);
+    CHECK(reboundBinding.mount.translation==originalMount.translation&&reboundBinding.mount.rotation==originalMount.rotation);
+    CHECK(reboundFrame.bindings.at({"other","device"}).inputSpace=="native"&&reboundFrame.bindings.at({"other","device"}).inputRevision==1);
+    auto sameWorld = mb::worldCalibrationCandidate(configValue,target,binding.world,true,std::make_pair(std::string("current-frame"),2U));
+    CHECK(sameWorld.revision==configValue.revision&&sameWorld.bindings.at({"pico","device"}).inputSpace=="native"&&sameWorld.bindings.at({"pico","device"}).inputRevision==1);
+    auto collision=configValue;auto distinct=shared;distinct.device="separate";distinct.tracker="logical-separate";distinct.inputSpace="current-frame";distinct.inputRevision=2;collision.bindings[{distinct.source,distinct.device}]=distinct;
+    const auto collisionTarget=mb::selectWorldCalibrationTarget(collision,"pico","device","logical-pico","native",1);
+    rejected([&]{mb::worldCalibrationCandidate(collision,collisionTarget,arbitrary,true,std::make_pair(std::string("current-frame"),2U));});
+    CHECK(collision.bindings.at({"pico","device"}).world.translation==binding.world.translation&&collision.bindings.at({"pico","device"}).mount.translation==originalMount.translation);
+    CHECK(collision.bindings.at({"pico","separate"}).inputRevision==2&&collision.bindings.at({"other","device"}).inputRevision==1);
+
     std::cout << "PASS world calibration: rigid recovery, translation/yaw/3-axis/noise, geometry/reflection rejection, identity/revision guards, measure/apply semantics\n";
     return 0;
 } catch (const std::exception& error) {

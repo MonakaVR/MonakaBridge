@@ -298,7 +298,7 @@ struct CalibrationSession::Impl {
   if(op=="prepare_commit"){
    need(!providerOptions->readOnly(),"READONLY_COMMIT_REJECTED");
    if(candidate.empty()){
-    auto proposed=worldCalibrationCandidate(config,frozen->target(),staticResult?staticResult->transform:result->world,true);
+    auto proposed=worldCalibrationCandidate(config,frozen->target(),staticResult?staticResult->transform:result->world,true,std::make_pair(input->space,input->revision));
     if(proposed.revision==config.revision)drafts.write("candidate.json",original);
     else {proposed.sourcePath.clear();drafts.publishCandidate(proposed,env.draftPublishHook);}
     candidate=readConfigBytes(drafts.path("candidate.json"));candidateHash=sha256(candidate);
