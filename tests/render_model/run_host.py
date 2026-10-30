@@ -114,8 +114,10 @@ case('two-generic-identities',mode='two-assigned',edit=two_assignments)
 case('default-unassigned')
 case('explicit-pico',mode='pico')
 case('mixed-pico-altra',mode='mixed')
-for mutation in ['publisher','source','device','tracker','revision','session','input-session']:
+for mutation in ['publisher','source','device','tracker']:
     case('unknown-'+mutation,mutation=mutation)
+for mutation in ['revision','session','input-session']:
+    case('compatible-'+mutation,mode='pico',mutation=mutation)
 for mutation in ['rebind','generation','input-restart','backend-restart']:
     case('revoke-'+mutation,mode='revoke',mutation=mutation)
 case('lost-recovery-cycles',mode='reacquire')
@@ -139,9 +141,9 @@ case('opaque-kind-assignment',mode='pico',edit=lambda c,s,p:s['assignments'][0].
 case('wrong-runtime-serial',edit=lambda c,s,p:s['assignments'][0].update(runtime_serial=SERIAL+'1'))
 case('duplicate-assignment',edit=lambda c,s,p:s['assignments'].append(copy.deepcopy(s['assignments'][0])))
 case('unknown-field',edit=lambda c,s,p:s.update(unrecognized=True))
-case('stale-config-generation',edit=lambda c,s,p:c.update(mapping_revision=2))
-case('unapproved-profile',edit=lambda c,s,p:c['profiles']['explicit'].update(approved=False))
-case('unapproved-space',edit=lambda c,s,p:c['mappings'][0].update(space_approved=False))
+case('diagnostic-config-generation',mode='pico',edit=lambda c,s,p:c.update(mapping_revision=2))
+case('unapproved-profile',mode='pico',edit=lambda c,s,p:c['profiles']['explicit'].update(approved=False))
+case('unapproved-space',mode='pico',edit=lambda c,s,p:c['mappings'][0].update(space_approved=False))
 case('unprovisioned-input',edit=lambda c,s,p:c['mappings'][0].pop('runtime_contract'))
 case('config-rebound-device',edit=lambda c,s,p:c['mappings'][0].update(device_id='ALTRA-replacement'))
 case('duplicate-physical-mapping',edit=lambda c,s,p:c['mappings'].append(copy.deepcopy(c['mappings'][0])))

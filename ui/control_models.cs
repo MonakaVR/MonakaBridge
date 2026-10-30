@@ -23,7 +23,7 @@ namespace MonakaBridge {
   internal void Select(IList rows,int index,Action<Dictionary<string,object>> render){
    var row=rows!=null&&index>=0&&index<rows.Count?(Dictionary<string,object>)rows[index]:null;
    SelectedIndex=row==null?-1:index;SelectedKey=row==null?null:Key(row);
-   Approved=row!=null&&Convert.ToBoolean(row["space_approved"],CultureInfo.InvariantCulture);
+   Approved=row!=null&&row.ContainsKey("space_approved")&&Convert.ToBoolean(row["space_approved"],CultureInfo.InvariantCulture);
    Programmatic(delegate{render(row);});
   }
   internal void Restore(IList rows,Tuple<string,string> key,Action<Dictionary<string,object>> render){
@@ -48,16 +48,22 @@ namespace MonakaBridge {
   internal static Tuple<string,string,string> Identity(string publisher,string source,string tracker){return Tuple.Create(publisher,source,tracker);}
   static string Text(Dictionary<string,object> value,string name){return Convert.ToString(value[name],CultureInfo.InvariantCulture);}
   static Dictionary<string,object> Rigid(){return new Dictionary<string,object>{{"rotation",new double[]{0,0,0,1}},{"translation",new double[]{0,0,0}}};}
+  internal static Dictionary<string,object> WithDefaults(Dictionary<string,object> loaded){
+   var result=Clone(loaded);if(!result.ContainsKey("pose_timeout_ms"))result["pose_timeout_ms"]=500;
+   foreach(var item in (Dictionary<string,object>)result["profiles"]){var p=(Dictionary<string,object>)item.Value;if(!p.ContainsKey("approved"))p["approved"]=false;if(!p.ContainsKey("evidence"))p["evidence"]="";if(!p.ContainsKey("angular_space_verified"))p["angular_space_verified"]=false;}
+   foreach(Dictionary<string,object> row in (IList)result["mappings"]){if(!row.ContainsKey("space_approved"))row["space_approved"]=false;if(!row.ContainsKey("world"))row["world"]=Rigid();if(!row.ContainsKey("mount"))row["mount"]=Rigid();}
+   return result;
+  }
   // Build a candidate without mutating the loaded UI model. Native validation and
   // atomic replacement must succeed before the GUI adopts this candidate.
   internal static Dictionary<string,object> Candidate(Dictionary<string,object> loaded,int selectedIndex,Dictionary<string,object> edit){
    RequireProfile(loaded,Convert.ToString(edit["profile"],CultureInfo.InvariantCulture));
-   var result=Clone(loaded);var list=new ArrayList((ICollection)result["mappings"]);
+   var normalized=WithDefaults(loaded);var result=Clone(normalized);var list=new ArrayList((ICollection)result["mappings"]);
    if(selectedIndex < -1 || selectedIndex>=list.Count)throw new InvalidOperationException("Mapping selection changed; reload first.");
    Dictionary<string,object> selected=selectedIndex<0?null:(Dictionary<string,object>)list[selectedIndex];
    if(selected==null)foreach(Dictionary<string,object> b in list)
     if(Text(b,"source_id")==Text(edit,"source_id")&&Text(b,"device_id")==Text(edit,"device_id"))selected=b;
-   bool sameApproval=selected!=null&&Convert.ToBoolean(selected["space_approved"],CultureInfo.InvariantCulture);
+   bool sameApproval=selected!=null&&selected.ContainsKey("space_approved")&&Convert.ToBoolean(selected["space_approved"],CultureInfo.InvariantCulture);
    foreach(string field in new[]{"source_id","device_id","profile","input_space","input_revision","world_space"})
     sameApproval=sameApproval&&selected!=null&&Text(selected,field)==Text(edit,field);
    if(Convert.ToBoolean(edit["space_approved"],CultureInfo.InvariantCulture)&&!sameApproval)
@@ -70,7 +76,8 @@ namespace MonakaBridge {
     if(!inputs.Add(Tuple.Create(Text(b,"source_id"),Text(b,"device_id"))))throw new InvalidOperationException("Source/device mapping collision; select the existing mapping.");
     if(!outputs.Add(Identity(publisher,Text(b,"source_id"),Text(b,"tracker_id"))))throw new InvalidOperationException("Publisher/source/tracker mapping collision.");
    }
-   result["mappings"]=list.ToArray();result["mapping_revision"]=checked(Convert.ToUInt32(result["mapping_revision"])+1);
+   result["mappings"]=list.ToArray();
+   var json=new JavaScriptSerializer();if(json.Serialize(result)!=json.Serialize(normalized))result["mapping_revision"]=checked(Convert.ToUInt32(result["mapping_revision"])+1);
    return result;
   }
  }
@@ -150,6 +157,7 @@ namespace MonakaBridge {
    var q=row.ContainsKey("orientation_xyzw")?ArrayText(row["orientation_xyzw"],4):"-";
    return "Pose stage: "+stage+" (not final SteamVR output)\nCoordinate space: "+Text(row,"space")+" | convention="+Text(row,"convention")+" | revision="+Text(row,"revision")+
     "\nTracking: "+Text(row,"tracking_state")+" | "+freshness+" | sample position valid="+Flag(row,"position_valid")+" | sample orientation valid="+Flag(row,"orientation_valid")+
+    "\nCalibration: "+Text(row,"calibration_status")+" (physical quality unverified)"+
     "\nPosition [m]: "+p+"\nQuaternion xyzw: "+q;
   }
  }

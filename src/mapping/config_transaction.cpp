@@ -4,6 +4,7 @@
 #include <chrono>
 #include <atomic>
 #include <stdexcept>
+#include <nlohmann/json.hpp>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -46,7 +47,11 @@ void commitConfigDocument(const std::filesystem::path& path,const std::optional<
   else if(std::filesystem::exists(target))throw std::runtime_error("Configuration exists; an expected snapshot is required.");
  };
  check();
- if(expected){const auto previous=parseConfigDocument(*expected);if(previous.revision==UINT32_MAX||proposed.revision!=previous.revision+1)throw std::runtime_error("mapping revision must increment exactly once");}
+ if(expected){const auto previous=parseConfigDocument(*expected);
+  // A genuine unchanged document is a CAS-checked no-op, including at revision
+  // exhaustion. It neither replaces bytes nor creates a meaningless generation.
+  if(proposed.revision==previous.revision&&equivalentConfigDocuments(candidate,*expected)){checkpoint("validated");check();return;}
+  if(previous.revision==UINT32_MAX||proposed.revision!=previous.revision+1)throw std::runtime_error("mapping revision must increment exactly once");}
  checkpoint("validated");
  auto pending=target;pending+=".pending-txn-"+unique();
  struct Cleanup{std::filesystem::path p;~Cleanup(){std::error_code ec;std::filesystem::remove(p,ec);}} cleanup{pending};

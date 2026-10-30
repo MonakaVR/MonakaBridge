@@ -115,7 +115,7 @@ Presentation Presentation::load(const std::filesystem::path& package){
    require(uuid(entry.inputSession),"input session");
    const auto it=config.bindings.find({entry.source,entry.device});require(it!=config.bindings.end(),"physical mapping missing");
    const auto& binding=it->second;const auto profile=config.profiles.find(binding.profile);
-   require(binding.tracker==entry.tracker&&binding.spaceApproved&&profile!=config.profiles.end()&&profile->second.approved&&!profile->second.evidence.empty()&&config.contracts.count(it->first),"unapproved/unprovisioned mapping");
+   require(binding.tracker==entry.tracker&&profile!=config.profiles.end()&&config.contracts.count(it->first),"undefined/unprovisioned mapping");
    auto serial=runtimeSerial(outputSource(config.bridgeId,entry.source),entry.tracker);
    require(row.at("runtime_serial")==serial,"exact runtime serial");
    require(result.assignments_.emplace(serial,std::move(entry)).second,"duplicate model assignment");
@@ -130,8 +130,10 @@ PresentationState Presentation::evaluate(const std::string& serial,const DirectS
  auto it=assignments_.find(serial);if(it==assignments_.end())return PresentationState::Unassigned;
  if(!sample||!sample->pose)return PresentationState::Hidden;
  const auto& p=*sample->pose;const auto& a=it->second;
- const bool same=p.publisher_id==publisher_&&p.session_id==session_&&p.clock_id==session_&&p.mapping_revision==revision_&&
-  p.source_id==a.source&&p.tracker_id==a.tracker&&p.input.source_id==a.source&&p.input.device_id==a.device&&p.input.session_id==a.inputSession;
+ // Appearance belongs to the explicitly selected physical/logical identity.
+ // The MTP feed owns freshness and retired-session/revision protection.
+ const bool same=p.publisher_id==publisher_&&
+  p.source_id==a.source&&p.tracker_id==a.tracker&&p.input.source_id==a.source&&p.input.device_id==a.device;
  if(!same)return PresentationState::Revoked;
  return !sample->absent&&sample->fixedTime>=0&&now>=sample->fixedTime&&now-sample->fixedTime<500000000&&
   p.validity.position&&p.validity.orientation&&p.modality=="full"&&p.tracking_state=="tracked"

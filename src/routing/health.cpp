@@ -25,6 +25,9 @@ J healthSnapshot(const Bridge& bridge,std::int64_t now,std::int64_t unixMs){
    {"pose_stage","native_observation"},{"is_final_output",false},
    {"fresh",bridge.registry.fresh({source,device},now)},
    {"tracker",binding==bridge.config().bindings.end()?"unmapped":binding->second.tracker},
+   {"calibration_status",binding==bridge.config().bindings.end()?"unmapped":
+      equivalentRigid(binding->second.world,Rigid{})&&equivalentRigid(binding->second.mount,Rigid{})?"uncalibrated_identity":"saved_transform"},
+   {"declared_capabilities",d.capabilities},
    {"collision",s.collision||d.collision},
    {"tracking_state",d.pose?d.pose->tracking_state:(d.state?d.state->tracking_state:"unknown")},
    {"position_valid",bool(d.pose&&d.pose->validity.position)},

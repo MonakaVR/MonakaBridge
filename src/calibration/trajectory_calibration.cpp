@@ -138,10 +138,11 @@ TrajectoryResult solveTrajectory(const std::vector<TrajectoryPair>& pairs,double
 }
 void validateTrajectoryTarget(const Config& current,const WorldCalibrationTarget& target,const std::string& publisher){
     validateWorldCalibrationTarget(current,target);ensure(current.bridgeId==publisher,"calibration publisher changed");
-    ensure(target.binding.spaceApproved,"trajectory requires exact input space approval");
+    // Measurement needs valid samples and a defined transform, not output permission.
     for(const auto& [key,b]:current.bindings)if(b.source==target.binding.source&&b.inputSpace==target.binding.inputSpace&&b.inputRevision==target.binding.inputRevision)
         ensure(b.profile==target.binding.profile&&b.worldSpace==target.binding.worldSpace&&b.worldRevision==target.binding.worldRevision,"shared calibration group has incompatible profile/world space");
 }
+void TrajectoryRecorder::bindInputFrame(const std::string& space,std::uint32_t revision){ensure(source_.empty()&&sequence_==-1&&!space.empty(),"input frame must be frozen before measurement");target_.binding.inputSpace=space;target_.binding.inputRevision=revision;}
 TrajectoryRecorder::TrajectoryRecorder(const Config& c,const WorldCalibrationTarget& t,std::string ref,TrajectoryOptions o):target_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateTrajectoryTarget(c,t,publisher_);ensure(!referenceId_.empty(),"reference serial required");}
 TrajectoryRecorder::TrajectoryRecorder(const Config& c,const FrozenMeasurementTarget& t,std::string ref,TrajectoryOptions o):target_(t.target()),frozenTarget_(t),publisher_(c.bridgeId),referenceId_(std::move(ref)),options_(o){validateTrajectoryOptions(o);validateFrozenMeasurementTarget(c,t);ensure(!referenceId_.empty(),"reference serial required");}
 void TrajectoryRecorder::require(bool ok,const char* reason){if(!failure_.empty())throw std::invalid_argument(failure_);if(!ok){failure_=reason;throw std::invalid_argument(failure_);}}

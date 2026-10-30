@@ -14,7 +14,7 @@ namespace MonakaBridge {
   internal DiscoveryPanel(){
    Children.Add(new TextBlock{Text=BridgeText.T("Unmapped discovery / explicit rebind"),FontSize=18});
    Children.Add(new TextBlock{Text=BridgeText.T("Canonical decoded claims only; not admitted tracking or verified device support. Known input-frame changes are listed separately."),TextWrapping=TextWrapping.Wrap});
-   Children.Add(State);Children.Add(Candidates);Field("Verified coordinate profile",Profiles);Field("Existing explicit source contract",Contracts);Field("New logical tracker ID (Create only)",Logical);Field("Persisted slot (Replace / revision update)",Slots);
+   Children.Add(State);Children.Add(Candidates);Field("Defined coordinate profile",Profiles);Field("Declared static capabilities / saved contract",Contracts);Field("New logical tracker ID (Create only)",Logical);Field("Persisted slot (Replace / revision update)",Slots);
    var actions=new WrapPanel();foreach(var b in new[]{Create,Replace,Revision,Ignore}){b.Margin=new Thickness(3);b.MinHeight=28;actions.Children.Add(b);}Children.Add(actions);Children.Add(Details);
   }
   static void Field(Panel p,string label,Control control){p.Children.Add(new TextBlock{Text=BridgeText.T(label)});p.Children.Add(control);}

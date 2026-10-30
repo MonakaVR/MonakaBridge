@@ -60,12 +60,12 @@ namespace MonakaBridge {
     reloadConfiguration=Add(panel,"Refresh / load configuration",delegate{if(busy||calibration.Active)throw new InvalidOperationException("Finish the pending save or close calibration first");Reload();});AddEdit(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text=BridgeText.T("Persistent tracker mapping and profile"),FontSize=18});panel.Children.Add(mappingStatus);panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{if(!editor.Updating)SelectMapping();};
     AddEdit(panel,"New mapping / clear selection",delegate{editor.Select(map,-1,RenderMapping);status.Text=BridgeText.T("No mapping selected; select a profile explicitly. Save updates the exact source/device or creates a new mapping.");});
-    Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);panel.Children.Add(approved);
+    Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);
     foreach(var identityField in new[]{source,device,space,revision})identityField.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
     approved.Checked+=delegate{if(!editor.Updating)editor.Approved=true;};approved.Unchecked+=delegate{if(!editor.Updating)editor.Approved=false;};
     profile.SelectionChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};world.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
-    AddEdit(panel,"Clear existing space approval",delegate{editor.Approved=false;approved.IsChecked=false;});
-    AddEdit(panel,"Save mapping",SaveMapping);Add(panel,"Show profile approval",delegate{var p=MappingEditor.RequireProfile(config,profile.SelectedItem as string);status.Text=BridgeText.T("Profile approved: ")+p["approved"]+"\nEvidence: "+p["evidence"]+"\nInput space approval is separate.";});
+
+    AddEdit(panel,"Save mapping",SaveMapping);Add(panel,"Show coordinate profile",delegate{var p=MappingEditor.RequireProfile(config,profile.SelectedItem as string);status.Text="Convention: "+p["convention"]+"\nWorld/Mount calibration is optional. Physical-quality metadata does not permit or deny output.";});
     AddEdit(panel,"Import legacy route / alignment",Migrate);
     panel.Children.Add(new TextBlock{Text=BridgeText.T("Shared alignment for the selected source map (metres)"),FontSize=18});Field(panel,"X",x);Field(panel,"Y",y);Field(panel,"Z",z);
     AddEdit(panel,"Apply shared translation",delegate{double.Parse(x.Text,CultureInfo.InvariantCulture);double.Parse(y.Text,CultureInfo.InvariantCulture);double.Parse(z.Text,CultureInfo.InvariantCulture);SaveNativeDraft("align "+Quote(tracker.Text)+" "+Quote(x.Text)+" "+Quote(y.Text)+" "+Quote(z.Text),false);});
@@ -132,14 +132,14 @@ namespace MonakaBridge {
    void Reload(){Reload(editor.SelectedKey);}
    void Reload(Tuple<string,string> restoreKey){
     if(calibration.Active)throw new InvalidOperationException("Close calibration before loading another config snapshot");needsReload=true;RefreshAvailability();if(!File.Exists(options.ConfigFile)||new FileInfo(options.ConfigFile).Length>2*1024*1024)throw new InvalidOperationException("Configuration unavailable or exceeds size bound: "+options.ConfigFile);
-    var loadedBytes=File.ReadAllBytes(options.ConfigFile);var persisted=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(Encoding.UTF8.GetString(loadedBytes).TrimStart('\uFEFF'));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
+    var loadedBytes=File.ReadAllBytes(options.ConfigFile);var persisted=MappingEditor.WithDefaults(new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(Encoding.UTF8.GetString(loadedBytes).TrimStart('\uFEFF')));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
     configBytes=loadedBytes;config=persisted;map=nextMap;DiscoveryConfigurationLoaded();needsReload=false;RefreshAvailability();
-    status.Text=BridgeText.T("Loaded revision ")+config["mapping_revision"]+"; profile approval is required independently of space approval.";
+    status.Text=BridgeText.T("Loaded revision ")+config["mapping_revision"]+"; defined axes and fresh components are required. Calibration quality is diagnostic.";
     editor.Programmatic(delegate{
      mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);
      var names=new List<string>(((Dictionary<string,object>)config["profiles"]).Keys);names.Sort(StringComparer.Ordinal);profile.ItemsSource=names;
      routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);
-     if(Convert.ToString(config["policy"],CultureInfo.InvariantCulture)=="both")status.Text+=" Legacy both is saved; select one destination explicitly to migrate. No automatic change.";
+     if(Convert.ToString(config["policy"],CultureInfo.InvariantCulture)=="both")status.Text+=" Both outputs use the same normalized logical tracker state.";
      editor.Restore(map,restoreKey,RenderMapping);
     });
     Health();
@@ -183,7 +183,7 @@ namespace MonakaBridge {
     var alignment=new Microsoft.Win32.OpenFileDialog{Title=BridgeText.T("Select the legacy alignment JSON")};if(alignment.ShowDialog(this)!=true)return;
     SaveNativeDraft("migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName),true);
    }
-   void SelectObservation(){RequireSave();if(!healthAvailable||!HealthPresentation.Current(healthSnapshotUtc,DateTime.UtcNow)||config==null||healthPublisher!=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture))throw new InvalidOperationException("Current matching-instance health is required to adopt an observation");if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);editor.Approved=false;approved.IsChecked=false;status.Text=(editor.SelectedIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select a verified profile before approving output.";}
+   void SelectObservation(){RequireSave();if(!healthAvailable||!HealthPresentation.Current(healthSnapshotUtc,DateTime.UtcNow)||config==null||healthPublisher!=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture))throw new InvalidOperationException("Current matching-instance health is required to adopt an observation");if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);editor.Approved=false;approved.IsChecked=false;status.Text=(editor.SelectedIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select an explicitly defined matching coordinate profile. Uncalibrated W/M use Identity.";}
    void SelectMapping(){editor.Select(map,mappings.SelectedIndex,RenderMapping);}
    void RenderMapping(Dictionary<string,object> b){
     mappings.SelectedIndex=editor.SelectedIndex;

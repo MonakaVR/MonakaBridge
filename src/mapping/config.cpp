@@ -47,7 +47,7 @@ std::vector<std::string> projectOutputCapabilities(const std::vector<std::string
 void validateConfig(const Config& c){
  id(c.bridgeId);if(c.bindings.size()>256||c.profiles.size()>64||c.timeoutNs<1000000||c.timeoutNs>10000000000LL)throw std::invalid_argument("config bounds");
  std::set<Key> trackers;
- for(auto& [name,p]:c.profiles){id(name);id(p.convention);axes(p.positionAxes);axes(p.quaternionAxes);if(p.approved&&p.evidence.empty())throw std::invalid_argument("approved profile needs evidence");}
+ for(auto& [name,p]:c.profiles){id(name);id(p.convention);axes(p.positionAxes);axes(p.quaternionAxes);}
  for(auto& [key,b]:c.bindings){
   auto contract=c.contracts.find(key);
   if(contract!=c.contracts.end()){
@@ -64,9 +64,19 @@ void validateConfig(const Config& c){
 Config parseConfigDocument(const std::string& bytes){
  auto j=J::parse(bytes);if(j.at("namespace")!="monaka.bridge"||j.at("version")!=2)throw std::invalid_argument("unsupported config namespace/version");
  Config c;c.bridgeId=j.at("bridge_id");c.revision=u32(j.at("mapping_revision"));c.policy=parsePolicy(j.at("policy"));auto timeout=j.value("pose_timeout_ms",J(500));if(!timeout.is_number_integer()||timeout<1||timeout>10000)throw std::invalid_argument("timeout out of range");c.timeoutNs=timeout.get<std::int64_t>()*1000000;
- for(auto it=j.at("profiles").begin();it!=j.at("profiles").end();++it){const auto& v=it.value();Profile p;p.convention=v.at("convention");p.positionAxes=v.at("position_axes").get<std::array<int,3>>();p.quaternionAxes=v.at("quaternion_axes").get<std::array<int,4>>();p.approved=v.at("approved");p.evidence=v.value("evidence","");p.angularSpaceVerified=v.value("angular_space_verified",false);c.profiles.emplace(it.key(),p);}
- for(const auto& v:j.at("mappings")){Binding b;b.source=v.at("source_id");b.device=v.at("device_id");b.tracker=v.at("tracker_id");b.profile=v.at("profile");b.inputSpace=v.at("input_space");b.inputRevision=u32(v.at("input_revision"));b.worldSpace=v.at("world_space");b.worldRevision=u32(v.at("world_revision"));b.spaceApproved=v.at("space_approved");b.world=rigid(v.at("world"));b.mount=rigid(v.at("mount"));if(v.contains("runtime_contract"))c.contracts.emplace(Key{b.source,b.device},capabilityProfile(v.at("runtime_contract")));if(!c.bindings.emplace(Key{b.source,b.device},b).second)throw std::invalid_argument("source/device collision");}
+ for(auto it=j.at("profiles").begin();it!=j.at("profiles").end();++it){const auto& v=it.value();Profile p;p.convention=v.at("convention");p.positionAxes=v.at("position_axes").get<std::array<int,3>>();p.quaternionAxes=v.at("quaternion_axes").get<std::array<int,4>>();p.approved=v.value("approved",false);p.evidence=v.value("evidence","");p.angularSpaceVerified=v.value("angular_space_verified",false);c.profiles.emplace(it.key(),p);}
+ for(const auto& v:j.at("mappings")){Binding b;b.source=v.at("source_id");b.device=v.at("device_id");b.tracker=v.at("tracker_id");b.profile=v.at("profile");b.inputSpace=v.at("input_space");b.inputRevision=u32(v.at("input_revision"));b.worldSpace=v.at("world_space");b.worldRevision=u32(v.at("world_revision"));b.spaceApproved=v.value("space_approved",false);if(v.contains("world"))b.world=rigid(v.at("world"));if(v.contains("mount"))b.mount=rigid(v.at("mount"));if(v.contains("runtime_contract"))c.contracts.emplace(Key{b.source,b.device},capabilityProfile(v.at("runtime_contract")));if(!c.bindings.emplace(Key{b.source,b.device},b).second)throw std::invalid_argument("source/device collision");}
  validateConfig(c);c.sourceDocument=bytes;return c;
+}
+bool equivalentConfigDocuments(const std::string& left,const std::string& right){
+ const auto canonical=[](const std::string& bytes){
+  auto doc=J::parse(bytes);if(!doc.contains("pose_timeout_ms"))doc["pose_timeout_ms"]=500;
+  for(auto& item:doc["profiles"].items()){auto& p=item.value();if(!p.contains("approved"))p["approved"]=false;if(!p.contains("evidence"))p["evidence"]="";if(!p.contains("angular_space_verified"))p["angular_space_verified"]=false;}
+  auto& rows=doc["mappings"];for(auto& row:rows){if(!row.contains("space_approved"))row["space_approved"]=false;if(!row.contains("world"))row["world"]=toJson(Rigid{});if(!row.contains("mount"))row["mount"]=toJson(Rigid{});}
+  std::sort(rows.begin(),rows.end(),[](const J& a,const J& b){return Key{a.at("source_id"),a.at("device_id")}<Key{b.at("source_id"),b.at("device_id")};});
+  return doc;
+ };
+ return canonical(left)==canonical(right);
 }
 Config loadConfig(const std::filesystem::path& path){auto c=parseConfigDocument(readConfigBytes(path));c.sourcePath=std::filesystem::weakly_canonical(path);return c;}
 void saveConfig(const std::filesystem::path& path,const Config& c){
@@ -81,8 +91,9 @@ void saveConfig(const std::filesystem::path& path,const Config& c){
   for(std::size_t i=0;i<known["mappings"].size();++i){const auto& delta=known["mappings"][i];for(const auto& old:original.value("mappings",J::array()))if(old.value("source_id","")==delta.at("source_id")&&old.value("device_id","")==delta.at("device_id")){J row=old;merge(merge,row,delta);if(!delta.contains("runtime_contract"))row.erase("runtime_contract");j["mappings"][i]=row;break;}}
   for(auto it=original.begin();it!=original.end();++it)if(!j.contains(it.key()))j[it.key()]=it.value();
  }
- const auto bytes=j.dump(2)+'\n';const auto canonical=std::filesystem::weakly_canonical(path);
+ auto bytes=j.dump(2)+'\n';const auto canonical=std::filesystem::weakly_canonical(path);
  const bool same=!c.sourcePath.empty()&&canonical==c.sourcePath;
+ if(same&&!c.sourceDocument.empty()&&equivalentConfigDocuments(c.sourceDocument,bytes))bytes=c.sourceDocument;
  commitConfigDocument(path,same?std::optional<std::string>(c.sourceDocument):std::nullopt,bytes);
  // The loaded snapshot stays immutable; a subsequent edit must reload.
 }
