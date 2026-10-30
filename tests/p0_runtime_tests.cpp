@@ -82,4 +82,3 @@ int main(int argc,char** argv)try{
  auto bad=c;bad.profiles.at("pico").positionAxes={1,1,3};rejected=false;try{mb::validateConfig(bad);}catch(...){rejected=true;}CHECK(rejected);
  std::cout<<"PASS P0 ordinary receive -> saved independent W/M -> dual fanout -> Direct feed; uncalibrated, space/revision/session reset, FULL/Q-only/NONE/recovery, same-W no-op, invalid math\n";return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
-

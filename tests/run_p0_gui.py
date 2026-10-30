@@ -25,4 +25,3 @@ for n,command in enumerate(commands):
  if r.returncode:raise SystemExit(r.returncode)
 latest=out/'runs/latest-run.json'
 if latest.exists():(out/'latest-run.json').write_bytes(latest.read_bytes())
-
