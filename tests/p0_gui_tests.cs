@@ -74,6 +74,7 @@ class P0GuiTests {
    // Explicit nonidentity Mount through the supported native config transaction.
    // There is no Mount editor in the current WPF product.
    mapping["mount"]=Rigid(mountX);saved["mapping_revision"]=Convert.ToUInt32(saved["mapping_revision"])+1;
+   if(!integrated){var peer=MappingEditor.Clone(mapping);peer["source_id"]="other-opaque-source";peer["device_id"]="other-opaque-device";peer["world"]=Rigid(7);peer["mount"]=Rigid(8);DiscoveryModel.Mappings(saved).Add(peer);}
    string candidate=Path.Combine(root,"mount-candidate.json");File.WriteAllBytes(candidate,Bytes(saved));
    new ConfigHelperClient(options).Commit(File.ReadAllBytes(path),candidate,CancellationToken.None);
    Invoke(host,"Reload");((ListBox)Field(host,"mappings")).SelectedIndex=selectedIndex;
@@ -82,6 +83,7 @@ class P0GuiTests {
    Check(!(bool)Field(host,"needsReload"),"normal World save failed: "+((TextBlock)Field(host,"status")).Text+"; tracker="+((TextBox)Field(host,"tracker")).Text+"; config="+path);
    byte[] geometric=File.ReadAllBytes(path);var applied=Read(path);var kept=(Dictionary<string,object>)DiscoveryModel.Mappings(applied)[selectedIndex];
    Check(IsRigid(kept["world"],worldX)&&IsRigid(kept["mount"],mountX),"ordinary GUI World save did not preserve Mount");
+   if(!integrated){var peer=(Dictionary<string,object>)DiscoveryModel.Mappings(applied)[1];Check(IsRigid(peer["world"],7)&&IsRigid(peer["mount"],8),"same-name peer source geometry changed");}
    // Same normal handler again must preserve exact bytes/revision.
    Action(host,"Apply shared translation").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Until(delegate{return !(bool)Field(host,"busy");});
    Check(Convert.ToBase64String(geometric)==Convert.ToBase64String(File.ReadAllBytes(path)),"same-W GUI save changed bytes/revision");
