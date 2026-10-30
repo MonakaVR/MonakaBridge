@@ -34,13 +34,15 @@ void Fanout::flush(const Send& send,std::int64_t now,std::size_t budget){
  }}
 }
 Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std::move(session)),normalization_(config_,session_){registry.sourceAuthorized=[this](const c1::Envelope& e){return normalization_.provisioned(e);};registry.normalize=[this](const c1::Envelope& e){return normalization_.input(e);};validateConfig(config_);registry.timeoutNs=config_.timeoutNs;for(auto& [key,b]:config_.bindings)trackerOwners_.emplace(Key{b.source,b.tracker},key);}
-bool Bridge::approved(const Binding& b,const Device& d)const{auto p=config_.profiles.find(b.profile);return p!=config_.profiles.end()&&p->second.approved&&!p->second.evidence.empty()&&b.spaceApproved&&p->second.convention==d.convention&&b.inputSpace==d.space&&b.inputRevision==d.revision;}
+// Source-space revision and optional physical calibration approval are diagnostics, not permission to use an otherwise valid pose.
+// A known axis/unit profile matching the producer convention is still required for the numeric transform.
+bool Bridge::usableWithProfile(const Binding& b,const Device& d)const{auto p=config_.profiles.find(b.profile);return p!=config_.profiles.end()&&p->second.convention==d.convention;}
 c1::Envelope Bridge::publish(const c1::Envelope& input,std::int64_t now){const auto e=normalization_.output(input,true);if(config_.policy==Policy::Monaka||config_.policy==Policy::Both)fanout.put(Channel::Monaka,e,now);if(config_.policy==Policy::Steamvr||config_.policy==Policy::Both)fanout.put(Channel::Steamvr,e,now);return e;}
 bool Bridge::receive(std::string_view bytes,std::string_view peer,std::int64_t now){c1::Envelope e;bool ok=registry.receive(bytes,peer,now,&e);if(ok)fanout.put(Channel::Mirror,std::move(e),now);tick(now);return ok;}
 void Bridge::tick(std::int64_t now){
  for(const auto& [key,b]:config_.bindings){
   if(!config_.contracts.count(key))continue; // Fail closed; configuration tools never infer support.
-  auto& l=logical_[key];auto d=registry.find(key);bool active=d&&approved(b,*d);bool fresh=active&&registry.fresh(key,now);
+  auto& l=logical_[key];auto d=registry.find(key);bool active=d&&usableWithProfile(b,*d);bool fresh=active&&registry.fresh(key,now);
   const auto src=registry.sources.find(key.first);const std::string inputSession=src==registry.sources.end()?"":src->second.session;
   if(l.inputSession!=inputSession){l.history=History{};l.pose.reset();l.inputSequence=-1;l.inputSession=inputSession;l.stateSignature.clear();}
   const auto& contract=config_.contracts.at(key);
@@ -68,7 +70,7 @@ void Bridge::tick(std::int64_t now){
   // Metadata is independent of pose sequence/freshness. Publish transitions, not pose heartbeats.
   const std::string capabilitySignature=[&]{std::string value;for(const auto& token:l.capabilities)value+=std::to_string(token.size())+":"+token;return value;}();
   const std::string poseState=l.pose?":"+l.pose->modality+":"+l.pose->tracking_state+":"+(l.pose->validity.position?"p1":"p0")+":"+(l.pose->validity.orientation?"q1":"q0"): ":no-pose";
-  const std::string signature=(fresh?"fresh":"stale")+std::string(active?":approved:":":blocked:")+(d?std::to_string(d->stateSequence):"none")+":"+inputSession+":"+capabilitySignature+poseState;
+  const std::string signature=(fresh?"fresh":"stale")+std::string(active?":usable:":":unavailable:")+(d?std::to_string(d->stateSequence):"none")+":"+inputSession+":"+capabilitySignature+poseState;
   // No backend declaration has been verified yet. Do not freeze an empty
   // declaration into the Core lifetime and then change it on the first packet.
   if(signature!=l.stateSignature&&!l.capabilities.empty()){
