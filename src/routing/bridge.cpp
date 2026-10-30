@@ -33,7 +33,22 @@ void Fanout::flush(const Send& send,std::int64_t now,std::size_t budget){
   }catch(...){++errors;}
  }}
 }
-Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std::move(session)),normalization_(config_,session_){registry.sourceAuthorized=[this](const c1::Envelope& e){return normalization_.provisioned(e);};registry.normalize=[this](const c1::Envelope& e){return normalization_.input(e);};validateConfig(config_);registry.timeoutNs=config_.timeoutNs;for(auto& [key,b]:config_.bindings)trackerOwners_.emplace(Key{b.source,b.tracker},key);}
+Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std::move(session)),normalization_(config_,session_){
+ registry.sourceAuthorized=[this](const c1::Envelope& e){
+  if(!normalization_.provisioned(e))return false;
+  // Reject an undefined conversion before it can advance accepted frame/sequence
+  // state. A bad higher-revision declaration must not poison healthy input.
+  return std::visit([this](const auto& value){
+   using T=std::decay_t<decltype(value)>;
+   if constexpr(std::is_same_v<T,c1::TrackerObservation>||std::is_same_v<T,c1::ObservationDeviceState>){
+    const auto& binding=config_.bindings.at({value.source_id,value.device_id});
+    const auto profile=config_.profiles.find(binding.profile);
+    return profile==config_.profiles.end()||profile->second.convention==value.coordinate_space.convention;
+   }else return false;
+  },e);
+ };
+ registry.normalize=[this](const c1::Envelope& e){return normalization_.input(e);};validateConfig(config_);registry.timeoutNs=config_.timeoutNs;for(auto& [key,b]:config_.bindings)trackerOwners_.emplace(Key{b.source,b.tracker},key);
+}
 // Axes are explicitly configured and validated; physical-quality metadata is
 // informational. A transport/map generation never grants permission to use W/M.
 bool Bridge::compatible(const Binding& b,const Device& d)const{auto p=config_.profiles.find(b.profile);return p!=config_.profiles.end()&&p->second.convention==d.convention;}

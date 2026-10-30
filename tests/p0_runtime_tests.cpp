@@ -60,7 +60,10 @@ int main(int argc,char** argv)try{
  CHECK(bridge.config().bindings.at({"pico","device"}).world.translation==binding.world.translation);
  CHECK(bridge.receive(wire(sample("other")),"other-peer",20000000));
  auto wrong=changed;wrong.sequence=2;wrong.coordinate_space.convention="unknown-axis";wrong.coordinate_space.revision=23;
- CHECK(bridge.receive(wire(wrong),"peer",30000000));CHECK(!bridge.logical().at({"pico","device"}).pose);CHECK(bridge.logical().at({"other","device"}).pose);
+ CHECK(!bridge.receive(wire(wrong),"peer",30000000));CHECK(bridge.logical().at({"pico","device"}).pose);CHECK(bridge.logical().at({"other","device"}).pose);
+ CHECK(bridge.registry.find({"pico","device"})->revision==22);
+ auto healthy=changed;healthy.sequence=2;CHECK(bridge.receive(wire(healthy),"peer",31000000));
+ CHECK(bridge.logical().at({"pico","device"}).pose->input.sequence==2);
  auto rotation=changed;rotation.sequence=3;rotation.coordinate_space.revision=24;rotation.modality="rotation_only";rotation.position.reset();rotation.validity.position=false;rotation.tracking_state="degraded";
  CHECK(bridge.receive(wire(rotation),"peer",40000000));CHECK(!bridge.logical().at({"pico","device"}).pose->position);CHECK(bridge.logical().at({"pico","device"}).pose->orientation);
  auto lost=rotation;lost.sequence=4;lost.modality="none";lost.orientation.reset();lost.validity.orientation=false;lost.orientation_evidence="none";lost.tracking_state="lost";
