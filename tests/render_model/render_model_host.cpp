@@ -140,11 +140,12 @@ int main(int argc,char** argv){
     else if(mutation=="backend-restart"){run.pump(510);p.session_id=p.clock_id=S2;p.sequence=0;}
     if(mutation!="expiry")send(sender,events,p);
     run.pump(10);
-    require(props.at(vr::Prop_RenderModelName_String)=="","old PICO model was inherited");
+    const bool retained=mutation=="generation"||mutation=="input-restart"||mutation=="backend-restart";
+    require(props.at(vr::Prop_RenderModelName_String)==(retained?Model:""),"presentation identity/reconnect state");
     if(mutation!="expiry")validFull(run.pose(),p);
     // Restoring an old matching tuple must not silently regrant appearance.
     auto old=pico();old.sequence=100;send(sender,events,old);run.pump(10);
-    require(props.at(vr::Prop_RenderModelName_String)=="","revoked appearance was reapplied");
+    require(props.at(vr::Prop_RenderModelName_String)==(retained?Model:""),"old sample changed presentation state");
     require(run.host.devices.size()==1,"presentation changed registration count");
    }
    result["pose_updates"]=run.host.totalPoses;result["registered_devices"]=run.host.devices.size();

@@ -13,9 +13,14 @@ namespace PcServiceLifecycle {
     }
     internal sealed class Control : IDisposable {
         readonly string name, executable, logs, executableSha;
+        readonly bool scoped;
+        readonly object lifetime = new object();
+        bool stopRequested, disposed;
         Process child;
         StreamWriter stdout, stderr;
-        internal Control(string mappingName, string serviceExecutable, string logDirectory) {
+        internal Control(string mappingName, string serviceExecutable, string logDirectory) : this(mappingName,serviceExecutable,logDirectory,false) {}
+        internal Control(string mappingName, string serviceExecutable, string logDirectory, bool installationScoped) {
+            scoped=installationScoped;
             name=mappingName; executable=Path.GetFullPath(serviceExecutable); logs=logDirectory;
             executableSha=File.Exists(executable)?Hash(executable):null;
         }
@@ -78,6 +83,13 @@ namespace PcServiceLifecycle {
                     throw new IOException("Receiver belongs to another controller or a headless session; it will not be stopped or replaced");
         }
         internal void EnsureRunning(string additionalArguments) {
+            lock(lifetime) {
+                if(disposed)throw new ObjectDisposedException("Control");
+                if(stopRequested)throw new InvalidOperationException("Controller shutdown has started; no service will be launched");
+                EnsureRunningOwned(additionalArguments);
+            }
+        }
+        void EnsureRunningOwned(string additionalArguments) {
             var existing=Read(name);
             if(existing!=null) {
                 using(var process=Verified(existing)) {
@@ -86,8 +98,14 @@ namespace PcServiceLifecycle {
                 }
                 throw new IOException("Existing service is not ready");
             }
-            if(AnyUnmanagedProcess())throw new IOException("An existing/legacy service has no compatible lifetime controller. No duplicate was started");
+            if(!scoped && AnyUnmanagedProcess())throw new IOException("An existing/legacy service has no compatible lifetime controller. No duplicate was started");
             if(!File.Exists(executable))throw new FileNotFoundException("Selected service executable is missing",executable);
+            if(child!=null) {
+                if(!child.HasExited)throw new IOException("Owned child has not exited; no replacement launched");
+                child.WaitForExit();child.Dispose();child=null;
+            }
+            if(stdout!=null){lock(stdout)stdout.Dispose();stdout=null;}
+            if(stderr!=null){lock(stderr)stderr.Dispose();stderr=null;}
             Directory.CreateDirectory(logs);
             string stamp=DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffffZ");
             stdout=new StreamWriter(Path.Combine(logs,stamp+".stdout.log"));
@@ -113,15 +131,35 @@ namespace PcServiceLifecycle {
             }
             throw new IOException("Service startup confirmation timed out. The tray remains available for stop/retry. Logs: "+logs);
         }
+        internal string Command(string operation,string arguments,int timeoutMs) {
+            lock(lifetime) {
+                if(disposed)throw new ObjectDisposedException("Control");
+                if(stopRequested)throw new IOException("Controller exit has started");
+                if(operation!="Start"&&operation!="Stop"&&operation!="Restart")throw new ArgumentException("Unsupported service command");
+                if(operation!="Start")StopOwnedAndWait(timeoutMs);
+                if(operation!="Stop")EnsureRunningOwned(arguments);
+                return operation=="Stop"?"STOPPED: owned process exit confirmed":"RUNNING: owned native process ready; tracking/output not verified";
+            }
+        }
         internal void StopAndWait(int timeoutMs) {
+            lock(lifetime) {
+                if(disposed)throw new ObjectDisposedException("Control");
+                // Exit may run before the queued startup callback. Keep the
+                // launch fence even if stopping an existing child fails.
+                stopRequested=true;
+                StopOwnedAndWait(timeoutMs);
+            }
+        }
+        void StopOwnedAndWait(int timeoutMs) {
             var state=Read(name);
             if(state==null) {
-                if(AnyUnmanagedProcess())throw new IOException("Service identity unavailable; tray retained, no force kill");
+                if(child!=null&&!child.HasExited)throw new IOException("Owned child is still running without identity; tray retained, no force kill");
+                if(!scoped&&AnyUnmanagedProcess())throw new IOException("Service identity unavailable; tray retained, no force kill");
                 return;
             }
             Process verified;
             try {verified=Verified(state);}
-            catch(ArgumentException) {if(!AnyUnmanagedProcess())return;throw;}
+            catch(ArgumentException) {if((child==null||child.HasExited)&&(scoped||!AnyUnmanagedProcess()))return;throw;}
             using(var process=verified) {
                 RequireOwned(state);
                 using(var stop=EventWaitHandle.OpenExisting(name+"_Stop_"+state.Pid+"_"+state.Created))stop.Set();
@@ -130,6 +168,13 @@ namespace PcServiceLifecycle {
             }
         }
         public void Dispose() {
+            lock(lifetime) {
+                if(disposed)return;
+                disposed=true;stopRequested=true;
+                DisposeOwned();
+            }
+        }
+        void DisposeOwned() {
             // Disposing an exited tray cannot kill any process. Owner death is
             // detected by the native service and follows its normal cleanup path.
             if(child!=null) {

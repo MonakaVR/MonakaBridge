@@ -74,7 +74,7 @@ namespace MonakaBridge {
     CalibrationOwnedProcess process;try{process=launch(profile.CalibrationHelper,"--local-api",false);}catch{lock(gate){launchPending=false;}throw;}
     lock(gate){child=process;launchPending=false;if(!process.AssignedBeforeCommands){FailLocked("Owned job assignment required");throw new InvalidOperationException(fault);}if(stopRequested){stdoutDone=stderrDone=true;process.KillOwned();throw new InvalidOperationException("Calibration session closed during startup");}phase="NEW";phaseDeadline=0;}
     outputThread=Background(ReadOutput);errorThread=Background(ReadError);
-     var fields=profile.OpenRequest(readOnly);if(staticMode){fields["mode"]="static";fields["static_points"]=staticPoints;fields["static_samples"]=staticSamples;}if(approvalMode)fields["purpose"]="output_approval";
+     var fields=approvalMode?profile.OpenRequest(readOnly):profile.OpenMeasurementRequest(readOnly);if(staticMode){fields["mode"]="static";fields["static_points"]=staticPoints;fields["static_samples"]=staticSamples;}if(approvalMode)fields["purpose"]="output_approval";
      return await Command("open",fields,10000).ConfigureAwait(false);
    }catch(Exception e){Fail(e.Message);CalibrationOwnedProcess current;lock(gate){current=child??bootstrap;if(current==null){closed=true;stopped.TrySetResult(true);}}
     if(current!=null)try{current.KillOwned();}catch{}throw;
@@ -176,8 +176,11 @@ namespace MonakaBridge {
    if(entry.Op=="open"&&status=="OPEN"){
     if(!CalibrationJson.Boolean(value,"capture_supported")||CalibrationJson.Boolean(value,"readonly")!=readOnly)throw new InvalidOperationException("Native capture/readonly contract mismatch");openHash=CalibrationJson.Hash(value,"config_sha256");phase="OPEN";
    }else if(entry.Op=="discover"&&status=="DISCOVERED"){
-    var witness=Map(value,"witness");if(Text(witness,"bridge_id")!=profile.BridgeId||Text(witness,"source")!=profile.Source||Text(witness,"device")!=profile.Device||Text(witness,"tracker")!=profile.Tracker||Text(witness,"input_space")!=profile.InputSpace||CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue)!=profile.InputRevision||Text(witness,"reference_role")!=profile.ReferenceRole)throw new InvalidOperationException("Native witness differs from selected target");
-    Text(witness,"standing_witness");Text(witness,"reference_serial");phase="DISCOVERED";
+    var witness=Map(value,"witness");if(Text(witness,"bridge_id")!=profile.BridgeId||Text(witness,"source")!=profile.Source||Text(witness,"device")!=profile.Device||Text(witness,"tracker")!=profile.Tracker||(approvalMode&&(Text(witness,"input_space")!=profile.InputSpace||CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue)!=profile.InputRevision))||Text(witness,"reference_role")!=profile.ReferenceRole)throw new InvalidOperationException("Native witness differs from selected target");
+    // The native monitor freezes the current compatible frame. The saved
+    // profile frame selects the config snapshot; it is not a revision permit.
+    Text(witness,"input_space");CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue);
+    Text(witness,"convention");Text(witness,"standing_witness");Text(witness,"reference_serial");phase="DISCOVERED";
    }else if(entry.Op=="confirm_target"&&status=="CONFIRMED"){confirmation=Text(value,"confirmation_token");confirmDeadline=entry.SentAt+10000;phase="CONFIRMED";
     }else if((entry.Op=="begin"||entry.Op=="capture_point")&&status=="WAITING_POINT"){
      if(!staticMode)throw new InvalidOperationException("Unexpected static point");pointToken=Text(value,"point_token");pointWaitDeadline=now+59000;if(staticRunDeadline==0)staticRunDeadline=entry.SentAt+300000;confirmation=null;phase="WAITING_POINT";

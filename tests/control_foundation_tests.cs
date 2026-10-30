@@ -56,7 +56,7 @@ class FoundationTests {
   }finally{Close(window);}
   Check(Convert.ToBase64String(before)==Convert.ToBase64String(File.ReadAllBytes(target)),"Read-only handler wrote target");
   Check(Directory.GetFiles(Path.GetDirectoryName(target),"*.config-write.lock").Length==0,"Read-only created lock");
-  using(var tray=new SteamVrControlTray(options,options.ConfigHelper,false)){
+  using(var tray=new SteamVrControlTray(options,options.ConfigHelper,false,@"Local\MonakaBridge_TestOpen_"+Guid.NewGuid().ToString("N"))){
    foreach(var item in (IDictionary)Field(tray,"policies")){
     var entry=(DictionaryEntry)item;Check(!(bool)entry.Value.GetType().GetProperty("Enabled").GetValue(entry.Value,null),"Readonly tray policy enabled");
    }
@@ -175,7 +175,7 @@ class FoundationTests {
  static void TrayHealth(){
   string target=Fixture("tray-health-policy"),path=target+".status.json";var options=Options(target,helper,true);byte[] before=File.ReadAllBytes(target);
   WriteTrayHealth(path,"steamvr",true,0,"fixture-publisher");object window=Window(options);
-  using(var tray=new SteamVrControlTray(options,options.ConfigHelper,false))try{
+  using(var tray=new SteamVrControlTray(options,options.ConfigHelper,false,@"Local\MonakaBridge_TestOpen_"+Guid.NewGuid().ToString("N")))try{
    Invoke(window,"Reload");TrayCallback(tray,delegate(HealthReadResult r){return r.Error==null;});
    object[] invalid={null,null,42,true,new object[]{"steamvr"},new Dictionary<string,object>{{"name","steamvr"}},"","unknown-policy"};
    for(int i=0;i<invalid.Length;i++){

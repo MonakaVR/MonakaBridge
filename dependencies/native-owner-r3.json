@@ -1,0 +1,99 @@
+{
+  "parent": "7371bb842ae84523e7195740deb6ea2247c99b39",
+  "authority": "MONAKA-OFFLINE-PREHIL-CLOSURE-20261028-R3 / SA-01 native successor",
+  "purpose": "Existing runtime loop and native Win32 tray share one owner; exact current functional tests remain unprojected. Historical receipts unchanged.",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "467a1042231bc0bde71ad1d9bf65a73a5f8c91c2b7b3f97fe1de994e29d7a7c9",
+      "parent_sha256": "8e9da46cb25e688732fa7daadbd12ea647910045a0d6df25a9b1aab96ae7cf8f"
+    },
+    "docs/native-owner.md": {
+      "sha256": "ddcfba565a9ba03c6b48dce69407319ff695f2d8fd43fa80fe6b2839225f0aa4",
+      "parent_sha256": null
+    },
+    "include/monaka_bridge/native_owner_runtime.hpp": {
+      "sha256": "df03420bbe66fade8aaba59c93ca893e3c58de729cd52a2a34c8c6f36428f317",
+      "parent_sha256": null
+    },
+    "include/monaka_bridge/service_runtime.hpp": {
+      "sha256": "f15bff41d31ca3b1d478880100c90a58a2183d8a375a82f205c8d0668300200a",
+      "parent_sha256": null
+    },
+    "tests/calibration_runtime_fake.hpp": {
+      "sha256": "782c516de12f640d9bd557b5e73af78409c13eddbc44278e2a93f27164839ec0",
+      "parent_sha256": "20158164dbaee2679428353568f45f9ddf00bc64892297f1504fd9a5f5e173bf"
+    },
+    "tests/calibration_runtime_process_fixture.cpp": {
+      "sha256": "b57836c3824be3b0c6d8bc3af02f6a41183ad34590f1bfe8cae3f113758024a4",
+      "parent_sha256": "e2829775fd21874a73f17fee54ab3680029fc0c0c94d707044dcb1664bfc4135"
+    },
+    "tests/installation_owner_scope.py": {
+      "sha256": "1223493d222f9a75b6649a76be1a214240d3bcbafa00550fb25977ee8b0cd22f",
+      "parent_sha256": "623a06f0d4f6f0ef4169891c5e00821af7940c50732c13083e737b55b86a39c9"
+    },
+    "tests/installation_owner_scope_tests.py": {
+      "sha256": "670a425e65f950809b58b834b97a8dbc08d283a4ee9d18ba386aa3d309a267ac",
+      "parent_sha256": "af1293c062bae85fc5af8d9e5e82ca7af8d51ad14af547eb37f58e1ca9dc2470"
+    },
+    "tests/native_owner_client_tests.cs": {
+      "sha256": "f3d1158ad762974d5e1550a2698ad4d5f6e2b23686c7b028a50c8967d24bdf2a",
+      "parent_sha256": null
+    },
+    "tests/native_owner_process.py": {
+      "sha256": "b0821573af4876d8bff0c3a00eb97e23ebb576cab7c86aac3be324ee27313dd4",
+      "parent_sha256": null
+    },
+    "tests/native_owner_runtime_tests.cpp": {
+      "sha256": "f09e1c08e8208ae3478ed96332e1eb7bbfa2bfd770a5bd9f99a774e78bb1613a",
+      "parent_sha256": null
+    },
+    "tests/native_owner_scope.py": {
+      "sha256": "e9e7c36134346a7875e5307f13f8a0f272cc253f5b9bee807f941fbe120ff5e2",
+      "parent_sha256": null
+    },
+    "tests/native_owner_scope_tests.py": {
+      "sha256": "026e86f29d748e11a29b11a390cdbe76d382d521cda8252899568cd4b0820b5e",
+      "parent_sha256": null
+    },
+    "tests/run_native_owner_client.ps1": {
+      "sha256": "390b55fe83266280777e0aff696bf384b0da343b6ad94f7c17b1167f30e4aa74",
+      "parent_sha256": null
+    },
+    "tools/bridge_service.cpp": {
+      "sha256": "49b1f4f6084f329e025025800c5d20e2f2f38f26593f29f562e7cc5a80c52f94",
+      "parent_sha256": "576f501899119449c63339a063de55e9fdb3bcb884b2ec216d9b3b9fa9c34b61"
+    },
+    "tools/native_owner.cpp": {
+      "sha256": "9c44e1ce382b68a2af1e9b011d4a824a441cd20ed8b226fd05baedaae6c40ba5",
+      "parent_sha256": null
+    },
+    "ui/calibration_panel.cs": {
+      "sha256": "34eae4e740d0b1ea0b27ad3e6abcf0167b1e2e919c7c102e019eb793b45cec42",
+      "parent_sha256": "17a1ba6f1459bf891b90dd24517ff4f7c0ff7ea94a255360b8505983f13e8091"
+    },
+    "ui/calibration_profile_dialog.cs": {
+      "sha256": "7aa5aee2754cd214c2f08e2dff2df37e6d72a75675f837b8682ad2afd0ac638f",
+      "parent_sha256": "a3ab7c46fe008aab55af8bdf99b882607af6579750394a69fdb222b0964a0434"
+    },
+    "ui/discovery_panel.cs": {
+      "sha256": "ff3fd4ef35bcc5298a1d5aa92ddfb7b9f6807fdf5ba8e11cc171bb8b116e98da",
+      "parent_sha256": "791aaf2f2cf17ddbd955a0068ca3cf6a2034f4a7f191dcb349e059c84bf71404"
+    },
+    "ui/discovery_window.cs": {
+      "sha256": "3a8cff459353d8b9ee8d8b564cc6dbb81b80e55179f5bd38d164e2b9bcdc522c",
+      "parent_sha256": "e23377b993482bc784ce1689a0e4081886fa42dfb594e1250d23fc7264424f01"
+    },
+    "ui/installation_control.cs": {
+      "sha256": "c5ccabf9ecf9da05f0c5ab784df0afa52ad601df2e2a15a3c6a463f9d685dd65",
+      "parent_sha256": "f67475e380561c1abb47a0e07f9033562536aec8d5201d5d8331e86ca6c7d54a"
+    },
+    "ui/steamvr_control_gui_main.cs": {
+      "sha256": "200e05768736e287bc73981e56ebe20bce26c77cb9fa359a7a6e9eef368e98cc",
+      "parent_sha256": "0b6d4e93b3951d633253cffe23a9396054b363db5a9b0c48ebc6dfa46d2dcd24"
+    },
+    "ui/steamvr_control_wpf.cs": {
+      "sha256": "2de7fc74fe033f23f0c0c49c7cbf875ccfefad589490c52638834200f2463454",
+      "parent_sha256": "f75d5e23714382e062ed7c5f6637bd126892448b4787b56c023ec063d05d2db4"
+    }
+  }
+}

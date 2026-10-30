@@ -1,4 +1,18 @@
 # MonakaBridge repository instructions
+## Ordinary runtime decision (2026-10-30, Issue #17)
+
+The user's Issue #17 overrides historical output-quality approval requirements.
+Saved Source World and Tracker Mount transforms and explicit identity mappings
+survive transport/map/session generations. With explicitly defined compatible
+units/axes, uncalibrated transforms are Identity and quality is diagnostic.
+Profile/space approval, physical evidence and coordinate revision equality do
+not authorize ordinary Pose, calibration save, model presentation or output.
+Keep mathematical/wire validity, unknown conversion rejection, static capability
+declarations, identity/session/replay protection and atomic config CAS. Identical
+World saves are no-ops; new measurements use review and explicit save/apply,
+without a separate Output Approval session. Historical byte/scope audits are
+separate from normal behavioral regression; never rewrite old evidence to PASS.
+
 ## Current contract ownership (2026-10-18)
 
 MVIP (MonakaVR/MonakaVRInputProtocol) owns the wire/model/schema/codec and capability vocabulary. MBIP (MonakaVR/MonakaBridgeInputProtocol) owns the pure normalization adapter over its fixed MVIP kit. Broader input DLL hosting is a later phase. Older MonakaProtocol ownership and fixed-v1 handoffs below are historical; use the actual hash-pinned kits in this tree and docs/responsibility-refactor.md. Do not change wire/ports or vendor/solver boundaries for this UI repair.
@@ -20,7 +34,7 @@ The bridge MUST operate with any conforming MBIP input producer **without knowin
 - MUST NOT branch on producer kind, manufacturer/model name, descriptive device strings, driver or application names, or magic prefixes/values within `source_id`, `device_id`, `publisher_id`, or `tracker_id`. Identity values may be used as **opaque keys** for cataloging, matching, deduplication, and explicitly configured mapping, but never to infer vendor, capability, coordinate conventions, or fallback policy.
 - MUST NOT introduce named producer/device-specific if/switch branches, built-in source-specific coordinate fixes, output model/icon rules, routing exceptions, or hard-coded per-producer presets in common source code.
 - MUST NOT infer missing capabilities, modalities, coordinate spaces, device descriptors, or render resources from recognizable identity strings. Do not substitute an observation's transient field presence for a declared static capability.
-- MUST NOT silently assume unknown, undeclared, or unverified input coordinate spaces are identity transforms.
+- MUST NOT silently assume unknown or undeclared unit/axis conversions are identity transforms. Physical-quality approval is separate from a mathematically defined conversion.
 - MUST NOT implement consumer-owned body assignment, Main/Fallback selection, Fusion/Fallback, or IK inside the bridge, including the SteamVR Direct path.
 - MUST NOT copy upstream-specific implementation guidance from legacy task notes into the common pipeline. Treat incompatible examples as historical, not architectural precedent.
 

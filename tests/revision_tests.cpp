@@ -21,10 +21,11 @@ int main() try {
  absent.sequence=1;CHECK(ordered.receive(wire(absent),"a",14000000));
  CHECK(ordered.fresh({"pico","device"},14000000));
  auto sibling=p;sibling.device_id="sibling";CHECK(ordered.receive(wire(sibling),"a",15000000));
- auto fault=fresh;fault.sequence=3;fault.coordinate_space.id="wrong";
- CHECK(!ordered.receive(wire(fault),"a",16000000));
- CHECK(ordered.fresh({"pico","sibling"},16000000));CHECK(!ordered.fresh({"pico","device"},16000000));
- fresh.sequence=3;CHECK(ordered.receive(wire(fresh),"a",16000001));
+ auto fault=fresh;fault.sequence=3;fault.coordinate_space.id="compatible-new-space";
+ CHECK(ordered.receive(wire(fault),"a",16000000));
+ CHECK(ordered.find({"pico","device"})->space=="compatible-new-space");
+ CHECK(ordered.fresh({"pico","sibling"},16000000));CHECK(ordered.fresh({"pico","device"},16000000));
+ fresh.sequence=4;CHECK(ordered.receive(wire(fresh),"a",16000001));
  fault=fresh;fault.position=mb::Vec{999,0,0}; // conflicting same sequence is tracker-local
  CHECK(!ordered.receive(wire(fault),"a",17000000));
  CHECK(!ordered.find({"pico","device"}));CHECK(ordered.fresh({"pico","sibling"},17000000));

@@ -89,7 +89,7 @@ ProviderBatch RuntimeCaptureProvider::poll(){
   const auto receipt=clock_();need(receipt>=after,"MONOTONIC_CLOCK_ROLLBACK");
   c1::Envelope value;c1::Error error;if(!c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(datagram->bytes.data()),datagram->bytes.size(),value,error))continue;
   auto selected=[&](const auto& p){return p.source_id==witness_.source&&p.device_id==witness_.device;};
-  auto seed=[&](const auto& p){if(witness_.session.empty()){witness_.session=p.session_id;witness_.clock=p.clock_id;witness_.peer=datagram->peer;}};
+  auto seed=[&](const auto& p){if(witness_.session.empty()){witness_.session=p.session_id;witness_.clock=p.clock_id;witness_.peer=datagram->peer;witness_.space=p.coordinate_space.id;witness_.revision=p.coordinate_space.revision;witness_.convention=p.coordinate_space.convention;}};
   bool keep=false;if(auto p=std::get_if<c1::TrackerObservation>(&value)){keep=selected(*p);if(keep)seed(*p);}else if(auto p=std::get_if<c1::ObservationDeviceState>(&value)){keep=selected(*p);if(keep)seed(*p);}
   if(keep)batch.frames.push_back({std::move(value),datagram->peer,receipt});
  }
@@ -121,5 +121,5 @@ void RuntimeCaptureProvider::shutdown(){
  if(!started_||closed_)return;need(std::this_thread::get_id()==owner_,"CAPTURE_OWNER_REQUIRED");closed_=true;
  std::exception_ptr error;try{transport_->shutdown();}catch(...){error=std::current_exception();}try{api_->shutdown();}catch(...){if(!error)error=std::current_exception();}if(error)std::rethrow_exception(error);
 }
-Json productionCalibrationVersion(){return {{"api_version",1},{"software_policy",1},{"capture_supported",true},{"static_supported",true},{"production_capture","OPENVR_BACKGROUND_MIRROR"},{"standing_policy","EXACT_FINITE_NUMERIC"},{"runtime_validation","NOT_RUN"},{"output_approval",true},{"gui_contract",1},{"features",Json::array({"idle_invalidation","phase_events","witness_details","immutable_result_commit","static_points_policy1","independent_output_review","max_residuals_v1","first_failure_v1","file_output_authority_v1"})}};}
+Json productionCalibrationVersion(){return {{"api_version",1},{"software_policy",1},{"capture_supported",true},{"static_supported",true},{"production_capture","OPENVR_BACKGROUND_MIRROR"},{"standing_policy","EXACT_FINITE_NUMERIC"},{"runtime_validation","NOT_RUN"},{"output_approval",false},{"gui_contract",1},{"features",Json::array({"idle_invalidation","phase_events","witness_details","immutable_result_commit","static_points_policy1","max_residuals_v1","first_failure_v1"})}};}
 } // namespace mb::local_calibration

@@ -16,7 +16,8 @@ class CalibrationClientProcessTests {
  sealed class Run:IDisposable {
   internal string Directory,Config;internal byte[] Original;internal CalibrationInstallation Profile;internal CalibrationProcessClient Client;
   internal Run(string name,bool readOnly,string mode,Func<long> clock=null,Action<Stream,byte[],string> writer=null,string selectedHelper=null) {
-   Directory=Path.Combine(root,name+"-"+Guid.NewGuid().ToString("N"));System.IO.Directory.CreateDirectory(Directory);
+   Console.WriteLine("CASE "+name);
+   Directory=Path.Combine(root,name+"-"+Guid.NewGuid().ToString("N").Substring(0,8));System.IO.Directory.CreateDirectory(Directory);
    var environment=new Dictionary<string,string>{{"MONAKA_CALIBRATION_TEST_ROOT",Path.Combine(Directory,"seed")}};
    Dictionary<string,object> seed;
    using(var child=CalibrationOwnedProcess.Start(fixture,"--fixture-seed",true,environment,null)){
@@ -27,7 +28,7 @@ class CalibrationClientProcessTests {
    var profile=new Dictionary<string,object>{{"schema",CalibrationInstallation.Schema},{"name",name},{"config",Config},{"health",Config+".status.json"},{"config_helper",helper},{"helper_sha256",CalibrationInstallation.Sha256(File.ReadAllBytes(helper))},{"read_only",readOnly},{"calibration_helper",processHelper},{"calibration_helper_sha256",CalibrationInstallation.Sha256(File.ReadAllBytes(processHelper))},{"calibration_api",1},{"calibration_software_policy",1},{"calibration_gui_contract",1},{"bridge_id",seed["bridge_id"]},{"installation_path",seed["installation_path"]},{"association",CalibrationInstallation.Association},{"single_bridge_no_relay",true},{"mirror_address",seed["mirror_address"]},{"mirror_port",seed["mirror_port"]},{"source",seed["source"]},{"device",seed["device"]},{"tracker",seed["tracker"]},{"input_space",seed["input_space"]},{"input_revision",seed["input_revision"]},{"reference_role",seed["reference_role"]}};
    Profile=CalibrationInstallation.SaveNew(Path.Combine(Directory,"profile.json"),profile,new[]{Config,helper,fixture});
    var env=new Dictionary<string,string>{{"MONAKA_CALIBRATION_TEST_ROOT",Path.Combine(Directory,"process")},{"MONAKA_CALIBRATION_TEST_MODE",mode}};
-   Client=new CalibrationProcessClient(Profile,readOnly,delegate(string path,string arguments,bool version){return CalibrationOwnedProcess.Start(path,arguments,version,env,null);},clock,writer);
+   Client=new CalibrationProcessClient(Profile,readOnly,delegate(string path,string arguments,bool version){return CalibrationOwnedProcess.Start(path,arguments,version,env,null);},clock,delegate(Stream stream,byte[] bytes,string op){Console.WriteLine("COMMAND "+name+" "+op);if(writer!=null)writer(stream,bytes,op);else{stream.Write(bytes,0,bytes.Length);stream.Flush();}});
   }
   internal void Result(){Check(Await(Client.OpenAsync())["status"].Equals("OPEN"),"open");Check(Await(Client.DiscoverAsync())["status"].Equals("DISCOVERED"),"discover");Check(Await(Client.ConfirmAsync())["status"].Equals("CONFIRMED"),"confirm");var begin=Await(Client.BeginAsync());Check(begin["status"].Equals("RESULT_READY"),"begin: "+CalibrationJson.Utf8.GetString(CalibrationJson.Encode(begin,65536))+" | client: "+Client.Snapshot().Fault);}
   public void Dispose(){try{Closed(Client);}finally{Client.Dispose();}}
@@ -69,6 +70,9 @@ class CalibrationClientProcessTests {
   }}
   using(var run=new Run("request-quota",false,"")){
    run.Result();for(int i=0;i<122;i++)Await(run.Client.PrepareAsync());Failed(run.Client.PrepareAsync(),"request limit");var cancelled=run.Client.CancelAsync();Check(cancelled.Wait(5000)&&run.Client.Snapshot().Stopped,"reserved cancel/close unavailable after126 ordinary requests");Check(!run.Client.Snapshot().CommitMayHaveStarted&&Convert.ToBase64String(run.Original)==Convert.ToBase64String(File.ReadAllBytes(run.Config)),"quota shutdown changed config");cases++;
+  }
+  foreach(string mode in new[]{"approval-revision","approval-space"})using(var run=new Run(mode,true,mode,null,null,faultFixture)){
+   run.Client.SelectOutputApproval();Await(run.Client.OpenAsync());Failed(run.Client.DiscoverAsync(),"Native witness differs from selected target");Check(!run.Client.Snapshot().CanCommit&&Convert.ToBase64String(run.Original)==Convert.ToBase64String(File.ReadAllBytes(run.Config)),"legacy approval frame mismatch enabled save");cases++;
   }
   foreach(string mode in new[]{"utf8","oversize","stderr","chain","unrequested","foreign-session","old-version","idle-invalid","hang-version"}){
    var clock=new TestClock();using(var run=new Run(mode,true,mode,clock.Read,null,faultFixture)){

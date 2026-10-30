@@ -22,6 +22,7 @@ class StaticMeasurement {
  void pair();
 public:
  StaticMeasurement(const FrozenMeasurementTarget&,std::string,StaticOptions);
+ void bindInputFrame(const std::string& space,std::uint32_t revision);
  void beginPoint(std::int64_t);
  bool consume(const RecordingDelivery&);
  void finishPoint();
