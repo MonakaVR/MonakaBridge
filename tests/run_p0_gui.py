@@ -1,6 +1,8 @@
 """Compile production WPF sources and run isolated first-source native-CAS acceptance."""
 from pathlib import Path
-import argparse, subprocess, json, hashlib
+import argparse, subprocess, json, hashlib, sys
+sys.stdout.reconfigure(encoding='utf-8',errors='replace')
+sys.stderr.reconfigure(encoding='utf-8',errors='replace')
 p=argparse.ArgumentParser()
 for name in ['root','out','helper']:p.add_argument('--'+name,required=True)
 p.add_argument('--config');p.add_argument('--health');p.add_argument('--tracker',default='logical')

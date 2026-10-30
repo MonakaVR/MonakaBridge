@@ -23,6 +23,13 @@ print(json.dumps(dict(before_approved=target_flags(before),after_approved=target
 unchanged_except_group(before,after,[2,3,4]);assert list(target.parent.glob('*.backup-txn-*'));record('align changes intended World group without permission invalidation, exact non-target/profile/Mount/contract/extensions, one revision and backup')
 if a.baseline_only:raise SystemExit(0)
 target=fixture('same-world');before=json.loads(target.read_bytes());assert run(a.helper,target,'align','logical-pico-device-1',1,0,0).returncode==0;unchanged_except_group(before,json.loads(target.read_bytes()),[1,0,0]);record('same World explicit align preserves revision and geometry')
+document=copy.deepcopy(seed);document['mappings'][4]['tracker_id']='logical-pico-device-1'
+target=fixture('exact-binding-same-names',document);row=document['mappings'][0]
+result=run(a.helper,target,'align-binding',row['source_id'],row['device_id'],2,3,4);assert result.returncode==0,result.stderr
+unchanged_except_group(document,json.loads(target.read_bytes()),[2,3,4]);before=target.read_bytes()
+assert run(a.helper,target,'align-binding',row['source_id'],row['device_id'],2,3,4).returncode==0 and target.read_bytes()==before
+assert run(a.helper,target,'align-binding','missing',row['device_id'],9,3,4).returncode!=0 and target.read_bytes()==before
+record('exact source/device alignment isolates same-name peers, same-W byte no-op and absent-key rejection')
 for label,args,modify in [('missing',['missing','2','3','4'],None),('ambiguous',['logical-pico-device-1','2','3','4'],'ambiguous'),('nan',['logical-pico-device-1','nan','3','4'],None),('inf',['logical-pico-device-1','2','inf','4'],None),('overflow',['logical-pico-device-1','2','3','4'],'overflow')]:
  document=copy.deepcopy(seed)
  if modify=='ambiguous':document['mappings'][4]['tracker_id']='logical-pico-device-1'

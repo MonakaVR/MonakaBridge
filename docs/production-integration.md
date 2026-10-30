@@ -133,6 +133,13 @@ fallback policy, raw VIVE protocol logic or wire-v2 schema change is introduced.
 
 ## Reconnect integration gates
 
+Issue17 supersedes the historical quality-approval requirements above and item 4
+below. Ordinary valid fresh input uses the explicitly selected known coordinate
+conversion and saved World/Mount transforms (Identity when absent), without a
+physical-quality approval or an exact input-space revision permit. A compatible
+space/revision change clears transient history and retains saved geometry;
+unsupported axes, stale/replayed samples and identity conflicts still reject.
+
 RF reconnect success is not a promise of Bridge-to-MTP recovery. Check separately:
 
 1. The six-byte RF address is not a persistent hardware ID; an address change can
