@@ -176,7 +176,7 @@ namespace MonakaBridge {
    if(entry.Op=="open"&&status=="OPEN"){
     if(!CalibrationJson.Boolean(value,"capture_supported")||CalibrationJson.Boolean(value,"readonly")!=readOnly)throw new InvalidOperationException("Native capture/readonly contract mismatch");openHash=CalibrationJson.Hash(value,"config_sha256");phase="OPEN";
    }else if(entry.Op=="discover"&&status=="DISCOVERED"){
-    var witness=Map(value,"witness");if(Text(witness,"bridge_id")!=profile.BridgeId||Text(witness,"source")!=profile.Source||Text(witness,"device")!=profile.Device||Text(witness,"tracker")!=profile.Tracker||Text(witness,"reference_role")!=profile.ReferenceRole)throw new InvalidOperationException("Native witness differs from selected target");
+    var witness=Map(value,"witness");if(Text(witness,"bridge_id")!=profile.BridgeId||Text(witness,"source")!=profile.Source||Text(witness,"device")!=profile.Device||Text(witness,"tracker")!=profile.Tracker||(approvalMode&&(Text(witness,"input_space")!=profile.InputSpace||CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue)!=profile.InputRevision))||Text(witness,"reference_role")!=profile.ReferenceRole)throw new InvalidOperationException("Native witness differs from selected target");
     // The native monitor freezes the current compatible frame. The saved
     // profile frame selects the config snapshot; it is not a revision permit.
     Text(witness,"input_space");CalibrationJson.Integer(witness,"input_revision",0,UInt32.MaxValue);

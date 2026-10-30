@@ -71,6 +71,9 @@ class CalibrationClientProcessTests {
   using(var run=new Run("request-quota",false,"")){
    run.Result();for(int i=0;i<122;i++)Await(run.Client.PrepareAsync());Failed(run.Client.PrepareAsync(),"request limit");var cancelled=run.Client.CancelAsync();Check(cancelled.Wait(5000)&&run.Client.Snapshot().Stopped,"reserved cancel/close unavailable after126 ordinary requests");Check(!run.Client.Snapshot().CommitMayHaveStarted&&Convert.ToBase64String(run.Original)==Convert.ToBase64String(File.ReadAllBytes(run.Config)),"quota shutdown changed config");cases++;
   }
+  foreach(string mode in new[]{"approval-revision","approval-space"})using(var run=new Run(mode,true,mode,null,null,faultFixture)){
+   run.Client.SelectOutputApproval();Await(run.Client.OpenAsync());Failed(run.Client.DiscoverAsync(),"Native witness differs from selected target");Check(!run.Client.Snapshot().CanCommit&&Convert.ToBase64String(run.Original)==Convert.ToBase64String(File.ReadAllBytes(run.Config)),"legacy approval frame mismatch enabled save");cases++;
+  }
   foreach(string mode in new[]{"utf8","oversize","stderr","chain","unrequested","foreign-session","old-version","idle-invalid","hang-version"}){
    var clock=new TestClock();using(var run=new Run(mode,true,mode,clock.Read,null,faultFixture)){
     var opening=run.Client.OpenAsync();
