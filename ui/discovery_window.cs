@@ -10,6 +10,9 @@ using System.Windows;
 using System.Windows.Controls;
 namespace MonakaBridge {
  public static partial class SteamVrControlWpf {
+  // Confirmation is a presentation boundary; the candidate, late health recheck,
+  // native validation and CAS are always the normal product implementation.
+  internal static Func<Window,string,bool> DiscoveryConfirmation=delegate(Window owner,string text){return MessageBox.Show(owner,text,"Review explicit discovery mapping",MessageBoxButton.OKCancel,MessageBoxImage.Warning)==MessageBoxResult.OK;};
   private sealed partial class ControlWindow {
    DiscoveryPanel discoveryPanel;Dictionary<string,object> discoveryHealth;
    DiscoveryDraft discoverySaved;bool discoveryRendering;string discoveryOutcome;
@@ -44,8 +47,9 @@ namespace MonakaBridge {
     var row=discoveryPanel.Candidates.SelectedItem as DiscoveryObservation;
     discoveryPanel.Contracts.Items.Clear();discoveryPanel.Profiles.Items.Clear();discoveryPanel.Slots.Items.Clear();discoveryPanel.Logical.Text="";
     if(row==null||config==null){discoveryPanel.Details.Text=BridgeText.T("Select an unmapped claim or a known input revision mismatch.");return;}
+    discoveryPanel.Contracts.Items.Add(DiscoveryModel.DeclaredContract(row));
     foreach(var c in DiscoveryModel.Contracts(config,row.Source))discoveryPanel.Contracts.Items.Add(c);
-    foreach(var name in ((Dictionary<string,object>)config["profiles"]).Keys){var p=MappingEditor.RequireProfile(config,name);if(DiscoveryModel.Flag(p,"approved")&&DiscoveryModel.Text(p,"evidence")!=""&&DiscoveryModel.Text(p,"convention")==row.Convention)discoveryPanel.Profiles.Items.Add(name);}
+    foreach(var name in ((Dictionary<string,object>)config["profiles"]).Keys){var p=MappingEditor.RequireProfile(config,name);if(DiscoveryModel.Text(p,"convention")==row.Convention)discoveryPanel.Profiles.Items.Add(name);}
     for(int n=0;n<map.Count;++n){var b=(Dictionary<string,object>)map[n];if(DiscoveryModel.Text(b,"source_id")==row.Source)discoveryPanel.Slots.Items.Add(new DiscoverySlot{Index=n,Label=DiscoveryModel.Text(b,"tracker_id")+" | "+DiscoveryModel.Text(b,"device_id")+" | "+DiscoveryModel.Text(b,"input_space")+" @"+DiscoveryModel.Text(b,"input_revision")});}
     discoveryPanel.Details.Text=(row.Configured?"KNOWN INPUT FRAME/REVISION NOTICE":"UNMAPPED (not admitted)")+"\nSource: "+row.Source+"\nDevice: "+row.Device+"\nSession: "+row.Session+" | clock: "+row.Clock+"\nInput: "+row.Space+" @"+row.Revision+" | "+row.Convention+"\nAdvertised claims: "+string.Join(", ",row.Claims)+"\nNo support inferred from pose validity/presence. A compatible explicit source contract is required. Otherwise NEEDS_CONTRACT_REVIEW.";
    }
@@ -56,7 +60,7 @@ namespace MonakaBridge {
    }
    void SaveDiscovery(DiscoveryAction action){
     var draft=BuildDiscoveryDraft(action);discoveryPanel.Details.Text=draft.Confirmation;
-    if(MessageBox.Show(this,draft.Confirmation,"Review explicit discovery mapping",MessageBoxButton.OKCancel,MessageBoxImage.Warning)!=MessageBoxResult.OK)return;
+    if(!DiscoveryConfirmation(this,draft.Confirmation))return;
     // The modal review may have taken time. Recheck now, then again immediately
     // before the native commit, after helper validation and temporary snapshots.
     DiscoveryModel.Recheck(config,HealthReader.ReadOnce(options.HealthFile).Value,draft,options.ReadOnly,DiscoveryBusy(),DateTime.UtcNow);

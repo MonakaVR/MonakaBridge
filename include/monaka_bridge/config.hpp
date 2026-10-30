@@ -28,6 +28,9 @@ Config parseConfigDocument(const std::string&);
 Config loadConfig(const std::filesystem::path&);
 void saveConfig(const std::filesystem::path&,const Config&);
 void validateConfig(const Config&);
+// Compares local documents with optional Identity/diagnostic defaults, while
+// retaining every unknown member. It never bypasses exact-snapshot CAS.
+bool equivalentConfigDocuments(const std::string&,const std::string&);
 // Supported output channels from an explicit backend declaration and existing
 // transform contract. Never inspect pose values or current validity here.
 std::vector<std::string> projectOutputCapabilities(const std::vector<std::string>&,

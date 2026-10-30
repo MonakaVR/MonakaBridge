@@ -112,7 +112,7 @@ int main() try {
     const auto& updated=applied.bindings.at({"pico","device"});
     sameRotation(updated.world.rotation,arbitrary.rotation);close(updated.world.translation,arbitrary.translation);
     CHECK(updated.mount.rotation==originalMount.rotation&&updated.mount.translation==originalMount.translation);
-    CHECK(!updated.spaceApproved&&updated.worldRevision==binding.worldRevision);
+    CHECK(updated.spaceApproved==binding.spaceApproved&&updated.worldRevision==binding.worldRevision);
     CHECK(applied.profiles.at(binding.profile).positionAxes==originalProfile.positionAxes);
     CHECK(applied.profiles.at(binding.profile).quaternionAxes==originalProfile.quaternionAxes);
     // Existing shared input-map semantics update same-source siblings, not another source.

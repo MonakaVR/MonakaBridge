@@ -12,6 +12,11 @@ namespace MonakaBridge {
  internal static class BridgeText {
   internal static string Language="en";
   static readonly Dictionary<string,string> Japanese=new Dictionary<string,string>(StringComparer.Ordinal){
+   {"World calibration","ワールド校正"},
+   {"Defined coordinate profile","定義済みの座標変換プロファイル"},
+   {"Declared static capabilities / saved contract","デバイスの静的能力宣言／保存済み設定"},
+   {"Show coordinate profile","座標変換プロファイルを表示"},
+   {"Open is resource-free. Discover explicitly starts OpenVR Background and the selected loopback mirror. Choose measurement mode before Open. Static captures paired fresh points; it does not verify physical stillness or accuracy. Review and save the measured World to use it. Existing Mount is retained; physical quality is diagnostic.","開始前に測定方式を選択してください。対象の検出で基準と入力の観測を開始します。測定結果を確認してワールドを保存すると通常出力へ反映できます。既存の取付変換は保持します。物理精度は測定情報として表示し、出力の再承認操作は不要です。"},
    {"Open installation profile...","\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u8a2d\u5b9a\u3092\u958b\u304f..."},
    {"Create calibration profile (Save As)...","\u8f03\u6b63\u8a2d\u5b9a\u3092\u65b0\u898f\u4fdd\u5b58..."},
    {"Sources and devices","\u5165\u529b\u30bd\u30fc\u30b9\u3068\u30c7\u30d0\u30a4\u30b9"},

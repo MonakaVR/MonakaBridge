@@ -178,8 +178,8 @@ WorldCalibrationTarget selectWorldCalibrationTarget(
         binding->second.inputRevision != inputRevision)
         throw std::invalid_argument("tracker/input-space/revision selection does not match mapping");
     const auto profile = config.profiles.find(binding->second.profile);
-    if (profile == config.profiles.end() || !profile->second.approved || profile->second.evidence.empty())
-        throw std::invalid_argument("selected mapping does not have an approved coordinate profile");
+    if (profile == config.profiles.end())
+        throw std::invalid_argument("selected mapping does not have a defined coordinate profile");
     return {config.revision, binding->second, profile->second};
 }
 
@@ -238,14 +238,17 @@ Config worldCalibrationCandidate(
     if (!apply) return current;
     if (!finite(transform.rotation) || !finite(transform.translation))
         throw std::invalid_argument("world calibration transform must be finite");
+    double squaredNorm=0;for(double value:transform.rotation)squaredNorm+=value*value;
+    if(std::abs(squaredNorm-1)>1e-5)throw std::invalid_argument("world calibration quaternion must be unit length");
     Config candidate = current;
+    bool changed=false;
     for (auto& [key, binding] : candidate.bindings)
         if (binding.source == measured.binding.source &&
             binding.inputSpace == measured.binding.inputSpace &&
             binding.inputRevision == measured.binding.inputRevision) {
-            binding.world = transform;
-            binding.spaceApproved = false;
+            if(!equivalentRigid(binding.world,transform)){binding.world = transform;changed=true;}
         }
+    if(!changed)return current;
     if (candidate.revision == std::numeric_limits<std::uint32_t>::max())
         throw std::invalid_argument("mapping_revision exhausted");
     ++candidate.revision;

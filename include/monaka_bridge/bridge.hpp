@@ -23,7 +23,7 @@ struct Logical {
  History history;
  std::optional<c1::MtpPose> pose;
  std::vector<std::string> capabilities;
- std::string inputSession,stateSignature;
+ std::string inputSession,inputFrame,stateSignature;
  std::int64_t inputSequence=-1,poseSequence=0,stateSequence=0;
  bool wasFresh=false;
 };
@@ -34,7 +34,7 @@ class Bridge {
  std::map<Key,Logical> logical_;
  std::map<Key,Key> trackerOwners_;
  c1::Envelope publish(const c1::Envelope&,std::int64_t now);
- bool approved(const Binding&,const Device&)const;
+ bool compatible(const Binding&,const Device&)const;
 public:
  Registry registry;
  Fanout fanout;
