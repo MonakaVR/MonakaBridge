@@ -67,6 +67,10 @@ int main()try{
     {auto o=mb::TrajectoryOptions{};o.maxSamples=80;mb::TrajectoryRecorder r(c,target,"controller-serial",o);for(int i=0;i<80;++i)r.reference({i,{},true},"controller-serial");reject([&]{r.reference({81,{},true},"controller-serial");});}
     auto candidate=mb::worldCalibrationCandidate(c,target,result.world,true);CHECK(candidate.revision==c.revision+1);CHECK(candidate.bindings.at({"pico","device"}).mount.translation==b.mount.translation);CHECK(!candidate.bindings.at({"pico","device"}).spaceApproved);
     CHECK(mb::worldCalibrationCandidate(c,target,result.world,false).revision==c.revision);
+    // A no-op World save must retain both calibration data and the original mapping generation.
+    auto unchanged=mb::worldCalibrationCandidate(c,target,b.world,true);
+    CHECK(unchanged.revision==c.revision&&unchanged.bindings.at({"pico","device"}).spaceApproved==b.spaceApproved);
+    CHECK(unchanged.bindings.at({"pico","device"}).world.translation==b.world.translation);
     // Exercise the fixed codec -> recorder -> time pairing -> solver boundary,
     // with actual invalid/lost packets and a nonzero mount that must stay unused.
     auto captureConfig=c;captureConfig.profiles.at("pico").quaternionAxes={1,2,3,4};
