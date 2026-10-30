@@ -28,7 +28,7 @@ class CalibrationProtocolFaultFixture {
     if(mode=="idle-invalid"){Emit(new Dictionary<string,object>{{"status","INVALIDATED"},{"phase","INSPECT_ONLY"},{"eligible",false},{"session_id","test-only-session"},{"run_id","test-only-run"},{"reason","test-only idle lifetime invalidation"}});}
    }else if(op=="discover"){
     if(mode.StartsWith("approval-")){
-     var value=Response(request,"DISCOVERED");value["witness"]=new Dictionary<string,object>{{"bridge_id",opened["bridge_id"]},{"source",opened["source"]},{"device",opened["device"]},{"tracker",opened["tracker"]},{"input_space",mode=="approval-space"?"current-frame":opened["input_space"]},{"input_revision",mode=="approval-revision"?2:opened["input_revision"]},{"reference_role",opened["reference_role"]},{"convention","fixture-native"},{"standing_witness","fixture-standing"},{"reference_serial","fixture-reference"}};Emit(value);continue;
+     var approvalReply=Response(request,"DISCOVERED");approvalReply["witness"]=new Dictionary<string,object>{{"bridge_id",opened["bridge_id"]},{"source",opened["source"]},{"device",opened["device"]},{"tracker",opened["tracker"]},{"input_space",mode=="approval-space"?"current-frame":opened["input_space"]},{"input_revision",mode=="approval-revision"?2:opened["input_revision"]},{"reference_role",opened["reference_role"]},{"convention","fixture-native"},{"standing_witness","fixture-standing"},{"reference_serial","fixture-reference"}};Emit(approvalReply);continue;
     }
     var value=Response(request,"REJECTED");value["reason"]="test-only deliberate fault";if(mode=="foreign-session")value["session_id"]="foreign";Emit(value);
    }else if(op=="cancel"||op=="close"){Emit(Response(request,op=="close"?"CLOSED":"CANCELLED"));if(op=="close")return 0;}
