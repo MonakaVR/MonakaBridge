@@ -1,5 +1,6 @@
 plugins { kotlin("jvm") version "2.3.10" }
 repositories { mavenCentral() }
+layout.buildDirectory.set(layout.projectDirectory.dir("../Build/receiver"))
 kotlin { jvmToolchain(17); sourceSets.main { kotlin.srcDirs("src", "upstream") }; sourceSets.test { kotlin.srcDirs("tests") }; compilerOptions { freeCompilerArgs.add("-Xvalue-classes") } }
 dependencies {
     implementation(files("libs/kotlinx-serialization-core-jvm-1.10.0.jar"))
@@ -11,7 +12,7 @@ tasks.jar {
     isPreserveFileTimestamps = false; isReproducibleFileOrder = true
     manifest { attributes["Main-Class"] = "dev.monaka.tracking.ReceiverMainKt" }
 }
-tasks.processResources { from("build-identity.properties") }
+tasks.processResources { from(layout.buildDirectory.file("build-identity.properties")) }
 tasks.register("runtimeDependencies") {
     doLast {
         layout.buildDirectory.file("runtime-classpath.txt").get().asFile.writeText(

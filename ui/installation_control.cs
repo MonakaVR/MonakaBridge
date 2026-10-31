@@ -84,7 +84,7 @@ namespace MonakaBridge {
     root=root??dir;
    }
    root=Path.GetFullPath(root??defaultRoot??AppDomain.CurrentDomain.BaseDirectory);
-   config=config??Path.Combine(root,"config","bridge.json");health=health??config+".status.json";helper=helper??Path.Combine(root,"build","Release","monaka_bridge_config.exe");
+   config=config??Path.Combine(root,"config","bridge.json");health=health??config+".status.json";helper=helper??Path.Combine(root,"Build","runtime","Release","monaka_bridge_config.exe");
    var distinct=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
    foreach(string value in new[]{config,health,helper})if(!distinct.Add(Path.GetFullPath(value)))throw new ArgumentException("Config, health and helper paths must be distinct");
    if(hash!=null){if(hash.Length!=64)throw new ArgumentException("Helper SHA256 must have64 hexadecimal characters");foreach(char c in hash)if(!Uri.IsHexDigit(c))throw new ArgumentException("Invalid helper SHA256");hash=hash.ToLowerInvariant();}

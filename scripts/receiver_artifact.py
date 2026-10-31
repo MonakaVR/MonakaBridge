@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,hashlib,json,shutil,subprocess,zipfile
 ROOT=Path(__file__).resolve().parents[1]
-JDK=Path(r'C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot')
+from java_tools import java_home
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def git(*a):return subprocess.check_output(['git','-C',str(ROOT),*a],text=True).strip()
 def validate(folder):
@@ -25,16 +25,18 @@ def validate(folder):
         assert props['commit']==manifest['commit'] and props['build_input_sha256']==manifest['build_input_sha256']
     return manifest
 def package(folder,candidate=False):
+    JDK=java_home()
+    if not (JDK/'jmods').is_dir() or not (JDK/'bin/jlink.exe').is_file():raise RuntimeError('A complete JDK 17 with jlink/jmods is required')
     clean=not git('status','--porcelain')
     assert clean or candidate,'clean committed receiver tree required'
     folder=Path(folder).resolve();assert folder.is_relative_to(ROOT/'dist') and not folder.exists()
-    jar=ROOT/'receiver/build/libs/monaka-common-world-receiver.jar'
+    jar=ROOT/'Build/receiver/libs/monaka-common-world-receiver.jar'
     with zipfile.ZipFile(jar) as z:props=dict(line.split('=',1) for line in z.read('build-identity.properties').decode().splitlines())
     assert props['commit']==git('rev-parse','HEAD') and props['branch']==git('branch','--show-current')
     for name in ['lib','templates','licenses']: (folder/name).mkdir(parents=True,exist_ok=True)
     shutil.copy2(jar,folder/'lib'/jar.name)
     dependencies=[]
-    for line in (ROOT/'receiver/build/runtime-classpath.txt').read_text().splitlines():
+    for line in (ROOT/'Build/receiver/runtime-classpath.txt').read_text().splitlines():
         p=Path(line);assert p.suffix=='.jar' and not (folder/'lib'/p.name).exists()
         shutil.copy2(p,folder/'lib'/p.name);dependencies.append({'name':p.name,'sha256':sha(p)})
         with zipfile.ZipFile(p) as z:

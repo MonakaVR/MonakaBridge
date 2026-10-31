@@ -1,6 +1,6 @@
 #include "helpers.hpp"
 #include "direct_pose.hpp"
-#include "../build/upstream/task2/outputs/steamvr/driver/tracker_device.hpp"
+#include "../Build/Dependencies/upstream/task2/outputs/steamvr/driver/tracker_device.hpp"
 #include <iostream>
 #include "standalone_driver_context.hpp"
 int main()try{

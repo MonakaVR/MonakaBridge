@@ -86,6 +86,8 @@ When continuing an existing branch, incorporate the current input-independence i
 
 ## Repository-wide constraints
 
+- Normal launchers resolve the fixed repository `Build/runtime` output from their script location. Do not depend on fixed drive/user paths, task-work, dated packages, or launcher edits after each build; discover external build tools from PATH or environment roots.
+
 - Work only in this repository unless the active coordinated task explicitly states otherwise.
 - Do not redefine shared wire fields, protocol types, ports, version rules, units, or public API names. Use the fixed active MonakaProtocol kit.
 - Preserve modality and provenance from input observations; the bridge does not invent rotation-only capability or synthetic IMU streams.

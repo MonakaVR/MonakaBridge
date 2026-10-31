@@ -1,4 +1,5 @@
 /build*/
+/Build/
 /dist/
 __pycache__/
 config/bridge.json

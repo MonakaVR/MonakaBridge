@@ -1,8 +1,15 @@
 # MonakaBridge
 
-Current local HIL candidate: use `Start_Bridge.cmd` with a verified artifact catalog. See [docs/offline-hil-readiness.md](docs/offline-hil-readiness.md). Historical build/deploy instructions below are developer workflows, not normal startup.
-
-Current local HIL candidate: use `Start_Bridge.cmd` with a verified artifact catalog. See [docs/offline-hil-readiness.md](docs/offline-hil-readiness.md). Historical build/deploy instructions below are developer workflows, not normal startup.
+Normal startup is `Start_Bridge.cmd`, using the latest local build at `Build/runtime`.
+Run `python scripts/build_runtime.py` explicitly to build that fixed location, then
+`Start_Bridge.cmd --check` to list missing binaries, DLL or `config/bridge.json`.
+The check only reads files; startup never builds, registers drivers or rewrites configuration.
+`--mode inspect` opens a read-only control window; `--mode calibrate` opens the control
+window where the existing Create/Open calibration profile actions select the target.
+Neither mode starts a service. Native calibration and saving remain explicit GUI actions.
+`--tray-only` keeps normal startup in the tray. The separate artifact-set launcher is
+retained for explicit HIL workflows and is not part of normal startup.
+Historical build/deploy instructions below are developer workflows.
 
 Common Observation router and thin SteamVR output. The active MVIP contract kit preserves message-specific wire 2.0/2.1/2.2 semantics; MBIP provides the fixed pure normalization adapter. Software validation and hardware cutover are separate: **hardware cutover pending**. See [responsibility repair](docs/responsibility-refactor.md).
 
@@ -15,31 +22,34 @@ default and config mutation requires `--apply`.
 
 ## Build and run
 
-Use Windows x64, MSVC C++17, CMake >=3.20, Python 3, .NET Framework 4.8/WPF Developer Pack. `scripts/import_upstream.py` verifies the actual bundled Task1/2/3 ZIPs and manifests, then restores reference-only extraction under `build/upstream`. It never reconstructs missing upstream artifacts.
+Use Windows x64, MSVC C++17, CMake >=3.20, Python 3, .NET Framework 4.8/WPF Developer Pack. `scripts/import_upstream.py` verifies the actual bundled Task1/2/3 ZIPs and manifests, then restores reference-only extraction under `Build/Dependencies/upstream`. It never reconstructs missing upstream artifacts.
 
 ```powershell
-python scripts/import_upstream.py
-git clone --depth 1 --branch v2.15.6 https://github.com/ValveSoftware/openvr.git build/openvr-sdk
-cmake -S . -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Release
-./scripts/build_gui.ps1
-Copy-Item config/bridge.example.json config/bridge.json
-./build/Release/monaka_bridge_service.exe config/bridge.json
-# Separate terminal, or use -Run on the GUI build script:
-./build-gui/monaka_bridge_control.exe .
+python scripts/build_runtime.py
+# Prepare and review config/bridge.json separately; no configuration is copied by the build.
+.\Start_Bridge.cmd --check
+.\Start_Bridge.cmd
 ```
 
-The SDK must be commit `0924064316de3effbcd1acf1e309182a2deb1c05`; do not replace an existing checkout blindly. See `dependencies/openvr.lock.json` for exact input file hashes. Configure accepts `-DOPENVR_SDK=PATH`. This workspace was verified with Visual Studio 18 2026 / MSVC 19.51 / SDK 10.0.26100.0. `scripts/build_windows.py` handles the host's duplicate Path/PATH MSBuild environment issue without changing the system environment.
+The builder acquires the public SDK into this checkout's `Build/Dependencies/OpenVR`
+and checks commit `0924064316de3effbcd1acf1e309182a2deb1c05` plus the exact input hashes
+in `dependencies/calibration-openvr-sdk.json`. An existing mismatched SDK fails without
+replacement or fallback. External build tools are discovered through PATH/environment.
+Explicit developer CMake configuration also accepts `-DOPENVR_SDK=PATH`.
 
 Before enabling output, assign a persistent installation `bridge_id`, select the observed source/device, choose a verified profile, specify the exact input map/revision and destination world, and approve that input space. The example contains **no mappings**. `vive-unverified` remains blocked; `vive-hil-v1` and `vive-hil-v2` are separate explicit historical/HIL candidates, not automatic approval of every `vut-native-v1` input. Calibration and mount rotations are xyzw unit Hamilton quaternions; translations are metres. See [production integration](docs/production-integration.md) for health I/O, mapping identity, profile tests and hardware evidence limits.
 
 The GUI supports source observations, logical IDs, profile/space approval status, shared alignment, route selection, legacy configuration import, and Bridge start/stop. Profile permutations and explicit mount/world rotations are advanced configuration fields documented in `docs/configuration.md`. It performs no backend pairing/firmware/reset operation.
 
-Build output includes one driver package at `build/steamvr/monaka_bridge`. Register this directory with the installed SteamVR `vrpathreg adddriver` only during the planned cutover. No automatic installation or registration is performed. Stop the Bridge with `monaka_bridge_service.exe --stop`.
+Build output includes one driver package at `Build/runtime/steamvr/monaka_bridge`. Register this directory with the installed SteamVR `vrpathreg adddriver` only during the planned cutover. No automatic installation or registration is performed. Stop the Bridge with `monaka_bridge_service.exe --stop`.
 
 ## Verification and handoff
 
-Run `ctest --test-dir build -C Release --output-on-failure`. `scripts/verify_windows.py` additionally records standalone Direct execution, DLL imports, the caught original null-context reproduction/call stack, a separate-process UDP regression, 74 fixed codec fixtures / 44 C++↔JVM directions, and actual CPU/allocation/latency measurements. All evidence is saved under `build/validation` and packaged by `scripts/package_handoff.py`.
+Run `python -B tests/runtime_launcher_tests.py` for the fixed-path, file-only launcher
+regression. The normal runtime builder targets the product binaries and does not run
+the full suite or a product process. Full native validation/release evidence is a
+separate developer workflow described in `docs/release-v2.md`; historical reporters
+and seals are not current startup or release evidence.
 
 - `docs/direct-regression-crash.md`: original Access Violation, root cause, isolation and rerun evidence.
 - `docs/architecture.md`: responsibility boundaries, age mapping and bounded queues.

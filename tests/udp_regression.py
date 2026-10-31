@@ -38,7 +38,7 @@ save()
 service_cmd=[binary/'monaka_bridge_service.exe',path,*ports,'--duration-ms',18000]
 fixture=json.loads((root/'third_party/monaka-protocol-v2/fixtures/v2/observation.json').read_text())
 # Read the actual TestPoseRoundTrip fixture values from the verified Task2 extraction.
-legacy=(root/'build/upstream/task2/tests/protocol_tests.cpp').read_text()
+legacy=(root/'Build/Dependencies/upstream/task2/tests/protocol_tests.cpp').read_text()
 def legacy_vector(field):return [float(x.strip()) for x in re.search(r'src\.'+field+r' = \{([^}]+)\}',legacy).group(1).split(',')]
 fixture.update(source_id='pico',device_id='same-device',position=legacy_vector('positionMeters'),orientation=legacy_vector('orientationXyzw'),linear_velocity=dict(value=legacy_vector('linearVelocityMetersPerSec'),frame='space',evidence='measured'))
 fixture['capabilities'].append('linear_velocity');fixture['coordinate_space']=dict(id='native',convention='fixture-pico-native',revision=1)

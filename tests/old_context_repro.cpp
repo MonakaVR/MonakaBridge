@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <dbghelp.h>
 #include <openvr_driver.h>
-#include "../build/upstream/task2/outputs/steamvr/driver/tracker_device.hpp"
+#include "../Build/Dependencies/upstream/task2/outputs/steamvr/driver/tracker_device.hpp"
 #include <cstdio>
 static bool reproduced=false;
 static LONG report(EXCEPTION_POINTERS* info){

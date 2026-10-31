@@ -95,10 +95,14 @@ inventory is inaccessible. This diagnostic does not establish output approval,
 physical continuity, runtime config byte identity or actual downstream output;
 those retain their separate native/operator gates.
 
-Normal startup is `Start_Bridge.cmd` / PICO `Start_Receiver.cmd`. The shared
-launcher selects the newest successful compatible artifact set in
-`build/artifact-sets.json` (or explicit `--catalog` / `--package`), verifies all
-pins and receipts, and starts the existing tray. It never builds or deploys.
+Normal Bridge startup is `Start_Bridge.cmd`, reading the fixed repository
+`Build/runtime` native/GUI outputs. `python scripts/build_runtime.py` builds
+that location explicitly; `Start_Bridge.cmd --check` only reads dependencies
+and configuration. It never builds, registers a driver or migrates state.
+The explicit HIL-only `scripts/launch_artifact_set.py` remains available with
+`Build/artifact-sets.json`, `--catalog` or `--package`. Relative package entries
+are based on their catalog directory; relative explicit arguments use the repo root.
+Its receipts do not replace the normal current-build executable paths.
 Tray reuse checks service/controller path, file SHA and creation time. X closes
 only the management window. Exit requests graceful stop only for the owned
 service before hiding the tray; stale PID/name and other owners fail closed.
