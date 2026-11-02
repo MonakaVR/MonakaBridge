@@ -17,8 +17,8 @@ namespace PcServiceLifecycle {
         [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
         static extern uint GetFinalPathNameByHandle(SafeFileHandle file, StringBuilder path, uint size, uint flags);
         static byte[] Identity(string config) {
+            if(config.StartsWith(@"\\?\",StringComparison.Ordinal))throw new IOException("Active configuration path alias refused");
             string selected=Path.GetFullPath(config);
-            if(selected.StartsWith(@"\\?\",StringComparison.Ordinal))throw new IOException("Active configuration path alias refused");
             using(var file=new FileStream(selected,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) {
                 var path=new StringBuilder(32768);
                 uint length=GetFinalPathNameByHandle(file.SafeFileHandle,path,(uint)path.Capacity,0);
