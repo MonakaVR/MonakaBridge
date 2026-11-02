@@ -95,7 +95,7 @@ def evaluate_input_readiness(health,expected,config,now_ms):
         for key in ('collision','absent'):
             require(row[key] is False,'INPUT_INVALID:'+key)
         require(row['tracking_state']=='tracked','INPUT_NOT_TRACKED')
-        require(integer(row['revision']) and row['space']==target['input_space'] and row['revision']==target['input_revision'] and
+        require(integer(row['revision']) and identity(row['space']) and
                 row['tracker']==target['tracker'] and row['convention']==convention,'INPUT_SPACE_OR_MAPPING_MISMATCH')
         for key in ('pose_age_ms','source_receive_age_ms'):
             require(number(row[key]) and row[key]+age<timeout,'INPUT_EXPIRED:'+key)
@@ -253,10 +253,11 @@ def package_checks(package,now_ms):
     if manifest.get('known_p0_blockers'):failures.append('KNOWN_P0_BLOCKERS')
     if not manifest.get('rollback_files') or any(p not in manifest['files_sha256'] for p in manifest['rollback_files']):failures.append('ROLLBACK_PACKAGE_MISSING')
     features=set(manifest.get('native_features',[]))
-    for feature in ('file_output_authority_v1','max_residuals_v1','first_failure_v1'):
+    for feature in ('max_residuals_v1','first_failure_v1'):
         if feature not in features:failures.append('NATIVE_FEATURE_MISSING:'+feature)
     if manifest.get('config_transaction')!='monaka-config-transaction-v1':failures.append('CONFIG_TRANSACTION_UNSUPPORTED')
-    failures.extend(authority_package_checks(package/'monaka/OutputApproval',now_ms))
+    # Historic physical-quality reports are optional diagnostics. They do not
+    # authorize or block ordinary input, calibration, or raw HIL collection.
     return failures
 
 def main():

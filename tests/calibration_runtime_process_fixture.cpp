@@ -12,11 +12,17 @@ int main(int argc,char** argv)try{
  auto base=local||seed?std::filesystem::path(environment(L"MONAKA_CALIBRATION_TEST_ROOT",true)):std::filesystem::u8path(argv[1]);
  fixture::Run run(std::filesystem::absolute(base));
  runtime_fixture::State state(run.time);auto provider=runtime_fixture::provider(state,true);
+ auto selectedPort=environment(L"MONAKA_CALIBRATION_TEST_MIRROR_PORT",false);if(!selectedPort.empty()){size_t used=0;auto port=std::stoul(selectedPort,&used);CHECK(used==selectedPort.size()&&port>0&&port<=65535);state.expectedMirrorPort=static_cast<std::uint16_t>(port);}
  wchar_t self[32768];auto n=GetModuleFileNameW(nullptr,self,32768);CHECK(n&&n<32768);
  run.env.helperPath=std::filesystem::path(self).u8string();run.env.helperSha256=lc::sha256(mb::readConfigBytes(std::filesystem::path(self)));
  std::string mode=local||seed?std::filesystem::path(environment(L"MONAKA_CALIBRATION_TEST_MODE",false)).u8string():(argc==3?argv[2]:"");
- std::atomic<bool> blockReference{false};
- if(mode=="b4-static") {state.extrinsic={};state.poseHook=[&]{state.time+=8000000;};}
+ std::atomic<bool> blockReference{false},measuring{false};std::atomic<unsigned> measuredPackets{0};
+ if(mode=="revision-only"||mode=="space-only"||mode=="recalibrate-trajectory"||mode=="recalibrate-static"||mode=="mid-revision") {
+  state.packetHook=[&,mode](auto& p){if(mode=="space-only")p.coordinate_space.id="current-frame";else p.coordinate_space.revision=mode=="mid-revision"&&measuring&&++measuredPackets>=10?3:2;};
+  if(mode=="mid-revision")run.env.ioHook=[&](const char* point){if(std::string(point)=="begin-draft-written")measuring=true;};
+  if(mode=="recalibrate-static"){state.extrinsic={};state.poseHook=[&]{state.time+=8000000;};}
+ }
+ else if(mode=="b4-static") {state.extrinsic={};state.poseHook=[&]{state.time+=8000000;};}
  else if(mode=="b4-approval"){state.poseHook=[&]{state.time+=8000000;};run.env.outputApprovalAuthority=std::make_shared<b4_fixture::Authority>();}
  else if(mode=="b4-unadopted")state.poseHook=[&]{state.time+=8000000;};
  else if(mode=="post-replace-exit")run.env.afterReplace=[](){ExitProcess(73);};

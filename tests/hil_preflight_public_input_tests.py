@@ -36,11 +36,13 @@ for timeout in (1,10000):
 for field in ('fresh','has_pose','position_valid','orientation_valid','collision','absent'):
     for bad in (not row[field],None,1 if row[field] else 0,'true'):
         h=copy.deepcopy(health);h['devices'][0][field]=bad;check(h,valid=False)
-for field,value in [('tracking_state','lost'),('tracking_state','stale'),('space','other'),('revision',113),('revision',True),
+for field,value in [('tracking_state','lost'),('tracking_state','stale'),('space',''),('revision',True),
                     ('tracker','other'),('convention','unknown'),('publisher_id','other'),('pose_stage','final'),('is_final_output',True),
                     ('pose_age_ms',480),('source_receive_age_ms',480),('pose_age_ms',-1),('pose_age_ms',float('nan')),
                     ('source_receive_age_ms',float('inf')),('pose_age_ms',True)]:
     h=copy.deepcopy(health);h['devices'][0][field]=value;check(h,valid=False)
+for field,value in [('space','new-generation'),('revision',113)]:
+    h=copy.deepcopy(health);h['devices'][0][field]=value;check(h)
 for field,value in [('snapshot_unix_ms',now+1),('snapshot_unix_ms',now-2001),('snapshot_unix_ms',True),('snapshot_unix_ms',None),
                     ('mapping_revision',55),('mapping_revision',True),('publisher_id','other'),('pose_timeout_ms',501),
                     ('pose_stage','final'),('is_final_output',0),('devices',[]),('devices',[row,row]),('devices',{}),('devices',[None])]:

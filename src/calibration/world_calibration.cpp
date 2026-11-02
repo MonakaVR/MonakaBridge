@@ -178,8 +178,8 @@ WorldCalibrationTarget selectWorldCalibrationTarget(
         binding->second.inputRevision != inputRevision)
         throw std::invalid_argument("tracker/input-space/revision selection does not match mapping");
     const auto profile = config.profiles.find(binding->second.profile);
-    if (profile == config.profiles.end() || !profile->second.approved || profile->second.evidence.empty())
-        throw std::invalid_argument("selected mapping does not have an approved coordinate profile");
+    if (profile == config.profiles.end())
+        throw std::invalid_argument("selected mapping does not have a defined coordinate profile");
     return {config.revision, binding->second, profile->second};
 }
 
@@ -233,19 +233,42 @@ Config worldCalibrationCandidate(
     const Config& current,
     const WorldCalibrationTarget& measured,
     const Rigid& transform,
-    bool apply) {
+    bool apply,
+    std::optional<std::pair<std::string, std::uint32_t>> observedFrame) {
     validateWorldCalibrationTarget(current, measured);
     if (!apply) return current;
     if (!finite(transform.rotation) || !finite(transform.translation))
         throw std::invalid_argument("world calibration transform must be finite");
+    double squaredNorm=0;for(double value:transform.rotation)squaredNorm+=value*value;
+    if(std::abs(squaredNorm-1)>1e-5)throw std::invalid_argument("world calibration quaternion must be unit length");
     Config candidate = current;
+    bool changed=false;
     for (auto& [key, binding] : candidate.bindings)
         if (binding.source == measured.binding.source &&
             binding.inputSpace == measured.binding.inputSpace &&
             binding.inputRevision == measured.binding.inputRevision) {
-            binding.world = transform;
-            binding.spaceApproved = false;
+            if(!equivalentRigid(binding.world,transform)){binding.world = transform;changed=true;}
         }
+    if(!changed)return current;
+    if (observedFrame) {
+        if (observedFrame->first.empty())
+            throw std::invalid_argument("measured input frame must be nonempty");
+        const auto& selected = measured.binding;
+        const auto savedMember = [&](const Binding& b) {
+            return b.source == selected.source && b.inputSpace == selected.inputSpace &&
+                   b.inputRevision == selected.inputRevision;
+        };
+        // Never merge an independently saved World group into the measured one.
+        for (const auto& [key, binding] : current.bindings)
+            if (!savedMember(binding) && binding.source == selected.source &&
+                binding.inputSpace == observedFrame->first && binding.inputRevision == observedFrame->second)
+                throw std::invalid_argument("measured input frame collides with another World group");
+        for (const auto& [key, binding] : current.bindings) if (savedMember(binding)) {
+            auto& updated = candidate.bindings.at(key);
+            updated.inputSpace = observedFrame->first;
+            updated.inputRevision = observedFrame->second;
+        }
+    }
     if (candidate.revision == std::numeric_limits<std::uint32_t>::max())
         throw std::invalid_argument("mapping_revision exhausted");
     ++candidate.revision;

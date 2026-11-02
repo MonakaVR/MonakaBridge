@@ -60,7 +60,7 @@ namespace MonakaBridge {
     ResultId=CalibrationJson.Text(value,OutputApproval?"approval_id":"result_id",4096);if(ResultId!=(OutputApproval?approval.ApprovalId:result.ResultId))throw new InvalidOperationException("Native result/review identity changed");
    ReviewToken=CalibrationJson.Text(value,"review_token",4096);CandidateSha256=CalibrationJson.Hash(value,"candidate_sha256");
    CandidatePath=GuiLaunchOptions.Absolute(CalibrationJson.Text(value,"candidate_path",32768),"candidate_path");CandidateBytes=CalibrationJson.Integer(value,"candidate_bytes",1,2*1024*1024);
-    if(!OutputApproval&&CalibrationJson.Text(value,"output_approval",128)!="REQUIRED")throw new InvalidOperationException("Native output reapproval contract changed");
+    if(!OutputApproval&&CalibrationJson.Text(value,"output_approval",128)!="NOT_REQUIRED")throw new InvalidOperationException("Unsupported normal calibration save contract");
     if(OutputApproval&&CalibrationJson.Text(value,"world_extrinsic_mount",128)!="UNCHANGED")throw new InvalidOperationException("Output approval must preserve W/E/M");
    NativeJson=CalibrationJson.Utf8.GetString(line);
   }

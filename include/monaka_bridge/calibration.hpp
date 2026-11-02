@@ -26,6 +26,12 @@ inline std::optional<Vec> angularVelocity(Quat prev,Quat now,double dt){
 // Diagnostic compatibility only. Never used implicitly by normal calibration.
 inline Quat orientationZero(Quat now,Quat zero){return normalized(mul(now,inverse(zero)));}
 struct Rigid { Quat rotation{0,0,0,1}; Vec translation{0,0,0}; };
+inline bool equivalentRigid(const Rigid& a,const Rigid& b){
+ if(a.translation!=b.translation)return false;
+ auto x=normalized(a.rotation),y=normalized(b.rotation);
+ bool same=true,opposite=true;for(int i=0;i<4;++i){same=same&&x[i]==y[i];opposite=opposite&&x[i]==-y[i];}
+ return same||opposite;
+}
 struct Profile {
  std::string convention;
  std::array<int,3> positionAxes{1,2,3}; // signed one-based components

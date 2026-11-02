@@ -1,3 +1,10 @@
+# Superseded ordinary-use policy
+
+Issue #17 (2026-10-30) replaces the output-permission and same-World invalidation
+requirements below. This document records the historical policy. Current
+behavior is described in [ordinary-runtime.md](ordinary-runtime.md): saved W/M
+remain usable, identical saves are no-ops, and physical approval is diagnostic.
+
 # Shared World approval invalidation (2026-10-19)
 
 Base: responsibility candidate `7e95371b145a516e51dbba3beb8d526b4c91dd9f`.

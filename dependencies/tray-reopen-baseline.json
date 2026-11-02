@@ -1,0 +1,43 @@
+{
+  "parent": "629e2682e113bd81f4854c470982f68cc3b187dd",
+  "authority": "MONAKA-ORCH-OFFLINE-20261028-R2 / SA-01",
+  "purpose": "Restore only the retained owned control window; isolate test reopen events. Current runtime tests remain unprojected.",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "c74f8ddb89bfd795908f93b4d2cf330aec58e5a7ad469b95a71f23106b6cc411",
+      "parent_sha256": "23163b1aed66243efa27a93c7a54dba222e9316e48185594c5ebe666d2ceb86d"
+    },
+    "tests/control_foundation_tests.cs": {
+      "sha256": "f321688d9e60c74227492f1ea6af56af887e4ad40b147afcf44fd4bf420b4c4d",
+      "parent_sha256": "e50fa54d4dfa4ad61aee8fe652e533f233d54561e7edb77109659a8937a0483a"
+    },
+    "tests/lifecycle_serialization_scope.py": {
+      "sha256": "311ae1709ab531f2630b6ea2c1ef3eea1da4a9260b99ca8090669f8656de3e4f",
+      "parent_sha256": "5bdd7db677723d97741d3d329eaa810b0cbad848958bd9c0b8b0dfdc9f4750f9"
+    },
+    "tests/lifecycle_serialization_scope_tests.py": {
+      "sha256": "38c75c5f62af7d88a06e25bf7c836ba49e2e831a938d1b0ab7abd9f9450af243",
+      "parent_sha256": "05baf22bc16c39b16b46eff38a586993dc23ac4773589e0c3ca73bf0d985dabd"
+    },
+    "tests/run_tray_window.py": {
+      "sha256": "15f125f25fbf9abf88e1baee94def228b878d35d530f262cf302699c0280f635",
+      "parent_sha256": null
+    },
+    "tests/tray_reopen_scope.py": {
+      "sha256": "7271cc3b2647f22eed9738ebed62f2bcaf316068395026bf178c6c149d3736d0",
+      "parent_sha256": null
+    },
+    "tests/tray_reopen_scope_tests.py": {
+      "sha256": "cc10486f0dc28516f640f490a29dc0a3f72bd41f8f11ada42a24b1a186cc7015",
+      "parent_sha256": null
+    },
+    "tests/tray_window_tests.cs": {
+      "sha256": "40ba54bfde3d40a3e13c054cb551f57816ecccfe77cf2cad2e61d51d9758b733",
+      "parent_sha256": null
+    },
+    "ui/steamvr_control_tray.cs": {
+      "sha256": "bf8c3917dded9e01931cd1d7d901ac0b231b90a433c9b3e4d55fded2b86ee3f7",
+      "parent_sha256": "d775f04f0cc0a3377633ca27682577524b101d04d0ea8e31da2a1ef203847b9c"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "parent": "0c874d34d2f68b92c167a7b2e5025fb95ec367da",
+  "authority": "MONAKA-ORCH-HIL-SW-20261028-R1 / SA-01",
+  "purpose": "Fence late queued startup after shutdown/disposal; serialize lifetime operations. Physical acceptance remains separate.",
+  "files": {
+    "CMakeLists.txt": {
+      "sha256": "23163b1aed66243efa27a93c7a54dba222e9316e48185594c5ebe666d2ceb86d",
+      "parent_sha256": "18b490b6fd115028332a30e2bf18e80bbd3ca55ae7c4de1ed00c0a9b00459790"
+    },
+    "tests/lifecycle_serialization_scope.py": {
+      "sha256": "5bdd7db677723d97741d3d329eaa810b0cbad848958bd9c0b8b0dfdc9f4750f9",
+      "parent_sha256": null
+    },
+    "tests/lifecycle_serialization_scope_tests.py": {
+      "sha256": "05baf22bc16c39b16b46eff38a586993dc23ac4773589e0c3ca73bf0d985dabd",
+      "parent_sha256": null
+    },
+    "tests/preflight_remediation_scope.py": {
+      "sha256": "f61e70a10f1a3b624a41d2aa23ee6772bf331495bb2e713cd9ec9c49c67bb6d1",
+      "parent_sha256": "731b4acdc82fb2f24ed6790e7524624b69bb0e29c3e37c6fe2c881867cb4c150"
+    },
+    "tests/run_service_lifecycle_serialization.ps1": {
+      "sha256": "74a98ec1a6e2239cab6c20ccf7d5eb1f6489f6e502acafeb4972144a582b4695",
+      "parent_sha256": null
+    },
+    "tests/service_lifecycle_fixture.cs": {
+      "sha256": "0a6c8ad3e0f09967f8abef6710ffd0001831d631a979caee8f0616d8d4e565ca",
+      "parent_sha256": null
+    },
+    "tests/service_lifecycle_serialization_tests.cs": {
+      "sha256": "290b6b249baa19bd52aedd9458eeea48abe673a068855ea565487fcb818e96df",
+      "parent_sha256": null
+    },
+    "ui/service_lifecycle_control.cs": {
+      "sha256": "18939e13b18009e634f413e0a3ad447acd09eed2d677f7c21bc5e060aa9d61ff",
+      "parent_sha256": "83211943b7ec93c74577b01d33fe1f1458c34929338b46c8de87ae5b9387d222"
+    }
+  }
+}

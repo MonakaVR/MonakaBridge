@@ -40,7 +40,7 @@ struct Provider:lc::CaptureProvider {
    time+=20000000;double t=i*.02;
    mb::Rigid source{mb::mul(mb::mul(axis(0,.8*std::sin(1.3*t)),axis(1,.9*std::sin(.9*t))),axis(2,.7*std::sin(1.7*t))),{.45*std::sin(t),.35*std::sin(1.4*t),.30*std::sin(.7*t)}};
    if(staticMotion)source={};
-   auto p=sample("pico",i+1);p.timestamp_ns=time-2000000;p.sent_at_ns=time;p.position=source.translation;p.orientation=source.rotation;
+   auto p=sample("pico",i+1);p.coordinate_space={latest.identity.space,latest.identity.convention,latest.identity.revision};p.timestamp_ns=time-2000000;p.sent_at_ns=time;p.position=source.translation;p.orientation=source.rotation;
    latest.frames={{p,"fixture-peer",time}};latest.references={{time-2000000,mb::composeRigid(mb::composeRigid(W,source),E),true}};latest.referenceReceiptNs=time;
    if(captureHook)captureHook(i);batch=latest;}sink(batch);pacer.wait();
   }std::lock_guard<std::recursive_mutex> lock(fixtureMutex);latest.references.clear();

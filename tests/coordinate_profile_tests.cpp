@@ -34,14 +34,21 @@ int main()try{
    close(mb::rotate(*negative.orientation,basis(v)),expected);
   }
  }
- // Actual config-selected profile goes through the Bridge approval and MTP pipeline.
+ // Actual config-selected profile goes through ordinary normalization and MTP.
  c.bindings[{b.source,b.device}]=b;c.contracts[{b.source,b.device}]=config().contracts.at({"pico","device"});c.policy=mb::Policy::Both;
  mb::Bridge bridge(c,SB);p.position=mb::Vec{1,2,3};p.orientation=mb::Quat{0,0,0,1};
  CHECK(bridge.receive(wire(p),"source",10000000));
  auto out=bridge.logical().at({b.source,b.device}).pose;CHECK(out);close(*out->position,{3,2,-1});
  CHECK(out->coordinate_space.convention=="rh_y_up_neg_z_forward");
  auto unselected=c;unselected.bindings.at({b.source,b.device}).profile="vive-unverified";
- mb::Bridge blocked(unselected,SB);CHECK(blocked.receive(wire(p),"source",10000000));CHECK(!blocked.logical().at({b.source,b.device}).pose);
+ mb::Bridge unapproved(unselected,SB);CHECK(unapproved.receive(wire(p),"source",10000000));
+ CHECK(!unselected.profiles.at("vive-unverified").approved);
+ const auto ordinary=unapproved.logical().at({b.source,b.device}).pose;CHECK(ordinary);
+ close(*ordinary->position,{1,2,3});CHECK(*ordinary->orientation==mb::Quat({0,0,0,1}));
+ auto incompatible=p;incompatible.sequence=1;incompatible.coordinate_space.convention="unsupported-axes";
+ CHECK(!unapproved.receive(wire(incompatible),"source",11000000));
+ CHECK(unapproved.logical().at({b.source,b.device}).pose->input.sequence==p.sequence);
+ close(*unapproved.logical().at({b.source,b.device}).pose->position,{1,2,3});
  // The 2026-09-21 profile is not auto-selected, but exact config selection
  // applies its independently observed signed quaternion components.
  auto v2=c;auto v2Binding=b;v2Binding.profile="vive-hil-v2";

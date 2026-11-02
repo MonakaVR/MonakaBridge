@@ -44,6 +44,18 @@ class CalibrationProfileTests {
   string alias=Path.Combine(directory,"config-hardlink-alias.json");Check(CreateHardLink(alias,config,IntPtr.Zero));Reject(delegate{CalibrationInstallation.SaveNew(alias,profile.AbsoluteDocument(),null);});
   using(var writer=new FileStream(path,FileMode.Open,FileAccess.Write,FileShare.ReadWrite)){Reject(delegate{CalibrationInstallation.Load(path,null);});}
   string relocated=Path.Combine(directory,"relocated");Directory.CreateDirectory(relocated);var moved=CalibrationInstallation.SaveNew(Path.Combine(relocated,"new-v2.json"),profile.AbsoluteDocument(),new[]{path,config,native,helper});Check(moved.ConfigFile==config&&moved.HealthFile==profile.HealthFile&&moved.CalibrationHelper==native);cases++;
+  var row=new Dictionary<string,object>{{"source_id","pico"},{"device_id","device"},{"tracker_id","hip"},{"input_space","current-frame"},{"input_revision",2}};
+  var current=new Dictionary<string,object>{{"bridge_id","fixture-publisher"},{"mappings",new[]{row}}};
+  File.WriteAllBytes(config,Bytes(current));var resolved=profile.OpenMeasurementRequest(false);
+  Check((string)resolved["input_space"]=="current-frame"&&Convert.ToInt64(resolved["input_revision"])==2&&profile.InputRevision==UInt32.MaxValue&&profile.ProfileSha256==CalibrationInstallation.Sha256(raw));cases++;
+  row["input_space"]="native";row["input_revision"]=1;File.WriteAllBytes(config,Bytes(current));Check(Convert.ToInt64(profile.OpenMeasurementRequest(false)["input_revision"])==1);cases++;
+  foreach(string field in new[]{"source_id","device_id","tracker_id"}){
+   object savedValue=row[field];row[field]="rebound";File.WriteAllBytes(config,Bytes(current));Reject(delegate{profile.OpenMeasurementRequest(false);});row[field]=savedValue;
+  }
+  current["bridge_id"]="different-bridge";File.WriteAllBytes(config,Bytes(current));Reject(delegate{profile.OpenMeasurementRequest(false);});current["bridge_id"]="fixture-publisher";
+  current["mappings"]=new Dictionary<string,object>[0];File.WriteAllBytes(config,Bytes(current));Reject(delegate{profile.OpenMeasurementRequest(false);});
+  current["mappings"]=new[]{row,row};File.WriteAllBytes(config,Bytes(current));Reject(delegate{profile.OpenMeasurementRequest(false);});
+  Check(Convert.ToBase64String(raw)==Convert.ToBase64String(File.ReadAllBytes(path)));File.WriteAllBytes(config,original);
   Check(Convert.ToBase64String(original)==Convert.ToBase64String(File.ReadAllBytes(config))&&Convert.ToBase64String(raw)==Convert.ToBase64String(File.ReadAllBytes(path)));cases++;
   Console.WriteLine("PASS calibration v2 profile "+cases+" cases; immutable byte/hash snapshot; CreateNew/hardlink/readonly; synthetic files only; GUI/SDK/socket NOT_RUN");return 0;
  }catch(Exception e){Console.Error.WriteLine(e);return 1;}}

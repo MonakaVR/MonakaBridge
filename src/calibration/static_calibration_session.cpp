@@ -10,6 +10,7 @@ void StaticOptions::validate()const{
 std::int64_t StaticOptions::pointTimeout()const{return std::max<std::int64_t>(5*second,std::min<std::int64_t>(60*second,samples*8*30*1000000LL));}
 StaticMeasurement::StaticMeasurement(const FrozenMeasurementTarget& target,std::string session,StaticOptions options)
  :options_(options),target_(target.target()),session_(std::move(session)){options_.validate();}
+void StaticMeasurement::bindInputFrame(const std::string& space,std::uint32_t revision){need(points_.empty()&&totalSource_==0&&!space.empty(),"input frame must be frozen before measurement");target_.binding.inputSpace=space;target_.binding.inputRevision=revision;}
 void StaticMeasurement::beginPoint(std::int64_t start){
  need(points_.size()<options_.points,"STATIC_POINT_LIMIT");start_=start;
  source_.clear();reference_.clear();usedReference_.clear();cursor_=pairs_=0;sourceSum_={};referenceSum_={};

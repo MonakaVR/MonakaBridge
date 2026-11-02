@@ -59,7 +59,7 @@ void DiscoveryCache::observe(const c1::Envelope& e,std::string_view peer,std::in
   if(entries_.size()>=maxDevices){drop(now);return;}
  }
  auto& entry=entries_[key];auto& sequence=m.pose?entry.poseSequence:entry.stateSequence;
- if(m.sequence<=sequence||(!entry.space.empty()&&(m.revision<entry.revision||(m.revision==entry.revision&&(m.space!=entry.space||m.convention!=entry.convention))))){++ignored_;return;}
+ if(m.sequence<=sequence||(!entry.space.empty()&&m.space==entry.space&&(m.revision<entry.revision||(m.revision==entry.revision&&m.convention!=entry.convention)))){++ignored_;return;}
  source.session=m.session;source.clock=m.clock;source.peer=std::string(peer);source.last=now;
  sequence=m.sequence;entry.session=m.session;entry.clock=m.clock;entry.space=m.space;entry.convention=m.convention;entry.revision=m.revision;entry.advertised=m.capabilities;entry.last=now;
  const auto age=m.sent-m.timestamp;entry.sample=age>=0&&age<=now?now-age:-1;
@@ -72,7 +72,7 @@ nlohmann::json DiscoveryCache::snapshot(const Bridge& bridge,std::int64_t now)co
   const auto active=bridge.registry.sources.find(key.first);
   if(active!=bridge.registry.sources.end()&&(active->second.retired.count(e.session)||(!active->second.session.empty()&&active->second.session!=e.session&&now-active->second.lastReceive<bridge.config().timeoutNs)))continue;
   auto binding=bridge.config().bindings.find(key);bool configured=binding!=bridge.config().bindings.end();std::string reason="UNMAPPED";
-  if(configured){const auto& b=binding->second;const auto profile=bridge.config().profiles.find(b.profile);reason=!bridge.config().contracts.count(key)?"CONFIGURED_CONTRACT_MISSING":profile==bridge.config().profiles.end()?"CONFIGURED_PROFILE_MISSING":b.inputSpace!=e.space?"INPUT_SPACE_MISMATCH":b.inputRevision!=e.revision?"INPUT_REVISION_MISMATCH":profile->second.convention!=e.convention?"CONVENTION_MISMATCH":"CONFIGURED";}
+  if(configured){const auto& b=binding->second;const auto profile=bridge.config().profiles.find(b.profile);reason=!bridge.config().contracts.count(key)?"CONFIGURED_CONTRACT_MISSING":profile==bridge.config().profiles.end()?"CONFIGURED_PROFILE_MISSING":profile->second.convention!=e.convention?"CONVENTION_MISMATCH":"CONFIGURED";}
   const auto seen=now>=e.last?double(now-e.last)/1000000.0:-1.0;const auto sample=e.sample>=0&&now>=e.sample?double(now-e.sample)/1000000.0:-1.0;
   rows.push_back({{"source",key.first},{"device",key.second},{"session_id",e.session},{"clock_id",e.clock},{"coordinate_space",{{"id",e.space},{"convention",e.convention},{"revision",e.revision}}},
    {"advertised_capabilities",e.advertised},{"last_seen_ns",e.last},{"seen_age_ms",seen},{"sample_age_ms",sample},{"fresh",seen>=0&&seen<3000&&sample>=0&&sample<3000},

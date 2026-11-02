@@ -18,7 +18,9 @@ CaptureMonitor::CaptureMonitor(const ProviderOpenOptions& options,const Provider
  const auto& frozen=options.measurementTarget();const auto& b=frozen.target().binding;
   orientationRequired_=!options.staticMode()||norm(b.mount.translation)>0;
  need(bool(options.capabilityProfile()),"EXPLICIT_DECLARATION_REQUIRED");declaration_=options.capabilityProfile()->inputDeclaration;
- need(input_.source==b.source&&input_.device==b.device&&input_.space==b.inputSpace&&input_.revision==b.inputRevision&&input_.convention==frozen.target().profile.convention&&!input_.session.empty()&&!input_.clock.empty()&&!input_.peer.empty()&&!input_.referenceSerial.empty()&&!input_.standing.empty()&&input_.referenceRole==options.referenceRole(),"DISCOVERY_WITNESS_MISMATCH");
+ // Freeze the observed frame for this measurement. Saved geometry is not a
+ // physical-quality permit for the provider's current map generation.
+ need(input_.source==b.source&&input_.device==b.device&&!input_.space.empty()&&input_.convention==frozen.target().profile.convention&&!input_.session.empty()&&!input_.clock.empty()&&!input_.peer.empty()&&!input_.referenceSerial.empty()&&!input_.standing.empty()&&input_.referenceRole==options.referenceRole(),"DISCOVERY_WITNESS_MISMATCH");
  // This local state becomes the active monitor by move, never by reseeding.
  consume(batch,false,now);requireLive(now,true);
  need(poses_.high.has_value(),"FRESH_POSE_REQUIRED");input_.initialPoseFloor=*poses_.high;input_.initialStateFloor=states_.high;

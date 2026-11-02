@@ -62,6 +62,7 @@ TrajectoryResult solveTrajectory(const std::vector<TrajectoryPair>& pairs,
 // Stores a frozen identity/profile/config target separately from timestamped poses.
 class TrajectoryRecorder {
 public:
+    void bindInputFrame(const std::string& space,std::uint32_t revision);
     TrajectoryRecorder(const Config&,const WorldCalibrationTarget&,std::string referenceId,
         TrajectoryOptions options={});
     TrajectoryRecorder(const Config&,const FrozenMeasurementTarget&,std::string referenceId,

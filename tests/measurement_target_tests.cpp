@@ -55,25 +55,25 @@ void positiveAndSeparation() {
     recorder.reference({999000000,{},true},"synthetic-reference");CHECK(recorder.pairs().size()==1);
     CHECK(!c.bindings.at(selected).spaceApproved);pass("unapproved-space-typed-measurement-without-approval-copy");
     const auto legacy=frozen.target();
-    rejected([&]{mb::validateTrajectoryTarget(c,legacy,c.bridgeId);});
-    rejected([&]{mb::TrajectoryRecorder r(c,legacy,"synthetic-reference");});
-    pass("legacy-validator-and-constructor-still-reject-unapproved-space");
+    mb::validateTrajectoryTarget(c,legacy,c.bridgeId);
+    mb::TrajectoryRecorder legacyRecorder(c,legacy,"synthetic-reference");legacyRecorder.checkConfig(c);
+    pass("legacy-validator-and-constructor-accept-defined-unapproved-space");
     mb::Bridge bridge(c,SB);CHECK(bridge.receive(wire(p),"synthetic-peer",10000000));
-    CHECK(!bridge.logical().at(selected).pose);
-    bool blocked=false;int poses=0;
+    CHECK(bridge.logical().at(selected).pose);
+    bool normal=false;int poses=0;
     bridge.fanout.flush([&](mb::Channel channel,std::string_view bytes){
         if(channel==mb::Channel::Mirror)return true;
         mb::c1::Envelope e;mb::c1::Error error;
         CHECK(mb::c1::DecodeEnvelope(reinterpret_cast<const std::uint8_t*>(bytes.data()),bytes.size(),e,error));
-        if(auto value=std::get_if<mb::c1::MtpPose>(&e)) { ++poses;CHECK(!value->validity.position&&!value->validity.orientation); }
+        if(auto value=std::get_if<mb::c1::MtpPose>(&e)) { ++poses;CHECK(value->validity.position&&value->validity.orientation);CHECK(value->position==p.position); }
         if(auto value=std::get_if<mb::c1::MtpTrackerState>(&e)) if(value->tracker_id=="logical-pico") {
-            CHECK(value->modality=="none"&&value->tracking_state=="disconnected");
-            CHECK(value->capabilities==c.contracts.at(selected).outputDeclaration);blocked=true;
+            CHECK(value->modality=="full"&&value->tracking_state=="tracked");
+            CHECK(value->capabilities==c.contracts.at(selected).outputDeclaration);normal=true;
         }
         return true;
     },10000001);
-    CHECK(blocked&&poses==0&&!bridge.config().bindings.at(selected).spaceApproved);
-    pass("in-memory-normal-output-gate-remains-blocked-monaka-and-steamvr");
+    CHECK(normal&&poses>0&&!bridge.config().bindings.at(selected).spaceApproved);
+    pass("in-memory-normal-output-uses-defined-unapproved-space-monaka-and-steamvr");
     c.bindings.at(selected).tracker="changed";c.profiles.at("pico").evidence="changed";
     c.contracts.at(selected).id="changed";c.bindings.erase(sibling);
     CHECK(frozen.target().binding.tracker=="logical-pico"&&frozen.target().profile.evidence==original.profiles.at("pico").evidence);
@@ -147,7 +147,7 @@ void groupAndFields() {
     mutation("profile/evidence",[](auto& c){c.profiles.at("pico").evidence+=" changed";});
     mutation("profile/angular",[](auto& c){c.profiles.at("pico").angularSpaceVerified=true;});
     mutation("profile/missing",[](auto& c){c.profiles.erase("pico");});
-    mutation("profile/empty-evidence",[](auto& c){c.profiles.at("pico").evidence.clear();},false);
+    mutation("profile/empty-evidence",[](auto& c){c.profiles.at("pico").evidence.clear();});
     mutation("profile/invalid-axis",[](auto& c){c.profiles.at("pico").positionAxes[0]=0;},false);
 }
 mb::Quat axis(int i,double a) { mb::Quat q{0,0,0,std::cos(a/2)};q[i]=std::sin(a/2);return q; }
@@ -196,7 +196,8 @@ void factoryGuards() {
         if(mode==3)bad.bindings.at(sibling).profile="unknown";
         if(mode==4)bad.bindings.at(sibling).worldSpace="incompatible";
         if(mode==5)++bad.bindings.at(sibling).worldRevision;
-        rejected([&]{freeze(bad);});pass("factory-profile-group-constraint/"+std::to_string(mode));
+        if(mode==1||mode==2) { auto ordinary=freeze(bad);mb::validateFrozenMeasurementTarget(bad,ordinary);pass("factory-quality-metadata-optional/"+std::to_string(mode)); }
+        else { rejected([&]{freeze(bad);});pass("factory-profile-group-constraint/"+std::to_string(mode)); }
     }
     auto frozen=freeze(c);
     rejected([&]{mb::TrajectoryRecorder r(c,frozen,"");});

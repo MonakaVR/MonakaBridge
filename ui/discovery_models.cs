@@ -15,7 +15,7 @@ namespace MonakaBridge {
   internal bool Same(DiscoveryObservation other){return other!=null&&Source==other.Source&&Device==other.Device&&Session==other.Session&&Clock==other.Clock&&Space==other.Space&&Convention==other.Convention&&Revision==other.Revision&&DiscoveryModel.SetEqual(Claims,other.Claims);}
  }
  internal sealed class DiscoveryContract {
-  internal int MappingIndex;internal string Source,Label;internal Dictionary<string,object> Value;
+  internal int MappingIndex;internal string Source,Device,Label;internal Dictionary<string,object> Value;
   public override string ToString(){return Label;}
  }
  internal sealed class DiscoverySnapshot {
@@ -66,6 +66,20 @@ namespace MonakaBridge {
     result.Add(new DiscoveryContract{MappingIndex=n,Source=source,Value=MappingEditor.Clone(c),Label=Text(c,"id")+" | "+Text(c,"input_policy")+" | template "+Text(b,"device_id")});
    }return result;
   }
+  // Static public declaration from the exact selected observation. The user
+  // reviews this candidate; current FULL/Q-only/NONE never determines support.
+  internal static DiscoveryContract DeclaredContract(DiscoveryObservation row){
+   var input=new List<string>(row.Claims);input.Sort(StringComparer.Ordinal);
+   var known=new HashSet<string>(new[]{"position","orientation","linear_velocity","angular_velocity","linear_acceleration","battery_fraction","charging"},StringComparer.Ordinal);
+   foreach(string token in input)if(!known.Contains(token))throw new InvalidOperationException("Unsupported declared capability: "+token);
+   var output=new List<string>();foreach(string token in input){
+    if((token=="linear_velocity"||token=="linear_acceleration")&&!input.Contains("position"))continue;
+    if(token=="angular_velocity"&&!input.Contains("orientation"))continue;output.Add(token);
+   }
+   return new DiscoveryContract{MappingIndex=-1,Source=row.Source,Device=row.Device,Label="Use this device's declared static capabilities: "+string.Join(", ",input),Value=new Dictionary<string,object>{
+    {"id","explicit-observation"},{"provenance","Explicit user selection of public static declaration; source="+row.Source+"; device="+row.Device+"; session="+row.Session+"; clock="+row.Clock},
+    {"input_policy","STRICT"},{"output_policy","STRICT"},{"input_declaration",input.ToArray()},{"output_declaration",output.ToArray()}}};
+  }
   internal static void RequireContract(DiscoveryContract contract,DiscoveryObservation row){
    if(contract==null||contract.Source!=row.Source||Text(contract.Value,"id")==""||Text(contract.Value,"provenance")=="")throw new InvalidOperationException("NEEDS_CONTRACT_REVIEW: select an explicit contract for this source");
    var input=Tokens(contract.Value["input_declaration"]);Tokens(contract.Value["output_declaration"]);var declared=new HashSet<string>(input,StringComparer.Ordinal);
@@ -83,11 +97,14 @@ namespace MonakaBridge {
    if(row!=null&&row.SeenAge>=0&&row.SeenAge<3000)throw new InvalidOperationException("Old slot is online; replacement rejected");
   }
   internal static DiscoveryDraft Prepare(Dictionary<string,object> loaded,DiscoverySnapshot snapshot,DiscoveryObservation selected,DiscoveryAction action,int oldIndex,string tracker,string profile,DiscoveryContract contract,bool readOnly,bool active){
+   loaded=MappingEditor.WithDefaults(loaded);
    RequireWritable(readOnly,active);if(snapshot==null||!snapshot.Ready||selected==null)throw new InvalidOperationException(snapshot==null?"Select a current discovery observation":snapshot.Error??"Select a current discovery observation");
    var current=snapshot.Find(selected.Source,selected.Device);if(!selected.Same(current)||!current.Fresh)throw new InvalidOperationException("Discovery selection changed or stale; select and review again");
-   RequireContract(contract,current);var mappings=Mappings(loaded);if(contract.MappingIndex<0||contract.MappingIndex>=mappings.Count)throw new InvalidOperationException("Contract selection changed");
-   var template=(Dictionary<string,object>)mappings[contract.MappingIndex];if(Text(template,"source_id")!=current.Source||!template.ContainsKey("runtime_contract")||Json(template["runtime_contract"])!=Json(contract.Value))throw new InvalidOperationException("Contract selection changed");
-   var verified=MappingEditor.RequireProfile(loaded,profile);if(!Flag(verified,"approved")||Text(verified,"evidence")==""||Text(verified,"convention")!=current.Convention)throw new InvalidOperationException("Select a verified matching coordinate profile");
+   RequireContract(contract,current);var mappings=Mappings(loaded);Dictionary<string,object> template=null;
+   if(contract.MappingIndex==-1){if(contract.Device!=current.Device||Json(DeclaredContract(current).Value)!=Json(contract.Value))throw new InvalidOperationException("Declared static contract changed; select again");}
+   else {if(contract.MappingIndex<0||contract.MappingIndex>=mappings.Count)throw new InvalidOperationException("Contract selection changed");
+    template=(Dictionary<string,object>)mappings[contract.MappingIndex];if(Text(template,"source_id")!=current.Source||!template.ContainsKey("runtime_contract")||Json(template["runtime_contract"])!=Json(contract.Value))throw new InvalidOperationException("Contract selection changed");}
+   var verified=MappingEditor.RequireProfile(loaded,profile);if(Text(verified,"convention")!=current.Convention)throw new InvalidOperationException("Select an explicitly defined matching coordinate profile");
    Dictionary<string,object> old=null;if(action!=DiscoveryAction.Create){if(oldIndex<0||oldIndex>=mappings.Count)throw new InvalidOperationException("Select one persisted slot explicitly");old=(Dictionary<string,object>)mappings[oldIndex];if(Text(old,"source_id")!=current.Source)throw new InvalidOperationException("Foreign source slot rejected");tracker=Text(old,"tracker_id");
     if(action==DiscoveryAction.Replace){if(Text(old,"device_id")==current.Device)throw new InvalidOperationException("Select an unmapped replacement device");RequireOffline(snapshot,old);}
     else if(Text(old,"device_id")!=current.Device||!current.Configured||Text(old,"input_space")==current.Space&&Convert.ToUInt32(old["input_revision"])==current.Revision)throw new InvalidOperationException("Select a known device with a changed input frame/revision");
@@ -96,7 +113,7 @@ namespace MonakaBridge {
    if(string.IsNullOrWhiteSpace(tracker)||tracker.Length>128||tracker.IndexOfAny(new[]{'\r','\n','\0'})>=0)throw new InvalidOperationException("Enter an explicit unique logical tracker ID");
    for(int n=0;n<mappings.Count;++n){if(n==oldIndex&&action!=DiscoveryAction.Create)continue;var b=(Dictionary<string,object>)mappings[n];if(Text(b,"source_id")==current.Source&&(Text(b,"device_id")==current.Device||Text(b,"tracker_id")==tracker))throw new InvalidOperationException("Duplicate source/device or logical tracker assignment");}
    var baseDoc=MappingEditor.Clone(loaded);var list=new ArrayList((ICollection)baseDoc["mappings"]);if(old!=null)list.RemoveAt(oldIndex);baseDoc["mappings"]=list.ToArray();
-   var destination=old??template;
+   var destination=old??template??new Dictionary<string,object>{{"world_space","world"},{"world_revision",0}};
    var edit=new Dictionary<string,object>{{"source_id",current.Source},{"device_id",current.Device},{"tracker_id",tracker},{"profile",profile},{"input_space",current.Space},{"input_revision",current.Revision},{"world_space",destination["world_space"]},{"space_approved",false}};
    var candidate=MappingEditor.Candidate(baseDoc,-1,edit);var output=(IList)candidate["mappings"];var binding=(Dictionary<string,object>)output[output.Count-1];binding["runtime_contract"]=MappingEditor.Clone(contract.Value);
    binding["world"]=Identity();binding["world_revision"]=destination["world_revision"];binding["mount"]=Identity();
@@ -110,13 +127,19 @@ namespace MonakaBridge {
     string value=Json(new object[]{b["world"],b["world_space"],b["world_revision"]});if(shared!=null&&shared!=value)throw new InvalidOperationException("Shared W group inconsistent; review alignment separately");shared=value;sharedBinding=b;
    }
    if(sharedBinding!=null){binding["world"]=MappingEditor.Clone((Dictionary<string,object>)sharedBinding["world"]);binding["world_space"]=sharedBinding["world_space"];binding["world_revision"]=sharedBinding["world_revision"];}
-   if(action==DiscoveryAction.UpdateRevision)binding["mount"]=MappingEditor.Clone((Dictionary<string,object>)old["mount"]);
+   if(action==DiscoveryAction.UpdateRevision){
+    // Coordinate generation is diagnostic. This is the same physical identity;
+    // saved geometry remains the user's interpretation until explicitly changed.
+    binding["world"]=MappingEditor.Clone((Dictionary<string,object>)old["world"]);
+    binding["world_space"]=old["world_space"];binding["world_revision"]=old["world_revision"];
+    binding["mount"]=MappingEditor.Clone((Dictionary<string,object>)old["mount"]);
+   }
    // Keep the selected slot's position in the UI/config; other rows are exact
    // cloned values, including extension fields. Candidate owns rev+1 once.
    if(old!=null){var ordered=new ArrayList((ICollection)candidate["mappings"]);ordered.RemoveAt(ordered.Count-1);ordered.Insert(oldIndex,binding);candidate["mappings"]=ordered.ToArray();}
    string previous=old==null?"(new slot)":Text(old,"device_id")+" | "+Text(old,"input_space")+" @"+Text(old,"input_revision");
    return new DiscoveryDraft{Document=candidate,Observation=current,Action=action,OldIndex=oldIndex,OldDevice=old==null?null:Text(old,"device_id"),Tracker=tracker,Profile=profile,Contract=contract,
-    Confirmation="Source: "+current.Source+"\nDevice: "+previous+" -> "+current.Device+"\nInput: "+current.Space+" @"+current.Revision+" | "+current.Convention+"\nPublisher/source/tracker: "+Text(loaded,"bridge_id")+" / "+current.Source+" / "+tracker+"\nContract: "+Text(contract.Value,"id")+" | "+Text(contract.Value,"input_policy")+"\nDeclaration: "+string.Join(", ",Tokens(contract.Value["input_declaration"]))+"\nProvenance: "+Text(contract.Value,"provenance")+"\nOnly this binding changes. Space approval is false; output is not approved. "+(action==DiscoveryAction.UpdateRevision?"Existing Mount belongs to this same physical device; other bindings remain unchanged.":"New physical device Mount is identity; old approval/evidence is not transferred.")+"\nSave uses native exact-snapshot CAS and backup. Replacement requires a manual Bridge restart; runtime/output remains unconfirmed."};
+    Confirmation="Source: "+current.Source+"\nDevice: "+previous+" -> "+current.Device+"\nInput: "+current.Space+" @"+current.Revision+" | "+current.Convention+"\nPublisher/source/tracker: "+Text(loaded,"bridge_id")+" / "+current.Source+" / "+tracker+"\nContract: "+Text(contract.Value,"id")+" | "+Text(contract.Value,"input_policy")+"\nDeclaration: "+string.Join(", ",Tokens(contract.Value["input_declaration"]))+"\nProvenance: "+Text(contract.Value,"provenance")+"\nOnly this binding changes. "+(action==DiscoveryAction.UpdateRevision?"Saved World and Mount are retained for this physical device.":"Uncalibrated World/Mount use Identity unless this source already has a saved shared World.")+"\nSave uses native exact-snapshot CAS and backup. No physical quality approval is required. Runtime/output application remains unconfirmed."};
   }
   internal static void Recheck(Dictionary<string,object> loaded,Dictionary<string,object> health,DiscoveryDraft draft,bool readOnly,bool active,DateTime now){
    var next=Prepare(loaded,Read(loaded,health,now),draft.Observation,draft.Action,draft.OldIndex,draft.Tracker,draft.Profile,draft.Contract,readOnly,active);

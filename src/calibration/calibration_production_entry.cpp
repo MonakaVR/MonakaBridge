@@ -59,7 +59,7 @@ int calibrationLocalDispatch(int argc,char** argv){
   wchar_t path[32768];DWORD length=GetModuleFileNameW(nullptr,path,32768);need(length&&length<32768,"HELPER_PATH_UNAVAILABLE");
   wchar_t local[32768];DWORD n=GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768);need(n&&n<32768,"OWNER_APPDATA_UNAVAILABLE");
   SessionEnvironment env;env.draftRoot=std::filesystem::path(local)/"MonakaBridge"/"CalibrationDrafts";env.helperPath=std::filesystem::path(path).u8string();env.helperSha256=sha256(readConfigBytes(std::filesystem::path(path)));
-  env.outputApprovalAuthority=makeProductionOutputApprovalAuthority(std::filesystem::path(path).parent_path()/"OutputApproval");
+  // Ordinary measurement/save does not load external quality approval policy.
   auto provider=makeProductionCaptureProvider();return runLocalApi(*provider,std::move(env));
  }catch(const std::exception& e){std::cout<<Json{{"status","UNAVAILABLE"},{"reason",diagnostic(e)}}.dump()<<'\n';return 2;}
 }

@@ -32,9 +32,9 @@ bool Registry::receive(std::string_view bytes,std::string_view peer,std::int64_t
   if(p&&seq==d.poseSequence&&d.pose&&!sameSample(*p,d.rawPose?*d.rawPose:*d.pose)){d.collision=true;d.pose.reset();d.fixedTime=-1;++collisions;}
   return reject();
  }
- if(d.hasSpace && space.revision<d.revision)return reject();
- if(d.hasSpace && space.revision==d.revision&&(space.id!=d.space||space.convention!=d.convention)){d.pose.reset();d.fixedTime=-1;return reject();}
- if(!d.hasSpace||space.revision!=d.revision){
+ if(d.hasSpace && space.id==d.space && space.revision<d.revision)return reject();
+ if(d.hasSpace && space.revision==d.revision&&space.convention!=d.convention){d.pose.reset();d.fixedTime=-1;return reject();}
+ if(!d.hasSpace||space.revision!=d.revision||space.id!=d.space){
   // Sequence high-water marks stay monotonic within the source session.
   d.pose.reset();d.state.reset();d.fixedTime=-1;d.absent=false;
   d.space=space.id;d.convention=space.convention;d.revision=space.revision;d.hasSpace=true;

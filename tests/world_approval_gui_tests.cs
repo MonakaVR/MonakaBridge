@@ -30,10 +30,10 @@ class WorldApprovalGuiTests {
     Check(action!=null&&action.IsEnabled,"normal GUI action unavailable");action.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Until(delegate{return !(bool)Field(window,"busy");});
     Check(Convert.ToBase64String(File.ReadAllBytes(target))==Convert.ToBase64String(File.ReadAllBytes(direct)),"GUI native candidate differs from actual align result");
     var value=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(target));int invalidated=0,other=0;
-    foreach(Dictionary<string,object> row in (IList)value["mappings"]){bool group=(string)row["source_id"]=="pico"&&(string)row["input_space"]=="native"&&Convert.ToInt32(row["input_revision"])==1;if(group){Check(!(bool)row["space_approved"],"GUI retained group approval");++invalidated;}else{Check((bool)row["space_approved"],"GUI invalidated unrelated group");++other;}}
-    Check(invalidated==4&&other==3&&Convert.ToInt32(value["mapping_revision"])==11,"wrong group/revision");Check(((TextBlock)Field(window,"status")).Text.Contains("Runtime application unconfirmed"),"save implied runtime application");cases++;
+    foreach(Dictionary<string,object> row in (IList)value["mappings"]){bool group=(string)row["source_id"]=="pico"&&(string)row["input_space"]=="native"&&Convert.ToInt32(row["input_revision"])==1;if(group){Check((bool)row["space_approved"],"GUI altered diagnostic approval");++invalidated;}else{Check((bool)row["space_approved"],"GUI invalidated unrelated group");++other;}}
+    Check(invalidated==4&&other==3&&Convert.ToInt32(value["mapping_revision"])==(same?10:11),"wrong group/revision");Check(((TextBlock)Field(window,"status")).Text.Contains("Runtime application unconfirmed"),"save implied runtime application");cases++;
    }finally{window.Close();}
   }
-  Console.WriteLine("PASS World approval normal WPF "+cases+" unshown flows: actual Apply shared translation button, native exact candidate/CAS, changed and same W invalidate four, other groups preserved, runtime unconfirmed; no Show/SDK/socket/HIL");return 0;
+  Console.WriteLine("PASS World approval normal WPF "+cases+" unshown flows: actual Apply shared translation button, native exact candidate/CAS, changed W updates four and same W is no-op, other groups preserved, runtime unconfirmed; no Show/SDK/socket/HIL");return 0;
  }catch(Exception e){Console.Error.WriteLine(e);return 1;}}
 }
