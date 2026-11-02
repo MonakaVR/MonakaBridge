@@ -4,8 +4,70 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 namespace PcServiceLifecycle {
+    // Local controller metadata, independent of tracking/wire/lifecycle ABIs.
+    // An existing tray may be reopened only for its exact active config target.
+    internal sealed class ActiveConfigurationLease : IDisposable {
+        const uint Magic = 0x31464341; // ACF1
+        MemoryMappedFile mapping;
+        [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+        static extern uint GetFinalPathNameByHandle(SafeFileHandle file, StringBuilder path, uint size, uint flags);
+        static byte[] Identity(string config) {
+            string selected=Path.GetFullPath(config);
+            if(selected.StartsWith(@"\\?\",StringComparison.Ordinal))throw new IOException("Active configuration path alias refused");
+            using(var file=new FileStream(selected,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)) {
+                var path=new StringBuilder(32768);
+                uint length=GetFinalPathNameByHandle(file.SafeFileHandle,path,(uint)path.Capacity,0);
+                if(length==0||length>=path.Capacity)throw new IOException("Active configuration canonical path unavailable");
+                string canonical=path.ToString();
+                if(canonical.StartsWith(@"\\?\UNC\",StringComparison.Ordinal))canonical=@"\\"+canonical.Substring(8);
+                else if(canonical.StartsWith(@"\\?\",StringComparison.Ordinal))canonical=canonical.Substring(4);
+                if(!string.Equals(selected,canonical,StringComparison.OrdinalIgnoreCase))
+                    throw new IOException("Active configuration path alias refused");
+                using(var sha=SHA256.Create())return sha.ComputeHash(Encoding.UTF8.GetBytes(canonical.ToUpperInvariant()));
+            }
+        }
+        internal ActiveConfigurationLease(string name,string config) {
+            byte[] identity=Identity(config);
+            // CreateNew refuses stale/foreign retained mappings rather than overwriting them.
+            mapping=MemoryMappedFile.CreateNew(name,64,MemoryMappedFileAccess.ReadWrite);
+            try {
+                using(var process=Process.GetCurrentProcess())
+                using(var view=mapping.CreateViewAccessor(0,64,MemoryMappedFileAccess.ReadWrite)) {
+                    view.Write(4,1u);view.Write(8,(uint)process.Id);
+                    view.Write(16,process.StartTime.ToUniversalTime().ToFileTimeUtc());
+                    view.WriteArray(24,identity,0,identity.Length);
+                    Thread.MemoryBarrier();view.Write(0,Magic);
+                }
+            } catch {mapping.Dispose();mapping=null;throw;}
+        }
+        internal static void VerifyAndSignal(string name,string config,State state,string openEvent,bool openWindow) {
+            byte[] expected=Identity(config);
+            try {
+                using(var map=MemoryMappedFile.OpenExisting(name,MemoryMappedFileRights.Read))
+                using(var view=map.CreateViewAccessor(0,64,MemoryMappedFileAccess.Read)) {
+                    if(view.ReadUInt32(0)!=Magic||view.ReadUInt32(4)!=1)throw new IOException("Active configuration metadata incomplete");
+                    Thread.MemoryBarrier();
+                    if(view.ReadUInt32(8)!=state.OwnerPid||view.ReadInt64(16)!=state.OwnerCreated)
+                        throw new IOException("Active configuration owner identity changed");
+                    byte[] actual=new byte[32];view.ReadArray(24,actual,0,actual.Length);
+                    for(int i=0;i<actual.Length;i++)if(actual[i]!=expected[i])
+                        throw new IOException("Existing tray active configuration differs; no reopen request sent");
+                    using(var owner=Process.GetProcessById(checked((int)state.OwnerPid))) {
+                        if(owner.HasExited||owner.StartTime.ToUniversalTime().ToFileTimeUtc()!=state.OwnerCreated)
+                            throw new IOException("Active configuration owner is stale");
+                    }
+                    // Hold the verified immutable mapping until after the signal.
+                    if(openWindow)using(var request=EventWaitHandle.OpenExisting(openEvent))request.Set();
+                }
+            } catch(FileNotFoundException) {throw new IOException("Existing tray active configuration is unavailable; no reopen request sent");}
+        }
+        public void Dispose(){if(mapping!=null){mapping.Dispose();mapping=null;}}
+    }
     internal sealed class State {
         internal uint Pid, OwnerPid;
         internal long Created, OwnerCreated;
@@ -27,7 +89,7 @@ namespace PcServiceLifecycle {
         internal static string Hash(string path) {
             using(var stream=File.OpenRead(path))using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();
         }
-        internal static void VerifyExistingTray(string mappingName,string expectedService,string expectedController) {
+        internal static State VerifyExistingTray(string mappingName,string expectedService,string expectedController) {
             var state=Read(mappingName);
             if(state==null || !state.Ready)throw new IOException("Existing tray has no ready service identity");
             using(var control=new Control(mappingName,expectedService,Path.GetTempPath()))
@@ -38,6 +100,7 @@ namespace PcServiceLifecycle {
                    Hash(owner.MainModule.FileName)!=Hash(expectedController) || owner.HasExited || service.HasExited)
                     throw new IOException("Existing tray path/build differs; no reopen request sent");
             }
+            return state;
         }
         internal static State Read(string name) {
             try {

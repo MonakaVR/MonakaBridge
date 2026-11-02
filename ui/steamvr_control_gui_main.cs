@@ -42,6 +42,7 @@ namespace MonakaBridge
                 if(serviceExecutable==null)throw new ArgumentException("Managed tray requires --service-exe. Window-only mode never manages a service");
                 string scope=ports==null?"29810":BridgeOwnerChannel.Scope(options.ConfigFile,ports.Split(' ')[0]);
                 string openName=@"Local\MonakaBridge_OpenControl_"+scope;
+                string configIdentityName=@"Local\MonakaBridge_ActiveConfiguration_"+scope;
                 bool created;
                 using(var singleton=new Mutex(true,@"Local\MonakaBridge_ServiceTray_"+scope,out created))
                 {
@@ -49,11 +50,14 @@ namespace MonakaBridge
                     if(!owned)try{owned=singleton.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
                     if(!owned) {
                         string controller=System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
-                        PcServiceLifecycle.Control.VerifyExistingTray(ports==null?@"Local\MonakaBridge_ServiceLifecycle_29810":@"Local\MonakaBridge_Controller_"+scope,ports==null?serviceExecutable:controller,controller);
-                        if(!trayOnly)using(var request=EventWaitHandle.OpenExisting(openName))request.Set();
+                        var active=PcServiceLifecycle.Control.VerifyExistingTray(ports==null?@"Local\MonakaBridge_ServiceLifecycle_29810":@"Local\MonakaBridge_Controller_"+scope,ports==null?serviceExecutable:controller,controller);
+                        PcServiceLifecycle.ActiveConfigurationLease.VerifyAndSignal(configIdentityName,options.ConfigFile,active,openName,!trayOnly);
                         return 0;
                     }
-                    try {using(var tray=new SteamVrControlTray(options,serviceExecutable,!trayOnly,openName,ports,logs))tray.Run();}
+                    try {
+                        using(var configIdentity=new PcServiceLifecycle.ActiveConfigurationLease(configIdentityName,options.ConfigFile))
+                        using(var tray=new SteamVrControlTray(options,serviceExecutable,!trayOnly,openName,ports,logs))tray.Run();
+                    }
                     finally {singleton.ReleaseMutex();}
                 }
                 return 0;

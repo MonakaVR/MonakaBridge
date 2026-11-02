@@ -15,7 +15,7 @@ $WhiteIcon = Join-Path $RepoRoot "ui\assets\monaka-bridge-tray-white.ico"
 $IconInputs = @($IconSource, $BlackIcon, $WhiteIcon)
 $CalibrationSources = @('calibration_json.cs','calibration_profile.cs','calibration_models.cs','calibration_owned_process.cs','calibration_pipe_frames.cs','calibration_process_client.cs','calibration_panel.cs','calibration_profile_dialog.cs') | ForEach-Object { Join-Path $RepoRoot ('ui/' + $_) }
 $DiscoverySources = @('discovery_models.cs','discovery_panel.cs','discovery_window.cs') | ForEach-Object { Join-Path $RepoRoot ('ui/' + $_) }
-$BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "build-gui" }
+$BuildDir = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $RepoRoot "Build\runtime\control\Release" }
 $GuiExe = Join-Path $BuildDir "monaka_bridge_control.exe"
 
 foreach ($path in (@($GuiSource, $GuiTraySource, $GuiMainSource, $GuiModelsSource, $InstallationSource, $LifecycleSource) + $CalibrationSources + $DiscoverySources + $IconInputs)) {

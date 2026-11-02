@@ -30,6 +30,11 @@ add_custom_command(OUTPUT "${MB_CONTROL_EXE}"
  COMMAND "${MB_CSC}" /nologo /utf8output /target:winexe /optimize+ "/out:${MB_CONTROL_EXE}" "/win32icon:${MB_WHITE_ICON}" "/resource:${MB_BLACK_ICON},MonakaBridge.Icons.black.ico" "/resource:${MB_WHITE_ICON},MonakaBridge.Icons.white.ico" ${MB_CONTROL_REFERENCES} ${MB_CONTROL_NATIVE_SOURCES}
  DEPENDS ${MB_CONTROL_SOURCES} ${MB_CONTROL_ICONS} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/control_gui.cmake" VERBATIM)
 add_custom_target(monaka_bridge_control ALL DEPENDS "${MB_CONTROL_EXE}")
+if(BUILD_TESTING)
+ add_test(NAME active_config_guard COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_active_config_guard.py"
+  --root "${CMAKE_CURRENT_SOURCE_DIR}" --out "${CMAKE_CURRENT_BINARY_DIR}/active-config-guard" --compiler "${MB_CSC}")
+ set_tests_properties(active_config_guard PROPERTIES TIMEOUT 60)
+endif()
 if(BUILD_TESTING AND TARGET calibration_runtime_process_fixture)
  foreach(group json profile models job launch client wpf b4)
   add_test(NAME calibration_gui_${group} COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_calibration_managed.py"
