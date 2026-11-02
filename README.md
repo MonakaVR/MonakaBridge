@@ -1,14 +1,12 @@
 # MonakaBridge
 
-Normal startup is `Start_Bridge.cmd`, using the latest local build at `Build/runtime`.
+Normal startup is `../launchers/Start_MonakaBridge.cmd`, using the latest local build at `Build/runtime`.
 Run `python scripts/build_runtime.py` explicitly to build that fixed location, then
-`Start_Bridge.cmd --check` to list missing binaries, DLL or `config/bridge.json`.
+`../launchers/Start_MonakaBridge.cmd --check` to list missing binaries, DLL or `config/bridge.json`.
 The check only reads files; startup never builds, registers drivers or rewrites configuration.
-`--mode inspect` opens a read-only control window; `--mode calibrate` opens the control
-window where the existing Create/Open calibration profile actions select the target.
-Neither mode starts a service. Native calibration and saving remain explicit GUI actions.
-`--tray-only` keeps normal startup in the tray. The separate artifact-set launcher is
-retained for explicit HIL workflows and is not part of normal startup.
+Normal startup opens Bridge Control and its service-owning tray. Configuration,
+inspection and calibration remain GUI actions. The only launcher option is `--check`.
+Repository launch aliases and historical artifact/operator launch helpers have been removed.
 Historical build/deploy instructions below are developer workflows.
 
 Common Observation router and thin SteamVR output. The active MVIP contract kit preserves message-specific wire 2.0/2.1/2.2 semantics; MBIP provides the fixed pure normalization adapter. Software validation and hardware cutover are separate: **hardware cutover pending**. See [responsibility repair](docs/responsibility-refactor.md).
@@ -27,8 +25,8 @@ Use Windows x64, MSVC C++17, CMake >=3.20, Python 3, .NET Framework 4.8/WPF Deve
 ```powershell
 python scripts/build_runtime.py
 # Prepare and review config/bridge.json separately; no configuration is copied by the build.
-.\Start_Bridge.cmd --check
-.\Start_Bridge.cmd
+..\launchers\Start_MonakaBridge.cmd --check
+..\launchers\Start_MonakaBridge.cmd
 ```
 
 The builder acquires the public SDK into this checkout's `Build/Dependencies/OpenVR`
@@ -45,11 +43,13 @@ Build output includes one driver package at `Build/runtime/steamvr/monaka_bridge
 
 ## Verification and handoff
 
-Run `python -B tests/runtime_launcher_tests.py` for the fixed-path, file-only launcher
+Run `python -B ../launchers/tests/test_bridge_pico.py` for the fixed-path, file-only launcher
 regression. The normal runtime builder targets the product binaries and does not run
 the full suite or a product process. Full native validation/release evidence is a
 separate developer workflow described in `docs/release-v2.md`; historical reporters
 and seals are not current startup or release evidence.
+Frozen historical source-scope tests and baselines remain unchanged; gates referring
+to removed launch helpers are historical evidence and are not current launcher validation.
 
 - `docs/direct-regression-crash.md`: original Access Violation, root cause, isolation and rerun evidence.
 - `docs/architecture.md`: responsibility boundaries, age mapping and bounded queues.

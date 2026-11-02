@@ -4,6 +4,10 @@ Base: PR9 `a03557d242c7d0588b3e3012d69a6de737e79715`, including B4.
 This branch does not merge the parallel PRs again and does not import the separate
 uncommitted Japanese/H1-R1 preview implementation.
 
+The adapter references below describe the historical repair. The old operator
+launcher has since been removed. Current startup is the single external
+`../launchers/Start_MonakaBridge.cmd`; the historical frozen receipts are unchanged.
+
 ## Implementation order and ownership
 
 1. Preserve PR9 Discovery and its unknown-input rejection, exact source contract,

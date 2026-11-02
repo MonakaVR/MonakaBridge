@@ -5,3 +5,9 @@ __pycache__/
 config/bridge.json
 config/bridge.json.*
 *.user
+
+# Normal operational launchers live in the sibling launchers directory.
+/Start_*.cmd
+/scripts/launch_runtime.py
+/scripts/launch_artifact_set.py
+/scripts/operator_gui_launcher.py

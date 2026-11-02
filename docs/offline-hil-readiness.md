@@ -95,14 +95,13 @@ inventory is inaccessible. This diagnostic does not establish output approval,
 physical continuity, runtime config byte identity or actual downstream output;
 those retain their separate native/operator gates.
 
-Normal Bridge startup is `Start_Bridge.cmd`, reading the fixed repository
+Normal Bridge startup is `../launchers/Start_MonakaBridge.cmd`, reading the fixed repository
 `Build/runtime` native/GUI outputs. `python scripts/build_runtime.py` builds
-that location explicitly; `Start_Bridge.cmd --check` only reads dependencies
+that location explicitly; `../launchers/Start_MonakaBridge.cmd --check` only reads dependencies
 and configuration. It never builds, registers a driver or migrates state.
-The explicit HIL-only `scripts/launch_artifact_set.py` remains available with
-`Build/artifact-sets.json`, `--catalog` or `--package`. Relative package entries
-are based on their catalog directory; relative explicit arguments use the repo root.
-Its receipts do not replace the normal current-build executable paths.
+Startup opens Bridge Control and its service-owning tray. Historical artifact-set
+and operator launch helpers have been removed; their frozen receipts and source-scope
+tests remain historical evidence, not validation of this external launcher.
 Tray reuse checks service/controller path, file SHA and creation time. X closes
 only the management window. Exit requests graceful stop only for the owned
 service before hiding the tray; stale PID/name and other owners fail closed.
