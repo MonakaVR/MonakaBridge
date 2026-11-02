@@ -54,7 +54,7 @@ The bridge is not required to be a byte-for-byte relay: generic admission, coord
 
 ### Mandatory design review and acceptance gates
 
-For every change to the input boundary, routing, calibration, output adapter, configuration, UI, or lifecycle:
+For changes affecting the input boundary, routing, calibration, output adapter, configuration, UI, or lifecycle, run only the checks applicable to the edited behavior and contracts:
 
 1. Confirm the bridge starts and accepts generic input without any particular producer installed, running, or configured.
 2. Feed equivalent public-contract messages from two synthetically distinct producer identities. Verify they follow the same code path and produce equivalent normalized outputs when explicitly given equivalent policies and calibration.
@@ -65,6 +65,12 @@ For every change to the input boundary, routing, calibration, output adapter, co
 7. Verify MonakaVR and SteamVR Direct output paths remain distinct adapters over the same logical tracker state. Do not claim physical-device HIL without actually performing it.
 
 Violations are **architecture defects and release blockers**, not optional cleanup. Mark unexecuted checks as `NOT RUN`; do not present them as PASS.
+
+## Product-software verification and historical audit (2026-10-30)
+
+MonakaVR is a producer-independent 6DoF body-constraint extension, not a physical-tracker quality certification tool. Normal software PASS must demonstrate actual public-input handling, transforms, IK/fallback/output or the relevant backend function; version/source hashes and historic approvals do not substitute for that behavior.
+
+`scripts/test_revision.ps1` uses `-Mode Quick` and `-Mode Full` for product-software checks and `-Mode Audit` for historical source/release-policy checks. Audit may be used for a relevant release, dependency or policy migration, but must not be imposed as a default per-edit requirement. See `docs/verification-lanes.md`. Software PASS is not hardware HIL PASS. The existing mandatory calibration approval/revision model is a migration target under MonakaVR/MonakaBridge#17, not the intended long-term product acceptance criterion.
 
 ## Current coordinated Architecture Revision
 
