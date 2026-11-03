@@ -115,9 +115,6 @@ def begin_build(repo, channel="windows", command=None):
     if repo.name not in PRODUCTS or channel not in ("windows", "android"):
         raise ContractError("Unknown product/channel")
     source = source_info(repo)
-    selected = load_catalog(repo.parent)["products"].get(repo.name, {})
-    if selected.get("selected_source") != source or channel not in selected.get("channels", []):
-        raise ContractError("Build source/channel has not been selected")
     return {
         "schema": SCHEMA,
         "product": repo.name,
@@ -146,7 +143,7 @@ def load_catalog(workspace):
 
 
 def finish_build(repo, snapshot, mappings):
-    """mappings contains (repository-relative file/directory, stable-relative destination)."""
+    """Record the explicit build's source and mapped output files, without selecting a runtime."""
     repo = Path(repo).resolve()
     if source_info(repo) != snapshot["source"]:
         raise ContractError("Source changed during build; candidate is not promotable")
@@ -171,16 +168,7 @@ def finish_build(repo, snapshot, mappings):
     if not payload or len({row["path"] for row in payload}) != len(payload):
         raise ContractError("Empty or overlapping payload")
     result = dict(snapshot, build_completed_utc=utc(), payload=payload)
-    catalog_file = catalog_path(repo.parent)
-    with lock(catalog_file.with_suffix(".lock")):
-        catalog = load_catalog(repo.parent)
-        selected = catalog["products"].get(repo.name, {})
-        if (selected.get("selected_source") != snapshot["source"] or
-                result["channel"] not in selected.get("channels", [])):
-            raise ContractError("Selection changed during build; candidate is not adopted")
-        write_json(manifest_path(repo, result["channel"]), result)
-        selected.setdefault("latest_candidates", {})[result["channel"]] = result["build_candidate_id"]
-        write_json(catalog_file, catalog)
+    write_json(manifest_path(repo, result["channel"]), result)
     return result
 
 

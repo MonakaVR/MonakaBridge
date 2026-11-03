@@ -65,7 +65,7 @@ def main():
     payload += ['steamvr/monaka_bridge/resources/' + p.relative_to(resources).as_posix()
                 for p in sorted(resources.rglob('*')) if p.is_file()]
     finish_build(ROOT, provenance, [('Build/runtime/' + path, path) for path in payload])
-    print('Built candidate in repo/Build/runtime. Stable promotion is an explicit separate operation.')
+    print('Built fixed repo/Build/runtime. Normal launch does not build, install or register it.')
     return 0
 
 
