@@ -21,6 +21,19 @@ int main(int argc,char** argv)try{
   contract.inputMode=contract.outputMode=monaka::bridge_input::Mode::STRICT;
  }
  mb::validateConfig(c);
+ // Two opaque, unrelated public identities use identical configured contracts
+ // and geometry, without device descriptors or producer-specific installation.
+ auto generic=c;generic.bindings.clear();generic.contracts.clear();
+ for(const auto& source:{std::string("opaque-A-17"),std::string("unknown-B-29")}){
+  auto b=c.bindings.at({"pico","device"});b.source=source;b.tracker="same-logical-name";
+  generic.bindings[{source,b.device}]=b;generic.contracts[{source,b.device}]=c.contracts.at({"pico","device"});
+ }
+ mb::Bridge genericBridge(generic,SB);
+ for(const auto& source:{std::string("opaque-A-17"),std::string("unknown-B-29")})CHECK(genericBridge.receive(wire(sample(source)),source,10000000));
+ const auto& first=*genericBridge.logical().at({"opaque-A-17","device"}).pose;
+ const auto& second=*genericBridge.logical().at({"unknown-B-29","device"}).pose;
+ CHECK(first.position==second.position&&first.orientation==second.orientation&&first.capabilities==second.capabilities);
+ CHECK(first.source_id!=second.source_id&&first.input.source_id!=second.input.source_id);
  auto input=sample();input.orientation=mb::Quat{0,0,0,1};
  mb::Bridge uncalibrated(c,SB);CHECK(uncalibrated.receive(wire(input),"peer",10000000));
  CHECK(uncalibrated.logical().at({"pico","device"}).pose->position==input.position);
@@ -68,6 +81,7 @@ int main(int argc,char** argv)try{
  CHECK(bridge.receive(wire(rotation),"peer",40000000));CHECK(!bridge.logical().at({"pico","device"}).pose->position);CHECK(bridge.logical().at({"pico","device"}).pose->orientation);
  auto lost=rotation;lost.sequence=4;lost.modality="none";lost.orientation.reset();lost.validity.orientation=false;lost.orientation_evidence="none";lost.tracking_state="lost";
  CHECK(bridge.receive(wire(lost),"peer",50000000));CHECK(bridge.logical().at({"pico","device"}).pose->modality=="none");
+ CHECK(bridge.logical().at({"pico","device"}).pose->capabilities==out.capabilities);
  auto recovered=changed;recovered.sequence=5;recovered.coordinate_space.revision=24;CHECK(bridge.receive(wire(recovered),"peer",60000000));CHECK(bridge.logical().at({"pico","device"}).pose->position);
  bridge.tick(700000000);CHECK(!bridge.logical().at({"pico","device"}).pose);
  recovered.session_id=recovered.clock_id=S2;recovered.sequence=0;recovered.coordinate_space.revision=0;

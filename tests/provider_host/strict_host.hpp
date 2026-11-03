@@ -44,6 +44,7 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
     std::map<std::string, unsigned> interfaceRequests;
     std::map<std::string, std::string> expectedRenderModels; // Explicit test oracle per full serial.
     std::map<std::string, std::string> expectedActivationRenderModels;
+    std::map<std::string,std::map<vr::ETrackedDeviceProperty,std::string>> expectedStatusIcons;
     unsigned rejectRenderModelWrites=0;
     bool activateSynchronously=false;
     std::string missingInterface;
@@ -152,6 +153,16 @@ struct StrictHost final: vr::IVRDriverContext, vr::IVRServerDriverHost,
             auto& p=batch[i]; require(p.writeType==vr::PropertyWrite_Set && p.pvBuffer, "unsupported property operation");
             Json value; vr::PropertyTypeTag_t tag=0;
             switch(p.prop) {
+            case vr::Prop_NamedIconPathDeviceReady_String: case vr::Prop_NamedIconPathDeviceSearching_String:
+            case vr::Prop_NamedIconPathDeviceStandby_String: case vr::Prop_NamedIconPathDeviceOff_String: {
+                require(expectedStatusIcons.count(d.serial)&&expectedStatusIcons.at(d.serial).count(p.prop),"unprovisioned status icon write");
+                tag=vr::k_unStringPropertyTag;
+                require(p.unBufferSize>0&&p.unBufferSize<=vr::k_unMaxPropertyStringSize,"icon string size");
+                require(static_cast<char*>(p.pvBuffer)[p.unBufferSize-1]=='\0',"icon termination");
+                value=static_cast<char*>(p.pvBuffer);
+                require(value.get<std::string>().size()+1==p.unBufferSize&&value==expectedStatusIcons.at(d.serial).at(p.prop),"unexpected icon reference");
+                break;
+            }
             case vr::Prop_RenderModelName_String: {
                 require(expectedRenderModels.count(d.serial)!=0,"unprovisioned render model write");
                 tag=vr::k_unStringPropertyTag;

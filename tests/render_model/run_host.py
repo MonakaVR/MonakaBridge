@@ -1,5 +1,6 @@
 """Fresh package copies + exact held native DLL Host children. No existing owner control."""
 import argparse
+import base64
 import copy
 import hashlib
 import json
@@ -20,6 +21,8 @@ p.add_argument('--axis-models',action='store_true')
 p.add_argument('--baseline-dll',type=Path)
 p.add_argument('--reacquire-only',action='store_true')
 p.add_argument('--expect-reacquire-failure',action='store_true')
+p.add_argument('--candidate',type=Path)
+p.add_argument('--icon-assets',type=Path)
 a=p.parse_args()
 root=a.out.resolve()/('run-'+uuid.uuid4().hex);root.mkdir(parents=True)
 records=[]
@@ -76,6 +79,23 @@ def case(name,mode='generic',mutation='none',edit=None,baseline=False,model=None
         assert code==1 and value['result']=='FAIL','old DLL unexpectedly implements D2'
     else:assert code==0 and value['result']=='PASS',name+': '+str(value)
 
+if a.candidate:
+    assert a.icon_assets,'explicit existing icon asset folder required'
+    def candidate(config,selection,package):
+        config.clear();config.update(json.loads((a.candidate/'resources/presentation/bridge-config.json').read_bytes()))
+        selection.clear();selection.update(json.loads((a.candidate/'resources/presentation/selection.json').read_bytes()))
+        icons=json.loads((a.candidate/'resources/icons/assignments.json').read_bytes())
+        folder=package/'resources/icons';folder.mkdir(exist_ok=True)
+        (folder/'assignments.json').write_bytes((a.candidate/'resources/icons/assignments.json').read_bytes())
+        for row in icons['assignments'].values():
+            for reference in row.values():
+                name=reference.removeprefix('{monaka_bridge}/icons/')
+                assert name==Path(name).name and '..' not in name
+                shutil.copyfile(a.icon_assets/name,folder/name)
+    case('current-five-candidate',mode='candidate-icons',edit=candidate)
+    (a.out/'latest-run.json').write_text(json.dumps(dict(run=str(root)),indent=2)+'\n')
+    print(json.dumps(dict(result='PASS',native_cases=1,run=str(root),physical_hil='NOT_RUN')))
+    raise SystemExit(0)
 if a.axis_models:
     for model in ['pico_tracker_rev3_identification','pico_tracker_rev3_axis_debug']:
         case(model+'-tracked',mode='pico',model=model)
@@ -110,6 +130,34 @@ assert not a.expect_reacquire_failure,'negative control must be isolated'
 def two_assignments(c,s,p):
     second=copy.deepcopy(c['mappings'][0]);second.update(source_id='unknown',device_id='anonymous-device');c['mappings'].append(second)
     second=copy.deepcopy(s['assignments'][0]);second.update(source_id='unknown',device_id='anonymous-device',device_kind='',runtime_serial='monaka-direct:313a70756e6b6e6f776e:74');s['assignments'].append(second)
+
+def icon_fixture(config,selection,package,change='none'):
+    folder=package/'resources/icons';folder.mkdir(exist_ok=True)
+    names={'DeviceReady':'tracker_status_ready@2x.png','DeviceSearching':'tracker_status_searching@2x.gif',
+           'DeviceStandby':'tracker_status_standby@2x.png','DeviceOff':'tracker_status_off@2x.png'}
+    png=(package/'resources/rendermodels/pico_motion_tracker/pico_motion_tracker.png').read_bytes()
+    gif=base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
+    for name in names.values():(folder/name).write_bytes(gif if name.endswith('.gif') else png)
+    row={key:'{monaka_bridge}/icons/'+name for key,name in names.items()}
+    icons=dict(version=1,assignments={SERIAL:row})
+    if change=='two':
+        two_assignments(config,selection,package);icons['assignments']['monaka-direct:313a70756e6b6e6f776e:74']=copy.deepcopy(row)
+    elif change=='unassigned':icons['assignments']={SERIAL+'-different':row}
+    elif change=='traversal':row['DeviceReady']='{monaka_bridge}/icons/../outside.png'
+    elif change=='namespace':row['DeviceReady']='{other}/icons/tracker_status_ready@2x.png'
+    elif change=='missing':(folder/names['DeviceReady']).unlink()
+    elif change=='corrupt':(folder/names['DeviceReady']).write_bytes(b'not an image')
+    elif change=='oversized':(folder/names['DeviceReady']).write_bytes(b'x'*(1024*1024+1))
+    elif change=='extra':row['UnknownProperty']=row['DeviceReady']
+    raw=json.dumps(icons)
+    if change=='malformed':raw='{bad json'
+    if change=='duplicate':raw=raw.replace('"version": 1','"version": 1, "version": 1')
+    (folder/'assignments.json').write_text(raw)
+
+case('icons-explicit',mode='pico',mutation='icons-valid',edit=icon_fixture)
+case('icons-two-opaque',mode='two-assigned',mutation='icons-two',edit=lambda c,s,p:icon_fixture(c,s,p,'two'))
+for change in ['unassigned','malformed','duplicate','traversal','namespace','missing','corrupt','oversized','extra']:
+    case('icons-'+change,mode='pico',mutation='icons-invalid',edit=lambda c,s,p,change=change:icon_fixture(c,s,p,change))
 case('two-generic-identities',mode='two-assigned',edit=two_assignments)
 case('default-unassigned')
 case('explicit-pico',mode='pico')

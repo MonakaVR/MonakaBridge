@@ -6,11 +6,12 @@ namespace mb::steamvr {
 class TrackerDevice final:public vr::ITrackedDeviceServerDriver{
  std::string serial_;vr::TrackedDeviceIndex_t objectId_=vr::k_unTrackedDeviceIndexInvalid;vr::DriverPose_t pose_{};
  const std::string renderModel_;
+ const StatusIcons statusIcons_;
  bool presentationVisible_=false,presentationRevoked_=false;
  std::optional<std::string> appliedRenderModel_;
  void ApplyPresentation();
 public:
- explicit TrackerDevice(std::string serial,std::string renderModel={});
+ explicit TrackerDevice(std::string serial,std::string renderModel={},StatusIcons icons={});
  vr::EVRInitError Activate(uint32_t)override;void Deactivate()override;void EnterStandby()override;
  void* GetComponent(const char*)override;void DebugRequest(const char*,char*,uint32_t)override;
  vr::DriverPose_t GetPose()override;const std::string& Serial()const{return serial_;}

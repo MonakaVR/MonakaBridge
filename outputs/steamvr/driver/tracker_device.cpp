@@ -3,7 +3,7 @@
 #include "direct_pose.hpp"
 #include <utility>
 namespace mb::steamvr {
-TrackerDevice::TrackerDevice(std::string serial,std::string renderModel):serial_(std::move(serial)),pose_(directPose(nullptr,0)),renderModel_(std::move(renderModel)){}
+TrackerDevice::TrackerDevice(std::string serial,std::string renderModel,StatusIcons icons):serial_(std::move(serial)),pose_(directPose(nullptr,0)),renderModel_(std::move(renderModel)),statusIcons_(std::move(icons)){}
 vr::EVRInitError TrackerDevice::Activate(uint32_t objectId) {
     objectId_ = objectId;
 
@@ -19,6 +19,12 @@ vr::EVRInitError TrackerDevice::Activate(uint32_t objectId) {
         container, vr::Prop_ManufacturerName_String, "MonakaVR");
     vr::VRProperties()->SetStringProperty(
         container, vr::Prop_TrackingSystemName_String, "monaka_bridge");
+    const vr::ETrackedDeviceProperty iconProperties[]={vr::Prop_NamedIconPathDeviceReady_String,
+        vr::Prop_NamedIconPathDeviceSearching_String,vr::Prop_NamedIconPathDeviceStandby_String,vr::Prop_NamedIconPathDeviceOff_String};
+    for(std::size_t i=0;i<statusIcons_.size();++i)if(!statusIcons_[i].empty()){
+        const auto error=vr::VRProperties()->SetStringProperty(container,iconProperties[i],statusIcons_[i].c_str());
+        if(error!=vr::TrackedProp_Success)DriverLog("monaka_bridge: status icon property %u unavailable",unsigned(iconProperties[i]));
+    }
     vr::VRProperties()->SetBoolProperty(
         container, vr::Prop_DeviceIsWireless_Bool, true);
     // Backend battery semantics are still a raw bucket candidate, so do not

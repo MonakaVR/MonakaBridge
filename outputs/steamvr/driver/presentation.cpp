@@ -74,6 +74,39 @@ void assets(const std::filesystem::path& package,const std::string& model){
  require(driver.at("name")=="monaka_bridge"&&driver.at("resourceOnly")==false,"driver manifest identity");
 }
 }
+StatusIconAssignments loadStatusIcons(const std::filesystem::path& package){
+ try{
+  const auto resources=std::filesystem::weakly_canonical(package/L"resources");
+  const auto directory=std::filesystem::weakly_canonical(resources/L"icons");
+  require(resources.parent_path()==std::filesystem::weakly_canonical(package)&&directory.parent_path()==resources,"icon directory containment");
+  const auto config=directory/L"assignments.json";
+  require(std::filesystem::weakly_canonical(config).parent_path()==directory&&std::filesystem::is_regular_file(config),"icon config containment");
+  const auto document=json(read(config,128*1024));keys(document,{"version","assignments"});
+  require(document.at("version").is_number_integer()&&document.at("version")==1,"icon version");
+  const auto& assignments=document.at("assignments");require(assignments.is_object()&&assignments.size()<=256,"icon assignment count");
+  StatusIconAssignments result;
+  for(const auto& item:assignments.items()){
+   require(!item.key().empty()&&item.key().size()<=2048,"icon serial size");
+   const auto& row=item.value();keys(row,{"DeviceReady","DeviceSearching","DeviceStandby","DeviceOff"});
+   StatusIcons icons;std::size_t index=0;
+   for(const char* key:{"DeviceReady","DeviceSearching","DeviceStandby","DeviceOff"}){
+    const auto reference=row.at(key).get<std::string>();const std::string prefix="{monaka_bridge}/icons/";
+    require(reference.compare(0,prefix.size(),prefix)==0,"icon namespace");
+    const auto name=reference.substr(prefix.size());
+    require(!name.empty()&&name.size()<=128&&name.front()!='.'&&name.find("..") == std::string::npos&&
+      name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.@") == std::string::npos,"icon filename");
+    const auto file=directory/name;
+    require(std::filesystem::weakly_canonical(file).parent_path()==directory&&std::filesystem::is_regular_file(file),"icon resource containment");
+    const auto bytes=read(file,1024*1024);const auto extension=file.extension().string();
+    const bool png=extension==".png"&&bytes.size()>=8&&bytes.compare(0,8,"\x89PNG\r\n\x1a\n",8)==0;
+    const bool gif=extension==".gif"&&bytes.size()>=6&&(bytes.compare(0,6,"GIF87a")==0||bytes.compare(0,6,"GIF89a")==0);
+    require(png||gif,"icon PNG/GIF resource required");icons[index++]=reference;
+   }
+   result.emplace(item.key(),std::move(icons));
+  }
+  return result;
+ }catch(const std::exception& e){DriverLog("monaka_bridge: status icons unavailable: %s",e.what());return {};}
+}
 std::filesystem::path currentDriverPackage(){
  HMODULE module{};wchar_t path[32768]{};
  require(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,

@@ -17,9 +17,10 @@ vr::EVRInitError DeviceProvider::Init(vr::IVRDriverContext* context){
   receiver_=std::make_unique<Udp>(static_cast<std::uint16_t>(port));
  }catch(const std::exception& e){DriverLog("monaka_bridge: %s",e.what());return vr::VRInitError_Driver_Unknown;}
  try{presentation_=Presentation::load(currentDriverPackage());}catch(const std::exception& e){DriverLog("monaka_bridge: presentation unavailable: %s",e.what());presentation_=Presentation{};}
+ try{statusIcons_=loadStatusIcons(currentDriverPackage());}catch(const std::exception& e){DriverLog("monaka_bridge: status icons unavailable: %s",e.what());statusIcons_.clear();}
  return vr::VRInitError_None;
 }
-void DeviceProvider::Cleanup(){devices_.clear();receiver_.reset();feed_=MtpFeed{};presentation_=Presentation{};VR_CLEANUP_SERVER_DRIVER_CONTEXT();}
+void DeviceProvider::Cleanup(){devices_.clear();receiver_.reset();feed_=MtpFeed{};presentation_=Presentation{};statusIcons_.clear();VR_CLEANUP_SERVER_DRIVER_CONTEXT();}
 const char* const* DeviceProvider::GetInterfaceVersions(){return vr::k_InterfaceVersions;}
 bool DeviceProvider::ShouldBlockStandbyMode(){return false;}
 void DeviceProvider::EnterStandby(){}void DeviceProvider::LeaveStandby(){}
@@ -29,7 +30,8 @@ void DeviceProvider::RunFrame(){
  for(auto& [key,sample]:feed_.devices){
   if(devices_.count(key)||!sample.pose)continue;
   auto serial=runtimeSerial(key.first,key.second);auto now=monotonicNs();auto state=presentation_.evaluate(serial,&sample,now);
-  auto device=std::make_unique<TrackerDevice>(serial,state==PresentationState::Visible||state==PresentationState::Hidden?presentation_.model(serial):"");
+  const auto icons=statusIcons_.find(serial);
+  auto device=std::make_unique<TrackerDevice>(serial,state==PresentationState::Visible||state==PresentationState::Hidden?presentation_.model(serial):"",icons==statusIcons_.end()?StatusIcons{}:icons->second);
   // Prepare desired state before Added, which may Activate synchronously.
   device->Update(&sample,now,state);
   if(vr::VRServerDriverHost()->TrackedDeviceAdded(serial.c_str(),vr::TrackedDeviceClass_GenericTracker,device.get()))devices_.emplace(key,std::move(device));

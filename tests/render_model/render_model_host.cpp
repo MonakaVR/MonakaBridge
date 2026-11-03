@@ -5,12 +5,38 @@
 #undef main
 
 std::string Model="{monaka_bridge}pico_motion_tracker";
+const std::map<vr::ETrackedDeviceProperty,std::string> Icons={
+ {vr::Prop_NamedIconPathDeviceReady_String,"{monaka_bridge}/icons/tracker_status_ready@2x.png"},
+ {vr::Prop_NamedIconPathDeviceSearching_String,"{monaka_bridge}/icons/tracker_status_searching@2x.gif"},
+ {vr::Prop_NamedIconPathDeviceStandby_String,"{monaka_bridge}/icons/tracker_status_standby@2x.png"},
+ {vr::Prop_NamedIconPathDeviceOff_String,"{monaka_bridge}/icons/tracker_status_off@2x.png"}};
 mb::c1::MtpPose pico(){auto p=full();p.input.device_id="physical-pico";p.input.session_id=S1;p.coordinate_space={"world","rh_y_up_neg_z_forward",1};return p;}
 mb::c1::MtpPose invalidPose(mb::c1::MtpPose p,bool diagnostic=false){
  p.modality="none";p.validity={false,false};p.tracking_state="lost";
  if(!diagnostic){p.position.reset();p.orientation.reset();}
  p.linear_velocity.reset();p.angular_velocity.reset();p.linear_acceleration.reset();p.confidence.position=p.confidence.orientation=0;
  return p;
+}
+void candidateIconsSuite(Session& run,mb::Udp& sender,const fs::path& dll,pt::Events& events,Json& result){
+ const auto package=dll.parent_path().parent_path().parent_path();Json selection,config;
+ std::ifstream(package/"resources/presentation/selection.json")>>selection;
+ std::ifstream(package/"resources/presentation/bridge-config.json")>>config;
+ const auto& rows=selection.at("assignments");require(rows.size()==5,"current five explicit assignments required");
+ std::vector<mb::c1::MtpPose> samples;
+ for(const auto& row:rows){
+  auto p=pico();p.publisher_id=config.at("bridge_id");p.session_id=p.clock_id=selection.at("publisher_session");
+  p.source_id=p.input.source_id=row.at("source_id");p.tracker_id=row.at("tracker_id");p.input.device_id=row.at("device_id");p.input.session_id=row.at("input_session");p.mapping_revision=config.at("mapping_revision");
+  const auto serial=row.at("runtime_serial").get<std::string>();run.host.expectedRenderModels[serial]="{monaka_bridge}"+row.at("model_id").get<std::string>();run.host.expectedStatusIcons[serial]=Icons;
+  samples.push_back(p);send(sender,events,p);
+ }
+ run.until([&]{return run.host.devices.size()==samples.size()&&run.host.totalPoses>=samples.size();});
+ for(std::size_t i=0;i<samples.size();++i){auto& d=run.host.devices.at(unsigned(i+1));validFull(d.pose,samples[i]);for(const auto& [property,value]:Icons)require(d.properties.at(property)==value,"candidate four icon properties");}
+ for(auto& p:samples){auto lost=invalidPose(p);lost.sequence=++p.sequence;send(sender,events,lost);}run.pump(15);
+ for(const auto& [id,d]:run.host.devices)require(!d.pose.poseIsValid&&d.properties.at(vr::Prop_RenderModelName_String)=="","candidate icons promoted lost pose");
+ for(auto& p:samples){++p.sequence;send(sender,events,p);}run.pump(15);
+ for(std::size_t i=0;i<samples.size();++i){auto& d=run.host.devices.at(unsigned(i+1));validFull(d.pose,samples[i]);require(d.properties.at(vr::Prop_RenderModelName_String)==run.host.expectedRenderModels.at(d.serial),"candidate model recovery");for(const auto& [property,value]:Icons)require(d.properties.at(property)==value&&d.propertyWrites[property]==1,"candidate icons rewritten by tracking");}
+ result["candidate"]={{"devices",samples.size()},{"synthetic_full_loss_recovery","PASS"},{"actual_physical_validity","NOT_VERIFIED"},{"config_sha256",sha256(package/"resources/presentation/bridge-config.json")}};
+ run.finish();
 }
 void reacquireSuite(Session& run,mb::Udp& sender,mb::c1::MtpPose& p,Json& result){
  auto& device=run.host.devices.at(1);auto* const pointer=device.driver;const auto prop=vr::Prop_RenderModelName_String;
@@ -73,8 +99,14 @@ int main(int argc,char** argv){
   catch(const std::exception& e){result["result"]="BLOCKED";result["reason"]=e.what();std::ofstream(out/"result.json")<<result.dump(2);return 77;}
   {
    Module module(dll,events);Session run(module);require(run.error==vr::VRInitError_None,"D2 Init");
+   if(mode=="candidate-icons"){mb::Udp sender;candidateIconsSuite(run,sender,dll,events,result);}
+   else{
    const bool enabled=mode=="two-assigned"||mode=="pico"||mode=="revoke"||mode=="mixed"||mode=="reacquire"||mode=="initial-hidden";
    if(enabled)run.host.expectedRenderModels[Serial]=Model;
+   const bool iconTest=mutation.compare(0,6,"icons-")==0;
+   const bool iconsEnabled=mutation=="icons-valid"||mutation=="icons-two";
+   if(iconsEnabled)run.host.expectedStatusIcons[Serial]=Icons;
+   if(mutation=="icons-two")run.host.expectedStatusIcons["monaka-direct:313a70756e6b6e6f776e:74"]=Icons;
    run.host.activateSynchronously=mutation=="activate-inline";
    if(mode=="initial-hidden")run.host.expectedActivationRenderModels[Serial]="";
    mb::Udp sender;auto p=pico();
@@ -101,6 +133,18 @@ int main(int argc,char** argv){
    }
    else if(enabled)require(props.at(vr::Prop_RenderModelName_String)==Model,"PICO property missing");
    else require(!props.count(vr::Prop_RenderModelName_String),"generic/unknown received PICO model");
+   if(iconTest){
+    auto& device=run.host.devices.at(1);
+    for(const auto& [property,reference]:Icons){
+     require(iconsEnabled?props.count(property)&&props.at(property)==reference:!props.count(property),"status icon assignment/default");
+     if(iconsEnabled)require(device.propertyWrites[property]==1,"icon rewritten before tracking");
+    }
+    auto lost=invalidPose(p);lost.sequence=++p.sequence;send(sender,events,lost);run.pump(10);
+    require(!run.pose().poseIsValid,"icon availability promoted invalid pose");
+    ++p.sequence;send(sender,events,p);run.pump(10);validFull(run.pose(),p);
+    for(const auto& [property,reference]:Icons)if(iconsEnabled)require(props.at(property)==reference&&device.propertyWrites[property]==1,"tracking rewrote icon properties");
+    result["status_icons"]={{"assigned",iconsEnabled},{"invalid_pose_preserved",true},{"tracking_independent",true}};
+   }
    if(mode=="reacquire"){
     auto lost=p;lost.sequence++;lost.modality="none";lost.validity={false,false};lost.tracking_state="lost";
     lost.position.reset();lost.orientation.reset();lost.linear_velocity.reset();lost.angular_velocity.reset();lost.linear_acceleration.reset();
@@ -119,6 +163,7 @@ int main(int argc,char** argv){
     send(sender,events,other);run.until([&]{return run.host.devices.size()==2&&run.host.devices.at(2).poses>0;});
     require(run.host.devices.at(2).properties.at(vr::Prop_RenderModelName_String)==Model,"explicit generic identity did not receive same resource");
     validFull(run.host.devices.at(2).pose,other);
+    if(mutation=="icons-two")for(const auto& [property,reference]:Icons)require(run.host.devices.at(2).properties.at(property)==reference,"second opaque identity icon assignment");
     auto lost=invalidPose(other);++lost.sequence;send(sender,events,lost);run.pump(10);
     require(!run.host.devices.at(2).pose.poseIsValid&&run.host.devices.at(2).properties.at(vr::Prop_RenderModelName_String)=="","second identity loss failed");
     other.sequence+=2;send(sender,events,other);run.pump(10);validFull(run.host.devices.at(2).pose,other);
@@ -156,6 +201,7 @@ int main(int argc,char** argv){
     auto fresh=pico();send(sender,events,fresh);restarted.until([&]{return restarted.host.totalPoses>0;});validFull(restarted.pose(),fresh);
     require(restarted.host.devices.at(1).properties.at(vr::Prop_RenderModelName_String)==Model,"fixture restart model");
     restarted.finish();result["reacquire_cases"]["driver-fixture-restart"]="PASS";
+   }
    }
    module.unload();events.write("FreeLibrary",{{"returned",true}});
   }
