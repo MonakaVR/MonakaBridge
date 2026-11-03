@@ -47,7 +47,7 @@ def main():
         [cmake, '-S', str(ROOT), '-B', str(build), '-A', 'x64',
          '-DBUILD_TESTING=OFF', '-DMB_BUILD_CONTROL_GUI=ON', '-DMB_BUILD_STEAMVR=ON',
          '-DPython3_EXECUTABLE=' + sys.executable, '-DOPENVR_SDK=' + str(sdk.resolve())],
-        [cmake, '--build', str(build), '--config', 'Release', '--parallel', '2', '--target',
+        [cmake, '--build', str(build), '--config', 'Release', '--clean-first', '--parallel', '2', '--target',
          'monaka_bridge_service', 'monaka_bridge_config', 'monaka_bridge_calibrator',
          'monaka_bridge_control', 'monaka_bridge_driver'],
     ]
@@ -56,9 +56,15 @@ def main():
         result = subprocess.run(command, cwd=ROOT, env=env)
         if result.returncode:
             return result.returncode
-    finish_build(ROOT, provenance, [('Build/runtime/Release', 'Release'),
-                                    ('Build/runtime/control/Release', 'control/Release'),
-                                    ('Build/runtime/steamvr/monaka_bridge', 'steamvr/monaka_bridge')])
+    payload = ['Release/monaka_bridge_service.exe', 'Release/monaka_bridge_config.exe',
+               'Release/monaka_bridge_calibrator.exe', 'Release/openvr_api.dll',
+               'control/Release/monaka_bridge_control.exe',
+               'steamvr/monaka_bridge/bin/win64/driver_monaka_bridge.dll',
+               'steamvr/monaka_bridge/driver.vrdrivermanifest', 'steamvr/monaka_bridge/OpenVR-LICENSE']
+    resources = ROOT / 'outputs/steamvr/package/resources'
+    payload += ['steamvr/monaka_bridge/resources/' + p.relative_to(resources).as_posix()
+                for p in sorted(resources.rglob('*')) if p.is_file()]
+    finish_build(ROOT, provenance, [('Build/runtime/' + path, path) for path in payload])
     print('Built candidate in repo/Build/runtime. Stable promotion is an explicit separate operation.')
     return 0
 
