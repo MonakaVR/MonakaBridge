@@ -7,6 +7,7 @@ import subprocess
 import sys
 sys.dont_write_bytecode = True
 from runtime_dependencies import prepare_openvr
+from build_provenance import begin_build, finish_build, ContractError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,6 +31,7 @@ def find_cmake():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
+    provenance = begin_build(ROOT)
     sdk = prepare_openvr(ROOT)
     cmake = find_cmake()
     build = ROOT / 'Build/runtime'
@@ -54,13 +56,16 @@ def main():
         result = subprocess.run(command, cwd=ROOT, env=env)
         if result.returncode:
             return result.returncode
-    print('Built repo/Build/runtime. Configuration, services and driver registration were not changed.')
+    finish_build(ROOT, provenance, [('Build/runtime/Release', 'Release'),
+                                    ('Build/runtime/control/Release', 'control/Release'),
+                                    ('Build/runtime/steamvr/monaka_bridge', 'steamvr/monaka_bridge')])
+    print('Built candidate in repo/Build/runtime. Stable promotion is an explicit separate operation.')
     return 0
 
 
 if __name__ == '__main__':
     try:
         raise SystemExit(main())
-    except OSError as error:
+    except (OSError, ContractError) as error:
         print(str(error), file=sys.stderr)
         raise SystemExit(1)
