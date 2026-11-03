@@ -114,10 +114,14 @@ def begin_build(repo, channel="windows", command=None):
     repo = Path(repo).resolve()
     if repo.name not in PRODUCTS or channel not in ("windows", "android"):
         raise ContractError("Unknown product/channel")
+    source = source_info(repo)
+    selected = load_catalog(repo.parent)["products"].get(repo.name, {})
+    if selected.get("selected_source") != source or channel not in selected.get("channels", []):
+        raise ContractError("Build source/channel has not been selected")
     return {
         "schema": SCHEMA,
         "product": repo.name,
-        "source": source_info(repo),
+        "source": source,
         "build_candidate_id": uuid.uuid4().hex,
         "channel": channel,
         "build_started_utc": utc(),
@@ -167,15 +171,16 @@ def finish_build(repo, snapshot, mappings):
     if not payload or len({row["path"] for row in payload}) != len(payload):
         raise ContractError("Empty or overlapping payload")
     result = dict(snapshot, build_completed_utc=utc(), payload=payload)
-    write_json(manifest_path(repo, result["channel"]), result)
     catalog_file = catalog_path(repo.parent)
-    if catalog_file.exists():
-        with lock(catalog_file.with_suffix(".lock")):
-            catalog = load_catalog(repo.parent)
-            selected = catalog["products"].get(repo.name)
-            if selected is not None:
-                selected.setdefault("latest_candidates", {})[result["channel"]] = result["build_candidate_id"]
-                write_json(catalog_file, catalog)
+    with lock(catalog_file.with_suffix(".lock")):
+        catalog = load_catalog(repo.parent)
+        selected = catalog["products"].get(repo.name, {})
+        if (selected.get("selected_source") != snapshot["source"] or
+                result["channel"] not in selected.get("channels", [])):
+            raise ContractError("Selection changed during build; candidate is not adopted")
+        write_json(manifest_path(repo, result["channel"]), result)
+        selected.setdefault("latest_candidates", {})[result["channel"]] = result["build_candidate_id"]
+        write_json(catalog_file, catalog)
     return result
 
 
