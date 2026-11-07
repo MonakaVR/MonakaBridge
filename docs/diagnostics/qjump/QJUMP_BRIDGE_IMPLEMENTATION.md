@@ -2,7 +2,7 @@
 
 2026-11-07 / OFFLINE. Requirement: user-approved residual-twist capture task and root `MonakaVR/docs/diagnostics/qjump/QJUMP_CAPTURE_DESIGN.md` including the event-close boundary amendment. Owner: root-dispatched GPT-6.1 Sol / High (`qjump_bridge_owner`), sole Bridge implementation owner, no child agents. Worktree `H:/tmp/6Dof/MonakaBridge`; topic `diagnostic/qjump-capture-20261107`; rollback/base `29d24bd4c06ece0bab59235803dace621fa6c3dc`.
 
-Separate PICO-owner implementation/header review: **ACCEPT**. Root specification/responsibility review and final original-footer inspection: **ACCEPT**. Final header bytecopy SHA256: `cc04a2e29881b6b0bc021550102e8e7f908761debf3c05b54eb6c7baa249dfde`. Final topic HEAD and normal build provenance are reported by root; no amend/rebase/push/dev integration or product startup is authorized by this document.
+Separate PICO-owner implementation/header review: **ACCEPT**. Root specification/responsibility review and final original-footer inspection: **ACCEPT**. Final header bytecopy SHA256: `c75546f75f7586b4e128aa28293c4d604a144407b4e48f32edcdc2de9aece86c`. The nominal/window measurement below was run on `cc04a2e29881b6b0bc021550102e8e7f908761debf3c05b54eb6c7baa249dfde`; the final difference is the independently reviewed and focused-tested T2-only repair described below. Final topic HEAD and normal build provenance are reported by root; no amend/rebase/push/dev integration or product startup is authorized by this document.
 
 ## Product path and unchanged tracking
 
@@ -61,14 +61,14 @@ PASS D1–D11 applicable to the shared collector: smooth motion/sign equivalence
 
 Actual Bridge hooks PASS: OFF/ON exact encoded output equality through receive/calibrate/publish/fanout; input/axis/calibrated/queued/wire lineage, transform snapshots, callback exceptions and admitted unknown-profile/no-output/zero-drop negative. No broad regression or historical byte audit was rerun.
 
-Final same-header real-time nominal: **five entities x all five Bridge lanes**, 25 offers every 50 ms, actual default 20 Hz retention and 10+10 s window, offers continuing for 21.2 s. The test reads the original durable footer and asserts complete/pre/post true, no_new false, drops/errors zero, one bounded file. PASS. Encoded ring max **1,841,090 bytes**; event storage max **3,750,090 bytes**; actual file **3,757,509 bytes**. Original footer independently inspected by root and PICO reviewer, with 25 actual boundary rows, 25 lane coverage entries and chronological samples.
+Measured cc04 real-time nominal (not relabelled as a c755 run): **five entities x all five Bridge lanes**, 25 offers every 50 ms, actual default 20 Hz retention and 10+10 s window, offers continuing for 21.2 s. The test reads the original durable footer and asserts complete/pre/post true, no_new false, drops/errors zero, one bounded file. PASS. Encoded ring max **1,841,090 bytes**; event storage max **3,750,090 bytes**; actual file **3,757,509 bytes**. Original footer independently inspected by root and PICO reviewer, with 25 actual boundary rows, 25 lane coverage entries and chronological samples.
 
 Log: `build-qjump/qjump-nominal25-final-coverage.log`.
 Bundle: `build-qjump/qjump-nominal25-final-coverage/bridge-50ee6d99-3783-4d15-8adb-58d1fb2ef4bd/11e08ad8-a0f3-4c51-8dc2-858c9329e3ff.jsonl`.
 
 Earlier 25-lane captures had complete windows but `post_data_present=false`; the owner's initial post-PASS report was incorrect and withdrawn. Their original artifacts/logs remain preserved. The diagnostic boundary repair and explicit original-footer assertions above supersede that result; no predicate was weakened. Intermediate commit `ae2187e3327bd7b484da9067b08eb378a050f2aa` and its normal build are not the final accepted candidate.
 
-Final isolated focused binary SHA256: collector `4c0254509798c095631cc3b698ef82057d8809b9a6e62d37b86744c26a5297d2`; Bridge `e6fbc40b27fab73b8184dfed3eb4cabb7ad83ed8d85d8547363418525553b569`. Final normal-build provenance, rather than these test binaries, is the runtime release authority.
+Recorded cc04 isolated focused binary SHA256: collector `4c0254509798c095631cc3b698ef82057d8809b9a6e62d37b86744c26a5297d2`; Bridge `e6fbc40b27fab73b8184dfed3eb4cabb7ad83ed8d85d8547363418525553b569`. Final normal-build provenance, rather than these test binaries, is the runtime release authority.
 
 ## Actual-format connected evidence and remaining gates
 
@@ -79,3 +79,11 @@ Actual Bridge bundle: `build-qjump/connected-v4/bridge-e7e234a2-2a63-4178-89dd-f
 Normal service initialization supplies generated actual P1 Bridge source SHA/input hash and pinned MBIP/MVIP identities. Fixture headers explicitly identify fixtures or unavailable build identity; they do not establish runtime provenance. After the follow-up approved clean topic commit, `python scripts/build_runtime.py` builds only fixed `Build/runtime` and records `Build/provenance/windows.json`; no launch/install/register is performed. Final commit/clean/build outcome is supplied to root.
 
 Bridge focused software and separate implementation/specification review: PASS/ACCEPT. Coordinated final acceptance and remaining Monaka/analyzer verification are root-owned. `PHYSICAL_HIL=NOT_RUN`, `CUTOVER=NOT_RUN`; no real rare-event capture or new physical stability claim.
+
+## Final T2-only impact acceptance
+
+Root G2 reopened one diagnostic semantic defect: clearing the original anchor on every short duplicate prevented T2 when genuine native updates were interleaved with faster duplicate receipts. The final c755 header preserves the anchor during short duplicates, tracks an actual source/sequence high-water mark and last-progress time in bounded scalar lane state, and fires T2 only on the currently progressing fresh sample after two seconds. Regressions never lower high water. A >250 ms progress/observation gap, invalidity, recovery or lifecycle/session change clears the candidate; stalled time is not credited on resume. Native explicit `persistence_fresh` and sequence-only observations are supported without inventing absent fields. Tracking, sampling, ring/event/queue/storage limits and close-boundary handling are unchanged.
+
+Focused command: `build-qjump/Release/qjump_capture_tests.exe --t2-progress build-qjump/qjump-t2-progress-final`; log `build-qjump/qjump-t2-progress-final.log`. PASS nine default-two-second scenarios: mixed fresh/duplicate positive using source timestamp, native explicit progress flag and sequence-only lineage; duplicate-only, regression, stalled-resume gap, invalidity, recovery and session negatives. Trigger records assert firing only on the progressing sample. PICO reviewer independently accepted the diff and copied/rebuilt/tested the same c755 source. Root accepted this limited delta and authorized an ordinary follow-up commit and normal fixed build.
+
+The cc04 25-lane 20-second raw capacity/window artifact remains the actual measurement for that unchanged path; it is not a new-source rerun. The final-source validation is that measurement plus unchanged-sampling/capacity diff review and the focused T2 impact evidence. No unrelated suite or 20-second repeat was run for this scalar-state correction. Final runtime SHA/source authority remains the ordinary `Build/provenance/windows.json` produced from the clean follow-up commit.

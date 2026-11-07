@@ -79,7 +79,7 @@ struct Options {
  std::function<bool(const std::filesystem::path&,const std::vector<std::string>&)> sink;
 };
 class Collector {
- struct Lane {std::optional<Sample> previous,reference,lifecycle_sample;std::int64_t retained=-1,step=0;bool persistent=false;std::string lifecycle;};
+ struct Lane {std::optional<Sample> previous,reference,lifecycle_sample;std::optional<std::int64_t> sourceHighWater;std::int64_t retained=-1,step=0,progressAt=-1;bool persistent=false;std::string lifecycle;};
  struct Row {std::int64_t mono;std::string bytes;std::int64_t utc=0;std::string stream;bool usable=false;};
  struct Event {std::string event;std::vector<std::string> aliases;std::vector<Row> samples;std::vector<J> triggers;std::map<std::string,std::int64_t> saved;J lane_coverage=J::array();std::int64_t started=0,started_wall=0,deadline=0,trigger_sample=0,pre_start=0,closed=0,closed_wall=0,last_valid=0;std::size_t bytes=0;std::uint64_t drops=0;bool truncated=false,shutdown=false;};
  Options o_;std::string process_=id();std::filesystem::path run_;
@@ -112,13 +112,23 @@ class Collector {
  void consume(Sample s){
   if(!lanes_.count(s.stream_id)&&lanes_.size()>=256){++dropped_;return;}
   auto entity=s.identity.value("source_id","")+"\n"+s.identity.value("device_id",s.identity.value("tracker_id",s.identity.value("serial","")));if(!entities_.count(entity)&&entities_.size()>=16){++dropped_;return;}entities_.insert(entity);
-  auto& lane=lanes_[s.stream_id];const auto life=lifecycle(s);if(!lane.lifecycle.empty()&&life!=lane.lifecycle){bool specific=false;if(lane.lifecycle_sample){for(const auto& group:std::vector<std::pair<const char*,std::vector<const char*>>>{{"T3",{"reset_generation","correction_epoch"}},{"T4",{"assignment_generation"}},{"T5",{"proxy_generation","topology_generation"}}}){bool changed=false;for(auto k:group.second)changed=changed||s.context.value(k,J())!=lane.lifecycle_sample->context.value(k,J());if(changed){trigger(group.first,&s,&*lane.lifecycle_sample);specific=true;}}}if(!specific)trigger("T6",&s,lane.lifecycle_sample?&*lane.lifecycle_sample:nullptr);lane.previous.reset();lane.reference.reset();}lane.lifecycle=life;lane.lifecycle_sample=s;
+  auto& lane=lanes_[s.stream_id];const auto life=lifecycle(s);if(!lane.lifecycle.empty()&&life!=lane.lifecycle){bool specific=false;if(lane.lifecycle_sample){for(const auto& group:std::vector<std::pair<const char*,std::vector<const char*>>>{{"T3",{"reset_generation","correction_epoch"}},{"T4",{"assignment_generation"}},{"T5",{"proxy_generation","topology_generation"}}}){bool changed=false;for(auto k:group.second)changed=changed||s.context.value(k,J())!=lane.lifecycle_sample->context.value(k,J());if(changed){trigger(group.first,&s,&*lane.lifecycle_sample);specific=true;}}}if(!specific)trigger("T6",&s,lane.lifecycle_sample?&*lane.lifecycle_sample:nullptr);lane.previous.reset();lane.reference.reset();lane.sourceHighWater.reset();lane.progressAt=-1;}lane.lifecycle=life;lane.lifecycle_sample=s;
   const bool fresh=s.validity.value("fresh",true)&&s.validity.value("rotation_valid",true);
   if(fresh&&s.q&&angle(*s.q,*s.q)){
+   const auto now=s.process_monotonic_ns;
+   bool progress=s.validity.value("persistence_fresh",true);
+   const J* sourceStamp=s.timestamps.contains("source_timestamp_ns")?&s.timestamps.at("source_timestamp_ns"):!s.validity.contains("persistence_fresh")&&s.identity.contains("sequence")?&s.identity.at("sequence"):nullptr;
+   if(sourceStamp){const auto stamp=std::stoll(sourceStamp->get<std::string>());const bool advanced=!lane.sourceHighWater||stamp>*lane.sourceHighWater;progress=progress&&advanced;if(advanced)lane.sourceHighWater=stamp;}
+   // A first valid observation seeds only the liveness interval. Short duplicate
+   // receipts preserve the original anchor, but cannot themselves fire T2.
+   if(lane.progressAt<0)lane.progressAt=now;
+   const bool gap=now-lane.progressAt>250000000||(lane.previous&&now-lane.previous->process_monotonic_ns>250000000);
+   if(gap)lane.reference.reset();
+   if(progress)lane.progressAt=now;
    if(lane.previous&&lane.previous->q){auto d=angle(*lane.previous->q,*s.q);if(d&&*d+1e-8>=o_.threshold_deg){trigger("T1",&s,&*lane.previous,*d);if(!lane.reference){lane.reference=lane.previous;lane.step=s.process_monotonic_ns;lane.persistent=false;}}}
-   if(lane.reference&&lane.reference->q){auto d=angle(*lane.reference->q,*s.q);const bool gap=lane.previous&&s.process_monotonic_ns-lane.previous->process_monotonic_ns>250000000;bool progress=s.validity.value("persistence_fresh",true);if(lane.previous&&s.timestamps.contains("source_timestamp_ns")&&lane.previous->timestamps.contains("source_timestamp_ns"))progress=progress&&std::stoll(s.timestamps.at("source_timestamp_ns").get<std::string>())>std::stoll(lane.previous->timestamps.at("source_timestamp_ns").get<std::string>());if(!d||*d+1e-8<o_.threshold_deg||gap||!progress){lane.reference.reset();}else if(!lane.persistent&&s.process_monotonic_ns-lane.step>=o_.persistent_ns){trigger("T2",&s,&*lane.reference,*d);lane.persistent=true;}}
+   if(lane.reference&&lane.reference->q){auto d=angle(*lane.reference->q,*s.q);if(!d||*d+1e-8<o_.threshold_deg){lane.reference.reset();}else if(progress&&!lane.persistent&&now-lane.step>=o_.persistent_ns){trigger("T2",&s,&*lane.reference,*d);lane.persistent=true;}}
    lane.previous=s;
-  }else{lane.previous.reset();lane.reference.reset();}
+  }else{lane.previous.reset();lane.reference.reset();lane.sourceHighWater.reset();lane.progressAt=-1;}
   if(lane.retained>=0&&s.process_monotonic_ns-lane.retained<o_.sample_ns)return;lane.retained=s.process_monotonic_ns;
   Row record=row(s);if(record.bytes.size()>16384){++dropped_;return;}
   while(!ring_.empty()&&(ring_.size()>=o_.ring_count||ring_bytes_+record.bytes.size()>o_.ring_bytes||(ring_.size()>1&&s.process_monotonic_ns-ring_[1].mono>o_.pre_ns))){ring_bytes_-=ring_.front().bytes.size();ring_.pop_front();}

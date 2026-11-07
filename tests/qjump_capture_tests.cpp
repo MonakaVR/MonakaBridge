@@ -16,7 +16,30 @@ struct Fixture {
  void finish(){std::this_thread::sleep_for(160ms);collector->stop();}
  std::size_t triggers(const char* type){std::size_t n=0;for(auto& b:bundles)for(auto& j:b)if(j.value("kind","")=="trigger"&&j.value("trigger_type","")==type)++n;return n;}
 };
+void t2ProgressTests(const std::filesystem::path& root){
+ // Synthetic local observation/source clock, default two-second threshold.
+ for(const std::string mode:{"mixed","flag-mixed","sequence-mixed","duplicates","regression","stalled-gap","invalid","recovery","session"}){
+  Fixture f(root);f.options.persistent_ns=2000000000LL;f.start();const auto t=qjump::mono();std::int64_t stamp=t;
+  for(int i=0;i<47;++i){auto s=pose(t+i*50000000LL,i?120:0);s.clock_domain="test.synthetic_monotonic";s.identity["sequence"]=std::to_string(i);bool progress=i==0||i%2==1;
+   if(mode=="duplicates"&&i>=2)progress=false;
+   if(mode=="regression"&&i>=2){progress=true;stamp=t-i*50000000LL;}
+   else if(mode=="stalled-gap"&&i>=2&&i<43)progress=false;
+   else if(progress)stamp=t+i*50000000LL;
+   s.timestamps["source_timestamp_ns"]=std::to_string(stamp);s.validity["persistence_fresh"]=progress;
+   if(mode=="flag-mixed"||mode=="sequence-mixed")s.timestamps.erase("source_timestamp_ns");
+   if(mode=="sequence-mixed"){s.validity.erase("persistence_fresh");s.identity["sequence"]=std::to_string(i==0?0:(i+1)/2);}
+   if(mode=="invalid"&&i==20){s.validity["fresh"]=false;s.validity["rotation_valid"]=false;s.q.reset();}
+   if(mode=="recovery"&&i>=20)s.q=std::array<double,4>{0,0,0,1};
+   if(mode=="session"&&i>=20)s.identity["session_id"]="replacement-session";
+   f.feed(s);
+  }
+  f.finish();REQUIRE(f.triggers("T2")==static_cast<std::size_t>(mode=="mixed"||mode=="flag-mixed"||mode=="sequence-mixed"));
+  for(const auto& bundle:f.bundles)for(const auto& j:bundle)if(j.value("trigger_type","")=="T2"){if(mode!="sequence-mixed")REQUIRE(j.at("after").at("validity").at("persistence_fresh")==true);const auto seq=std::stoll(j.at("after").at("identity").at("sequence").get<std::string>());REQUIRE(mode=="sequence-mixed"?seq>=20:seq%2==1);}
+ }
+ std::cout<<"PASS T2 default2s mixed fresh/duplicate; duplicate-only/regression/progress-gap/invalid/recovery/session negatives; trigger only on current high-water progress\n";
+}
 int main(int argc,char** argv)try{
+ if(argc==3&&std::string(argv[1])=="--t2-progress"){t2ProgressTests(std::filesystem::absolute(argv[2]));return 0;}
  if(argc==3&&std::string(argv[1])=="--nominal"){
   qjump::Options o;o.component="bridge";o.output_dir=std::filesystem::absolute(argv[2]);o.coordination_dir=o.output_dir/"coord";o.build_identity={{"fixture","single-producer nominal five entities x five stage lanes, 20 Hz, real 10+10 s"}};qjump::Collector c(o);auto start=std::chrono::steady_clock::now();for(int frame=0;frame<424;++frame){for(int device=0;device<5;++device)for(const char* stage:{"bridge_input","bridge_axis","bridge_calibrated","bridge_queued","bridge_actual_wire"}){auto s=pose(qjump::mono(),frame>=200?120:0,"nominal-"+std::to_string(device)+":"+stage);s.stage=(std::string(stage)=="bridge_queued"||std::string(stage)=="bridge_actual_wire")?"bridge_published":stage;if(std::string(stage)=="bridge_queued")s.publication_phase="queued";if(std::string(stage)=="bridge_actual_wire"){s.publication_phase="actual_wire";s.wire_send_success=true;}s.identity["device_id"]="nominal-"+std::to_string(device);REQUIRE(c.offer(std::move(s)));}std::this_thread::sleep_until(start+(frame+1)*50ms);}std::this_thread::sleep_for(300ms);c.stop();REQUIRE(c.dropped()==0&&c.errors()==0&&c.written()==1);REQUIRE(c.maxRingBytes()<=o.ring_bytes&&c.maxEventBytes()<=o.event_bytes);std::size_t closed=0;for(const auto& entry:std::filesystem::directory_iterator(c.directory()))if(entry.path().extension()==".jsonl"){++closed;std::ifstream in(entry.path());std::string line;J footer;while(std::getline(in,line))footer=J::parse(line);REQUIRE(footer.at("kind")=="footer");REQUIRE(footer.at("complete")==true&&footer.at("prewindow_complete")==true&&footer.at("post_data_present")==true&&footer.at("no_new_post_samples")==false);REQUIRE(footer.at("dropped")=="0"&&footer.at("writer_errors")=="0");REQUIRE(entry.file_size()<=o.event_bytes);}REQUIRE(closed==1);std::cout<<"PASS nominal20s footer-complete=true footer-post=true drop0 errors0 five-entity five-lane20Hz zero drops/errors; ring="<<c.maxRingBytes()<<" event="<<c.maxEventBytes()<<" dir="<<c.directory().string()<<'\n';return 0;
  }
