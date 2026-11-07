@@ -3,6 +3,8 @@
 #include "monaka_bridge/network.hpp"
 #include "monaka_bridge/health.hpp"
 #include "monaka_bridge/discovery.hpp"
+#include "monaka_bridge/qjump_bridge.hpp"
+#include "p1_runtime_identity.hpp"
 #include <chrono>
 #include <functional>
 #include <iostream>
@@ -16,6 +18,9 @@ inline void runService(const std::filesystem::path& path,const std::uint16_t (&p
                        const std::function<void()>& ready) {
  auto config=loadConfig(path);
  Udp input(ports[0]);Udp output;const auto epoch=monotonicNs();Bridge bridge(config,uuid());DiscoveryCache discovery;
+ auto qjump=qjump::Collector::fromEnvironment("bridge","BRIDGE_QJUMP_DIAGNOSTICS","BRIDGE_QJUMP_DIAGNOSTICS_DIR",{{"bridge_source",P1_BRIDGE_SOURCE},{"source_input_hash",P1_BRIDGE_INPUT_HASH},{"mbip",P1_MBIP_COMMIT},{"mvip",P1_MVIP_DELIVERY},{"mvip_kit_sha256",P1_MVIP_KIT_SHA256}});
+ std::unique_ptr<QJumpBridge> qjumpHooks;
+ if(qjump)try{qjumpHooks=std::make_unique<QJumpBridge>(*qjump,bridge);}catch(...){}
  std::unique_ptr<HealthWriter> healthWriter;
  try{auto health=path;health+=L".status.json";healthWriter=std::make_unique<HealthWriter>(health);}catch(...){/* Diagnostic failure cannot disable tracking. */}
  auto modified=std::filesystem::last_write_time(path);std::int64_t lastStatus=-1000000000;
@@ -24,7 +29,7 @@ inline void runService(const std::filesystem::path& path,const std::uint16_t (&p
   auto now=monotonicNs()-epoch;if(duration>0&&now>=duration)break;
   for(int i=0;i<128;++i){auto d=input.receive();if(!d)break;discovery.receive(bridge,d->bytes,d->peer,monotonicNs()-epoch);}
   now=monotonicNs()-epoch;bridge.tick(now);
-  bridge.fanout.flush([&](Channel c,std::string_view bytes){return output.send(ports[c==Channel::Monaka?1:c==Channel::Steamvr?2:3],bytes);},now);
+  bridge.fanout.flush([&](Channel c,std::string_view bytes){const bool sent=output.send(ports[c==Channel::Monaka?1:c==Channel::Steamvr?2:3],bytes);if(qjumpHooks)qjumpHooks->sent(c,bytes,sent,now);return sent;},now);
   if(now-lastStatus>=500000000) {
    lastStatus=now;
    try{auto change=std::filesystem::last_write_time(path);if(change!=modified){bridge.reconfigure(loadConfig(path),now);modified=change;}}catch(const std::exception& e){std::cerr<<"config not applied: "<<e.what()<<'\n';}

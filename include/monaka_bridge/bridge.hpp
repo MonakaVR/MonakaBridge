@@ -36,6 +36,10 @@ class Bridge {
  c1::Envelope publish(const c1::Envelope&,std::int64_t now);
  bool compatible(const Binding&,const Device&)const;
 public:
+ // Best-effort immutable observations on the owner thread. Empty by default.
+ // Exceptions are isolated at each call site and cannot affect admission/output.
+ std::function<void(const c1::TrackerObservation&,std::int64_t)> diagnosticReceive;
+ std::function<void(const c1::TrackerObservation&,const Binding&,const Profile&,const CalibrationDiagnostic&,const Calibrated&,const c1::MtpPose&,std::int64_t)> diagnosticPublication;
  Registry registry;
  Fanout fanout;
  Bridge(Config,std::string session);

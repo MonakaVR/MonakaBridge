@@ -53,7 +53,7 @@ Bridge::Bridge(Config c,std::string session):config_(std::move(c)),session_(std:
 // informational. A transport/map generation never grants permission to use W/M.
 bool Bridge::compatible(const Binding& b,const Device& d)const{auto p=config_.profiles.find(b.profile);return p!=config_.profiles.end()&&p->second.convention==d.convention;}
 c1::Envelope Bridge::publish(const c1::Envelope& input,std::int64_t now){const auto e=normalization_.output(input,true);if(config_.policy==Policy::Monaka||config_.policy==Policy::Both)fanout.put(Channel::Monaka,e,now);if(config_.policy==Policy::Steamvr||config_.policy==Policy::Both)fanout.put(Channel::Steamvr,e,now);return e;}
-bool Bridge::receive(std::string_view bytes,std::string_view peer,std::int64_t now){c1::Envelope e;bool ok=registry.receive(bytes,peer,now,&e);if(ok)fanout.put(Channel::Mirror,std::move(e),now);tick(now);return ok;}
+bool Bridge::receive(std::string_view bytes,std::string_view peer,std::int64_t now){c1::Envelope e;bool ok=registry.receive(bytes,peer,now,&e);if(ok){if(diagnosticReceive)try{if(const auto* p=std::get_if<c1::TrackerObservation>(&e)){const auto* d=registry.find({p->source_id,p->device_id});diagnosticReceive(d&&d->rawPose?*d->rawPose:*p,now);}}catch(...){}fanout.put(Channel::Mirror,std::move(e),now);}tick(now);return ok;}
 void Bridge::tick(std::int64_t now){
  for(const auto& [key,b]:config_.bindings){
   if(!config_.contracts.count(key))continue; // Fail closed; configuration tools never infer support.
@@ -68,7 +68,8 @@ void Bridge::tick(std::int64_t now){
   if(fresh && d->pose && (l.inputSequence!=d->poseSequence || !l.pose)){
    const auto& in=*d->pose;
    if(l.poseSequence==std::numeric_limits<std::int64_t>::max())throw std::runtime_error("MTP sequence exhausted: restart Bridge");
-   auto v=calibrate(in,b,config_.profiles.at(b.profile),l.history,d->fixedTime);
+   CalibrationDiagnostic diagnostic;
+   auto v=calibrate(in,b,config_.profiles.at(b.profile),l.history,d->fixedTime,diagnosticPublication?&diagnostic:nullptr);
    c1::MtpPose out;header(out,config_,session_,b,l.poseSequence++,d->fixedTime,now);
    out.position=contains(l.capabilities,"position")?v.position:std::nullopt;
    out.orientation=contains(l.capabilities,"orientation")?v.orientation:std::nullopt;
@@ -81,6 +82,7 @@ void Bridge::tick(std::int64_t now){
    out.modality=out.validity.position&&out.validity.orientation?"full":out.validity.orientation?"rotation_only":"none";
    if(out.modality=="none"){out.position.reset();out.validity.position=false;out.confidence.position=0;out.tracking_state="lost";}
    out.input={in.source_id,in.device_id,in.session_id,in.sequence,in.orientation_evidence};l.inputSequence=d->poseSequence;l.pose=std::get<c1::MtpPose>(publish(out,now));
+   if(diagnosticPublication)try{diagnosticPublication(in,b,config_.profiles.at(b.profile),diagnostic,v,*l.pose,now);}catch(...){}
   }
   if(!fresh){l.history=History{};l.pose.reset();}
   // Metadata is independent of pose sequence/freshness. Publish transitions, not pose heartbeats.

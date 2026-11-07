@@ -1,0 +1,42 @@
+#include "monaka_bridge/qjump_capture.hpp"
+#include <future>
+#include <iostream>
+#include <sstream>
+using namespace std::chrono_literals;
+#define REQUIRE(x) do{if(!(x))throw std::runtime_error("check: " #x);}while(false)
+using qjump::J;
+qjump::Sample pose(std::int64_t n,double degrees=0,const std::string& lane="entity:input"){
+ qjump::Sample s;s.stream_id=lane;s.stage="bridge_input";s.process_monotonic_ns=n;s.identity={{"source_id","opaque-a"},{"device_id",lane},{"session_id","s1"},{"clock_id","c1"},{"sequence",std::to_string(n)},{"space_id","space"},{"space_revision","1"}};s.validity={{"fresh",true},{"rotation_valid",true}};s.timestamps={{"source_timestamp_ns",std::to_string(n)}};auto a=degrees*3.14159265358979323846/360;s.q=std::array<double,4>{0,std::sin(a),0,std::cos(a)};return s;
+}
+struct Fixture {
+ qjump::Options options;std::unique_ptr<qjump::Collector> collector;std::vector<std::vector<J>> bundles;std::mutex mutex;
+ explicit Fixture(const std::filesystem::path& root){options.component="bridge";options.output_dir=root/qjump::id();options.coordination_dir=root/"coord";options.pre_ns=20000000;options.post_ns=30000000;options.persistent_ns=20000000;options.sample_ns=1000000;options.build_identity={{"test","synthetic collector fixture"}};options.sink=[this](auto&,const auto& lines){std::vector<J> j;for(auto& s:lines)j.push_back(J::parse(s));std::lock_guard<std::mutex> l(mutex);bundles.push_back(std::move(j));return true;};}
+ void start(){collector=std::make_unique<qjump::Collector>(options);}
+ void feed(const qjump::Sample& s){collector->offer(s);std::this_thread::sleep_for(1ms);}
+ void finish(){std::this_thread::sleep_for(160ms);collector->stop();}
+ std::size_t triggers(const char* type){std::size_t n=0;for(auto& b:bundles)for(auto& j:b)if(j.value("kind","")=="trigger"&&j.value("trigger_type","")==type)++n;return n;}
+};
+int main(int argc,char** argv)try{
+ if(argc==3&&std::string(argv[1])=="--nominal"){
+  qjump::Options o;o.component="bridge";o.output_dir=std::filesystem::absolute(argv[2]);o.coordination_dir=o.output_dir/"coord";o.build_identity={{"fixture","single-producer nominal five entities x five stage lanes, 20 Hz, real 10+10 s"}};qjump::Collector c(o);auto start=std::chrono::steady_clock::now();for(int frame=0;frame<401;++frame){for(int device=0;device<5;++device)for(const char* stage:{"bridge_input","bridge_axis","bridge_calibrated","bridge_queued","bridge_actual_wire"}){auto s=pose(qjump::mono(),frame>=200?120:0,"nominal-"+std::to_string(device)+":"+stage);s.stage=(std::string(stage)=="bridge_queued"||std::string(stage)=="bridge_actual_wire")?"bridge_published":stage;if(std::string(stage)=="bridge_queued")s.publication_phase="queued";if(std::string(stage)=="bridge_actual_wire"){s.publication_phase="actual_wire";s.wire_send_success=true;}s.identity["device_id"]="nominal-"+std::to_string(device);REQUIRE(c.offer(std::move(s)));}std::this_thread::sleep_until(start+(frame+1)*50ms);}std::this_thread::sleep_for(300ms);c.stop();REQUIRE(c.dropped()==0&&c.errors()==0&&c.written()==1);REQUIRE(c.maxRingBytes()<=o.ring_bytes&&c.maxEventBytes()<=o.event_bytes);std::cout<<"PASS nominal20s five-entity five-lane20Hz zero drops/errors; ring="<<c.maxRingBytes()<<" event="<<c.maxEventBytes()<<" dir="<<c.directory().string()<<'\n';return 0;
+ }
+ REQUIRE(argc==2);const auto root=std::filesystem::absolute(argv[1]);std::filesystem::create_directories(root);
+ REQUIRE(!qjump::Collector::fromEnvironment("bridge","QJUMP_TEST_UNSET","QJUMP_TEST_DIR"));
+ // D1 normal, D2 q/-q, original-cadence detection before retained decimation.
+ {Fixture f(root);f.start();auto t=qjump::mono();for(int i=0;i<25;++i){auto s=pose(t+i*1000000,static_cast<double>(i));if(i%2)for(auto& a:*s.q)a=-a;f.feed(s);}f.finish();REQUIRE(f.bundles.empty());}
+ for(double degrees:{120.,180.}){Fixture f(root);f.options.sample_ns=50000000;f.start();auto t=qjump::mono();f.feed(pose(t));f.feed(pose(t+1000000,degrees));f.feed(pose(t+2000000));f.finish();REQUIRE(f.triggers("T1")==2);bool saw=false;for(auto& b:f.bundles)for(auto& j:b)if(j.value("kind","")=="sample"&&j["identity"]["sequence"]==std::to_string(t+1000000))saw=true;REQUIRE(saw);} // D3–D5 between retained ticks.
+ {Fixture f(root);f.start();auto t=qjump::mono();f.feed(pose(t));for(int i=1;i<35;++i)f.feed(pose(t+i*1000000,120));f.finish();REQUIRE(f.triggers("T2")==1);} // D6
+ {Fixture f(root);f.start();auto t=qjump::mono();f.feed(pose(t));f.feed(pose(t+1000000,120));for(int i=2;i<35;++i)f.feed(pose(t+i*1000000,0));f.finish();REQUIRE(f.triggers("T2")==0);} // recovery does not become reverse-offset persistence.
+ {Fixture f(root);f.start();auto t=qjump::mono();f.feed(pose(t));for(int i=1;i<35;++i){auto s=pose(t+i*1000000,120);s.validity["persistence_fresh"]=false;f.feed(s);}f.finish();REQUIRE(f.triggers("T2")==0);} // no persistent proof from duplicated native source sample.
+ {Fixture f(root);f.start();auto t=qjump::mono();auto a=pose(t);a.context={{"reset_generation","1"},{"assignment_generation","1"},{"proxy_generation","1"}};f.feed(a);auto b=a;b.process_monotonic_ns+=1000000;b.identity["sequence"]="9007199254740993";b.context={{"reset_generation","2"},{"assignment_generation","2"},{"proxy_generation","2"}};f.feed(b);f.finish();REQUIRE(f.triggers("T3")==1);REQUIRE(f.triggers("T4")==1);REQUIRE(f.triggers("T5")==1);} // D7–D9 simultaneous lifecycle changes.
+ {Fixture f(root);f.start();auto t=qjump::mono();f.feed(pose(t));auto b=pose(t+1000000);b.identity["session_id"]="s2";b.identity["space_revision"]="9007199254740993";f.feed(b);f.finish();REQUIRE(f.triggers("T6")==1);} // D10 exact string revision/session.
+ // Silent participant handles generic request and finishes without more poses.
+ {Fixture f(root);f.start();auto t=qjump::mono();f.feed(pose(t));auto incident=qjump::id();J request={{"schema","qjump.request.v1"},{"incident_id",incident},{"origin_component","monaka"},{"origin_process_instance","other-process"},{"wall_clock_utc_ns",std::to_string(qjump::wall())},{"trigger_type","T4"}};{std::ofstream out(f.options.coordination_dir/(incident+".json"));out<<request.dump();}f.finish();REQUIRE(f.triggers("T4")==1);bool noPost=false;for(auto& b:f.bundles)for(auto& j:b)if(j.value("kind","")=="footer")noPost=j.at("no_new_post_samples").get<bool>();REQUIRE(noPost);}
+ // D11 count+bytes, lane/entity bounds, explicit oversize rejection.
+ {Fixture f(root);f.options.ring_bytes=32768;f.options.event_bytes=131072;f.options.ring_count=24;f.start();auto t=qjump::mono();for(int i=0;i<180;++i)for(int device=0;device<5;++device)f.feed(pose(t+i*1000000,i==80?120:0,"five-"+std::to_string(device)));auto huge=pose(t);huge.context["oversize"]=std::string(1025,'x');REQUIRE(!f.collector->offer(std::move(huge)));f.finish();REQUIRE(f.collector->maxRingBytes()<=32768);REQUIRE(f.collector->maxEventBytes()<=131072);REQUIRE(f.collector->dropped()>0);}
+ // A blocked writer never holds the tracking-offer lock. Failure is observable.
+ {Fixture f(root);f.options.max_events=1;f.start();auto t=qjump::mono();f.feed(pose(t));f.feed(pose(t+1000000,120));f.feed(pose(t+2000000));f.finish();REQUIRE(f.collector->exhausted());REQUIRE(f.triggers("T1")==2);REQUIRE(f.bundles.size()==1);} // Last accepted capture reports EXHAUSTED while retaining its markers.
+ for(int i=0;i<20;++i){Fixture f(root);f.start();f.collector->stop();} // Predicate update and notification share the writer wait mutex.
+ {Fixture f(root);std::promise<void> entered,release;auto resume=release.get_future().share();std::atomic_bool once{false};f.options.sink=[&](auto&,auto&){if(!once.exchange(true)){entered.set_value();resume.wait_for(3s);}return false;};f.start();auto t=qjump::mono();f.feed(pose(t));f.feed(pose(t+1000000,120));REQUIRE(entered.get_future().wait_for(1s)==std::future_status::ready);auto begin=qjump::mono();for(int i=0;i<1000;++i)f.collector->offer(pose(t+2000000+i*1000000));REQUIRE(qjump::mono()-begin<1000000000);release.set_value();f.finish();REQUIRE(f.collector->errors()>0);}
+ std::cout<<"PASS D1-D11 collector: sign/step/recovery/persistence/lifecycle/silent-request/bounds/writer isolation\n";return 0;
+}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}

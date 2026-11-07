@@ -48,5 +48,6 @@ struct Binding {
 };
 struct History {std::optional<Quat> q;std::int64_t timestamp=-1;};
 struct Calibrated {std::optional<Vec> position,velocity,omega,acceleration;std::optional<Quat> orientation;};
-Calibrated calibrate(const c1::TrackerObservation&,const Binding&,const Profile&,History&,std::int64_t fixedTime);
+struct CalibrationDiagnostic {std::optional<Quat> axis,selected,previous;};
+Calibrated calibrate(const c1::TrackerObservation&,const Binding&,const Profile&,History&,std::int64_t fixedTime,CalibrationDiagnostic* diagnostic=nullptr);
 }

@@ -1,9 +1,10 @@
 #include "monaka_bridge/calibration.hpp"
 namespace mb {
-Calibrated calibrate(const c1::TrackerObservation& in,const Binding& b,const Profile& p,History& h,std::int64_t time){
+Calibrated calibrate(const c1::TrackerObservation& in,const Binding& b,const Profile& p,History& h,std::int64_t time,CalibrationDiagnostic* diagnostic){
  Calibrated out;
  std::optional<Quat> q;
  if(in.modality!="none" && in.validity.orientation && in.orientation)q=normalized(permute(*in.orientation,p.quaternionAxes));
+ if(diagnostic){diagnostic->axis=q;diagnostic->previous=h.q;}
  const bool offset=norm(b.mount.translation)>0;
  std::optional<Vec> omega;
  if(q && p.angularSpaceVerified && in.angular_velocity){
@@ -13,6 +14,7 @@ Calibrated calibrate(const c1::TrackerObservation& in,const Binding& b,const Pro
  if(q && !omega && h.q && time>h.timestamp)omega=angularVelocity(*h.q,*q,double(time-h.timestamp)/1e9);
  if(q){
   if(h.q)*q=continuous(*q,*h.q);
+  if(diagnostic)diagnostic->selected=q;
   out.orientation=normalized(mul(mul(b.world.rotation,*q),b.mount.rotation));
   h.q=q;h.timestamp=time;
  }else h=History{};
