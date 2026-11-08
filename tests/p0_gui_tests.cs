@@ -22,7 +22,12 @@ class P0GuiTests {
  static byte[] Bytes(object x){return new UTF8Encoding(false).GetBytes(Json.Serialize(x));}
  static bool IsRigid(object raw,double x){var r=(Dictionary<string,object>)raw;var p=(IList)r["translation"];var q=(IList)r["rotation"];return Convert.ToDouble(p[0])==x&&Convert.ToDouble(p[1])==0&&Convert.ToDouble(p[2])==0&&Convert.ToDouble(q[0])==0&&Convert.ToDouble(q[1])==0&&Convert.ToDouble(q[2])==0&&Math.Abs(Convert.ToDouble(q[3]))==1;}
  static Dictionary<string,object> Read(string path){return Json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));}
- static Button Action(Window host,string caption){foreach(var child in ((StackPanel)((ScrollViewer)host.Content).Content).Children){var button=child as Button;if(button!=null&&Convert.ToString(button.Content)==caption)return button;}throw new Exception("Normal action missing: "+caption);}
+ static Button FindAction(DependencyObject parent,string caption){
+  var button=parent as Button;if(button!=null&&Convert.ToString(button.Content)==caption)return button;
+  foreach(object child in LogicalTreeHelper.GetChildren(parent)){var item=child as DependencyObject;if(item==null)continue;var found=FindAction(item,caption);if(found!=null)return found;}
+  return null;
+ }
+ static Button Action(Window host,string caption){var found=FindAction(host,caption);if(found==null)throw new Exception("Normal action missing: "+caption);return found;}
  [STAThread] static int Main(string[] args){try{
   string root=Path.Combine(args[1],Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
   bool integrated=args.Length>=4;

@@ -14,6 +14,11 @@ using MonakaBridge;
 class WorldApprovalGuiTests {
  static void Check(bool value,string message){if(!value)throw new Exception(message);}
  static object Field(object value,string name){return value.GetType().GetField(name,BindingFlags.NonPublic|BindingFlags.Instance).GetValue(value);}
+ static Button FindAction(DependencyObject parent,string caption){
+  var button=parent as Button;if(button!=null&&Convert.ToString(button.Content)==caption)return button;
+  foreach(object child in LogicalTreeHelper.GetChildren(parent)){var item=child as DependencyObject;if(item==null)continue;var found=FindAction(item,caption);if(found!=null)return found;}
+  return null;
+ }
  static void Until(Func<bool> ready){var watch=Stopwatch.StartNew();while(!ready()){Check(watch.ElapsedMilliseconds<20000,"WPF fixture deadline");Dispatcher.CurrentDispatcher.Invoke((Action)delegate{},DispatcherPriority.Background);Thread.Sleep(5);}Dispatcher.CurrentDispatcher.Invoke((Action)delegate{},DispatcherPriority.Background);}
  static void Align(string helper,string target,string x,string y,string z){using(var p=Process.Start(new ProcessStartInfo(helper,GuiLaunchOptions.Quote(target)+" align logical-pico-device-1 "+x+" "+y+" "+z){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true})){string output=p.StandardOutput.ReadToEnd(),error=p.StandardError.ReadToEnd();p.WaitForExit();Check(p.ExitCode==0,output+error);}}
  [STAThread]static int Main(string[] args){try{
@@ -26,7 +31,7 @@ class WorldApprovalGuiTests {
    try{
     type.GetMethod("Reload",BindingFlags.NonPublic|BindingFlags.Instance,null,Type.EmptyTypes,null).Invoke(window,null);((ListBox)Field(window,"mappings")).SelectedIndex=0;
     ((TextBox)Field(window,"x")).Text=x;((TextBox)Field(window,"y")).Text=y;((TextBox)Field(window,"z")).Text=z;
-    var panel=(StackPanel)((ScrollViewer)window.Content).Content;Button action=null;foreach(var child in panel.Children){var button=child as Button;if(button!=null&&Convert.ToString(button.Content)=="Apply shared translation")action=button;}
+    Button action=FindAction(window,"Apply shared translation");
     Check(action!=null&&action.IsEnabled,"normal GUI action unavailable");action.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Until(delegate{return !(bool)Field(window,"busy");});
     Check(Convert.ToBase64String(File.ReadAllBytes(target))==Convert.ToBase64String(File.ReadAllBytes(direct)),"GUI native candidate differs from actual align result");
     var value=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(target));int invalidated=0,other=0;

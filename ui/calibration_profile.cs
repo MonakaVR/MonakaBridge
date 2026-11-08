@@ -45,6 +45,35 @@ namespace MonakaBridge {
    foreach(string file in new[]{ProfilePath,ConfigFile,HealthFile,ConfigHelper,CalibrationHelper})if(!distinct.Add(file))throw new InvalidOperationException("Profile, config, health and helper paths must be distinct");
   }
   internal static CalibrationInstallation Parse(string path,byte[] bytes){return new CalibrationInstallation(path,bytes);}
+  static string FileHash(string path) {
+   using(var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read))using(var sha=SHA256.Create())
+    return BitConverter.ToString(sha.ComputeHash(input)).Replace("-","").ToLowerInvariant();
+  }
+  // The selection is an immutable, in-memory installation snapshot. The path
+  // supplies a base to the existing parser; no profile is created or loaded.
+  internal static CalibrationInstallation ForSelection(GuiLaunchOptions target,Dictionary<string,object> config,Dictionary<string,object> mapping,string role) {
+   if(target==null||config==null||mapping==null)throw new InvalidOperationException("Select an existing persisted tracker first");
+   string source=CalibrationJson.Text(mapping,"source_id",4096),device=CalibrationJson.Text(mapping,"device_id",4096),tracker=CalibrationJson.Text(mapping,"tracker_id",4096);
+   Dictionary<string,object> selected=null;object rows;
+   if(!config.TryGetValue("mappings",out rows)||!(rows is System.Collections.IEnumerable))throw new InvalidOperationException("Persisted mappings required");
+   foreach(object raw in (System.Collections.IEnumerable)rows){var row=raw as Dictionary<string,object>;if(row==null)throw new InvalidOperationException("Invalid persisted mapping");
+    if(CalibrationJson.Text(row,"source_id",4096)==source&&CalibrationJson.Text(row,"device_id",4096)==device){if(selected!=null)throw new InvalidOperationException("Ambiguous persisted tracker");selected=row;}
+   }
+   if(selected==null||CalibrationJson.Text(selected,"tracker_id",4096)!=tracker||CalibrationJson.Text(selected,"input_space",4096)!=CalibrationJson.Text(mapping,"input_space",4096)||CalibrationJson.Integer(selected,"input_revision",0,UInt32.MaxValue)!=CalibrationJson.Integer(mapping,"input_revision",0,UInt32.MaxValue))throw new InvalidOperationException("Selected tracker differs from persisted mapping");
+   string helper=Path.Combine(Path.GetDirectoryName(target.ConfigHelper),"monaka_bridge_calibrator.exe");
+   string configHash=FileHash(target.ConfigHelper);
+   if(target.HelperSha256!=null&&!string.Equals(configHash,target.HelperSha256,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Config helper SHA256 mismatch");
+   // Endpoint ports are service launch arguments, not fields in bridge config.
+   // An explicitly selected installation retains its endpoint; ordinary launch
+   // uses the service's public fixed loopback mirror default.
+   var prior=target.Calibration;
+   if(prior!=null&&(!string.Equals(prior.ConfigFile,target.ConfigFile,StringComparison.OrdinalIgnoreCase)||prior.BridgeId!=CalibrationJson.Text(config,"bridge_id",4096)))throw new InvalidOperationException("Installation differs from selected config");
+   var document=new Dictionary<string,object>{{"schema",Schema},{"name",target.InstallationName},{"config",target.ConfigFile},{"health",target.HealthFile},{"config_helper",target.ConfigHelper},{"helper_sha256",configHash},{"read_only",target.ReadOnly},
+    {"calibration_helper",helper},{"calibration_helper_sha256",FileHash(helper)},{"calibration_api",1},{"calibration_software_policy",1},{"calibration_gui_contract",1},{"bridge_id",CalibrationJson.Text(config,"bridge_id",4096)},
+    {"installation_path",prior==null?target.Root:prior.InstallationPath},{"association",Association},{"single_bridge_no_relay",true},{"mirror_address",prior==null?"127.0.0.1":prior.MirrorAddress},{"mirror_port",prior==null?29813:(int)prior.MirrorPort},
+    {"source",source},{"device",device},{"tracker",tracker},{"input_space",selected["input_space"]},{"input_revision",selected["input_revision"]},{"reference_role",role}};
+   return Parse(Path.Combine(target.Root,".calibration-selection-memory.json"),CalibrationJson.Encode(document,65536));
+  }
   internal static byte[] ReadBytes(string path) {
    path=GuiLaunchOptions.Absolute(path,"installation");byte[] bytes;
    using(var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read)) {

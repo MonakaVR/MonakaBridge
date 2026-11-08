@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Diagnostics;
@@ -37,7 +37,7 @@ namespace MonakaBridge {
    GuiLaunchOptions options;readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly TextBlock accessStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};
    readonly List<Control> editControls=new List<Control>();readonly List<Button> serviceControls=new List<Button>();
-   Button openInstallation,createCalibration,reloadConfiguration,cancelSave;bool busy,closed,needsReload,closing,closingReady,switching;CancellationTokenSource cancellation;Task pendingSave,pendingService;readonly CalibrationPanel calibration;
+   Button openInstallation,reloadConfiguration,cancelSave;bool busy,closed,needsReload,closing,closingReady,switching;CancellationTokenSource cancellation;Task pendingSave,pendingService;readonly CalibrationPanel calibration;
    readonly TextBlock livePose=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(2,4,2,8)};
    readonly TextBlock healthStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};readonly HealthReader healthReader=new HealthReader();
    DateTime healthSnapshotUtc=DateTime.MinValue;bool healthAvailable;string currentPolicy="unknown",healthPublisher;object healthRevision;double poseTimeoutMs=500;
@@ -50,10 +50,12 @@ namespace MonakaBridge {
    byte[] configBytes;Dictionary<string,object> config;ArrayList map;ArrayList observations=new ArrayList();readonly DispatcherTimer timer=new DispatcherTimer();
    public ControlWindow(string root):this(GuiLaunchOptions.FromRoot(root)){}
    public ControlWindow(GuiLaunchOptions target){options=target;Title="Monaka Bridge";Icon=BridgeIcons.WindowIcon();Width=900;Height=820;
-    var panel=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=panel};
-    panel.Children.Add(new TextBlock{Text=BridgeText.T(options.Language=="ja"?"Language: Japanese":"Language: English"),FontSize=16});
+    var primary=new StackPanel{Margin=new Thickness(16)};Content=new ScrollViewer{Content=primary};
+    primary.Children.Add(new TextBlock{Text=BridgeText.T(options.Language=="ja"?"Language: Japanese":"Language: English"),FontSize=16});
+    calibration=new CalibrationPanel(options,delegate{return !busy&&!closing&&!switching&&!needsReload&&config!=null;},CalibrationOwnershipChanged);primary.Children.Add(calibration);primary.Children.Add(status);
+    var panel=new StackPanel();primary.Children.Add(new Expander{Header=BridgeText.T("Advanced settings"),IsExpanded=false,Content=panel,Margin=new Thickness(0,18,0,0)});
     panel.Children.Add(new TextBlock{Text=BridgeText.T("Language is selected in the native tray while this window is closed."),TextWrapping=TextWrapping.Wrap});
-    openInstallation=Add(panel,"Open installation profile...",OpenInstallation);createCalibration=Add(panel,"Create calibration profile (Save As)...",CreateCalibrationProfile);panel.Children.Add(accessStatus);
+    openInstallation=Add(panel,"Open installation profile...",OpenInstallation);panel.Children.Add(accessStatus);
     panel.Children.Add(new TextBlock{Text=BridgeText.T("Sources and devices"),FontSize=20});panel.Children.Add(healthStatus);panel.Children.Add(devices);panel.Children.Add(livePose);
     devices.SelectionChanged+=delegate{UpdateLivePose();};
     InitializeDiscovery(panel);
@@ -73,7 +75,7 @@ namespace MonakaBridge {
     foreach(string operation in new[]{"Start","Stop","Restart"}){string selected=operation;serviceControls.Add(Add(panel,operation+" Bridge",delegate{ControlService(selected);}));}
     editControls.AddRange(new Control[]{source,device,tracker,space,revision,world,profile,x,y,z,approved,routes});
     cancelSave=Add(panel,"Cancel pending save",delegate{if(cancellation!=null)cancellation.Cancel();status.Text=BridgeText.T("Cancellation requested. A native commit already started may finish; wait for its result.");});
-    calibration=new CalibrationPanel(options,delegate{return !busy&&!closing&&!switching&&!needsReload&&config!=null;},delegate(bool active,bool mayCommit){if(!active&&mayCommit)needsReload=true;RefreshAvailability();});panel.Children.Add(calibration);panel.Children.Add(status);RefreshAvailability();timer.Interval=TimeSpan.FromSeconds(1);timer.Tick+=delegate{Health();};timer.Start();Closing+=CloseSafely;Closed+=delegate{closed=true;calibration.Dispose();if(cancellation!=null)cancellation.Cancel();timer.Stop();healthReader.Dispose();};Loaded+=delegate{Safe(Reload);};
+    RefreshAvailability();timer.Interval=TimeSpan.FromSeconds(1);timer.Tick+=delegate{Health();};timer.Start();Closing+=CloseSafely;Closed+=delegate{closed=true;calibration.Dispose();if(cancellation!=null)cancellation.Cancel();timer.Stop();healthReader.Dispose();};Loaded+=delegate{Safe(Reload);};
    }
    async void ControlService(string operation){
     bool entered=false;
@@ -97,14 +99,14 @@ namespace MonakaBridge {
     if(config!=null&&MessageBox.Show(this,BridgeText.T("Discard unsaved form edits and open the selected installation? The owned calibration worker will be closed first."),"Monaka Bridge",MessageBoxButton.OKCancel)!=MessageBoxResult.OK)return;
     SwitchInstallation(next);
    }
-   void CreateCalibrationProfile(){
-    if(busy||closing||switching||calibration.Active||needsReload)throw new InvalidOperationException("Close calibration and reload/review first");
-    if(config==null||map==null||editor.SelectedIndex<0||editor.SelectedIndex>=map.Count)throw new InvalidOperationException("Select an existing persisted mapping first");
-    var dialog=new CalibrationProfileDialog(options,config,(Dictionary<string,object>)map[editor.SelectedIndex]){Owner=this};
-    if(dialog.ShowDialog()!=true)return;
-    // Explicit Save As followed by explicit selection; the legacy profile is
-    // untouched and no new profile is auto-selected on later startup.
-    SwitchInstallation(GuiLaunchOptions.Parse(new[]{"--installation",dialog.Created.ProfilePath,"--profile-sha256",dialog.Created.ProfileSha256},null));
+   void CalibrationOwnershipChanged(bool active,bool mayCommit){
+    if(!active&&mayCommit){
+     needsReload=true;var snapshot=calibration.Snapshot();
+     if(!closing&&!switching&&snapshot!=null&&snapshot.ActualOutcome!=null&&snapshot.ActualOutcome.StartsWith("SAVED",StringComparison.Ordinal)){
+      try{Reload();}catch(Exception e){needsReload=true;status.Text=BridgeText.T("Calibration saved; configuration reload failed: ")+e.Message;}
+     }
+    }
+    RefreshAvailability();
    }
    async void SwitchInstallation(GuiLaunchOptions next){
     if(switching||closing)return;switching=true;RefreshAvailability();
@@ -122,7 +124,7 @@ namespace MonakaBridge {
     foreach(Control control in editControls){control.IsEnabled=reason==null;control.ToolTip=BridgeText.T(reason);}
     approved.IsEnabled=false;
     foreach(Button button in serviceControls){button.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&options.ServiceBlockReason()==null;button.ToolTip=BridgeText.T(options.ServiceBlockReason());}
-    cancelSave.IsEnabled=busy&&!closing;openInstallation.IsEnabled=!busy&&!closing&&!switching;createCalibration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active&&!needsReload;reloadConfiguration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active;
+    cancelSave.IsEnabled=busy&&!closing;openInstallation.IsEnabled=!busy&&!closing&&!switching;reloadConfiguration.IsEnabled=!busy&&!closing&&!switching&&!calibration.Active;
     Title="Monaka Bridge | "+options.InstallationName+(options.ReadOnly?" | READ ONLY":"");
     accessStatus.Text=BridgeText.T("Installation: ")+options.InstallationName+"\nConfig: "+options.ConfigFile+"\nHealth: "+options.HealthFile+"\nHelper: "+options.ConfigHelper+"\n"+(reason??"Writable; compatible transaction helper. Native commit checks directory permission, lock and exact snapshot.")+"\n"+options.ServiceBlockReason();
     RefreshDiscovery();
@@ -133,7 +135,7 @@ namespace MonakaBridge {
    void Reload(Tuple<string,string> restoreKey){
     if(calibration.Active)throw new InvalidOperationException("Close calibration before loading another config snapshot");needsReload=true;RefreshAvailability();if(!File.Exists(options.ConfigFile)||new FileInfo(options.ConfigFile).Length>2*1024*1024)throw new InvalidOperationException("Configuration unavailable or exceeds size bound: "+options.ConfigFile);
     var loadedBytes=File.ReadAllBytes(options.ConfigFile);var persisted=MappingEditor.WithDefaults(new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(Encoding.UTF8.GetString(loadedBytes).TrimStart('\uFEFF')));var nextMap=new ArrayList((ICollection)persisted["mappings"]);
-    configBytes=loadedBytes;config=persisted;map=nextMap;DiscoveryConfigurationLoaded();needsReload=false;RefreshAvailability();
+    configBytes=loadedBytes;config=persisted;map=nextMap;DiscoveryConfigurationLoaded();needsReload=false;calibration.SetConfiguration(config);RefreshAvailability();
     status.Text=BridgeText.T("Loaded revision ")+config["mapping_revision"]+"; defined axes and fresh components are required. Calibration quality is diagnostic.";
     editor.Programmatic(delegate{
      mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);

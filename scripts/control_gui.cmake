@@ -5,7 +5,7 @@ set(MB_CONTROL_SOURCES
  ui/discovery_models.cs ui/discovery_panel.cs ui/discovery_window.cs
  ui/calibration_json.cs ui/calibration_profile.cs ui/calibration_models.cs
  ui/calibration_owned_process.cs ui/calibration_pipe_frames.cs
- ui/calibration_process_client.cs ui/calibration_panel.cs ui/calibration_profile_dialog.cs)
+ ui/calibration_process_client.cs ui/calibration_workflow.cs ui/calibration_panel.cs ui/calibration_profile_dialog.cs)
 list(TRANSFORM MB_CONTROL_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
 set(MB_CONTROL_NATIVE_SOURCES)
 foreach(source IN LISTS MB_CONTROL_SOURCES)
@@ -36,7 +36,7 @@ if(BUILD_TESTING)
  set_tests_properties(active_config_guard PROPERTIES TIMEOUT 60)
 endif()
 if(BUILD_TESTING AND TARGET calibration_runtime_process_fixture)
- foreach(group json profile models job launch client wpf b4)
+ foreach(group json profile models job launch client workflow wpf b4)
   add_test(NAME calibration_gui_${group} COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_calibration_managed.py"
    --group "${group}" --root "${CMAKE_CURRENT_SOURCE_DIR}" --out "${CMAKE_CURRENT_BINARY_DIR}/managed-${group}"
    --compiler "${MB_CSC}" --references "${MB_NET48_REFERENCES}"

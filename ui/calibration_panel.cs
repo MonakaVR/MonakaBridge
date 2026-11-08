@@ -1,80 +1,104 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Collections;
-using System.IO;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Threading;
 using System.Windows.Automation;
+using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace MonakaBridge {
- // Native owns capture, solver, result and transaction. The view only sends
- // control requests and displays verbatim evidence from its one owned worker.
+ // Native owns capture, solving and the atomic World transaction.
  internal sealed class CalibrationPanel:StackPanel,IDisposable {
-  GuiLaunchOptions target;CalibrationProcessClient client;
+  sealed class TrackerChoice {
+   internal Dictionary<string,object> Mapping;internal string Source,Device;
+   public override string ToString(){return Convert.ToString(Mapping["tracker_id"])+" | "+Source+" / "+Device;}
+  }
+  GuiLaunchOptions target;Dictionary<string,object> configuration;
+  CalibrationWorkflow workflow=new CalibrationWorkflow();readonly object dispatchGate=new object();
   readonly Func<bool> hostAvailable;readonly Action<bool,bool> ownership;
-  readonly TextBlock state=new TextBlock{TextWrapping=TextWrapping.Wrap};
-  readonly TextBox evidence=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,Height=230,FontFamily=new FontFamily("Consolas")};
-  readonly TextBox preview=new TextBox{IsReadOnly=true,TextWrapping=TextWrapping.NoWrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,Height=180,FontFamily=new FontFamily("Consolas")};
-  readonly Button open,discover,confirm,begin,prepare,save,cancel,fresh;
-   readonly Button capturePoint;
-   readonly ComboBox mode=new ComboBox{ItemsSource=new[]{BridgeText.T("Trajectory"),BridgeText.T("Static")},SelectedIndex=0,MinWidth=160};
-   readonly TextBox points=new TextBox{Text="3",Width=70},pairs=new TextBox{Text="60",Width=70};
-
-
-  readonly CheckBox reviewed=new CheckBox{Content=BridgeText.T("I reviewed this exact native candidate and its SHA-256")};
+  readonly ComboBox reference=new ComboBox{ItemsSource=new[]{BridgeText.T("Left controller"),BridgeText.T("Right controller"),BridgeText.T("HMD")},SelectedIndex=0};
+  readonly ComboBox tracker=new ComboBox();
+  readonly ComboBox method=new ComboBox{ItemsSource=new[]{BridgeText.T("Figure-eight")},SelectedIndex=0};
+  readonly Button start,cancel;
+  readonly TextBlock instructions=new TextBlock{TextWrapping=TextWrapping.Wrap};
+  readonly TextBlock state=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,0)};
+  readonly ProgressBar progress=new ProgressBar{Height=8,Margin=new Thickness(0,8,0,3)};
   readonly DispatcherTimer timer=new DispatcherTimer();
-  bool pending,disposed,reportedActive;int generation;string shownResult,shownCandidate,detail;
-  internal CalibrationPanel(GuiLaunchOptions selected,Func<bool> available,Action<bool,bool> owned) {
+  bool pending,stopping,disposed,reportedActive;volatile bool workflowStarted;int generation;string detail;Task running;
+  internal CalibrationPanel(GuiLaunchOptions selected,Func<bool> available,Action<bool,bool> owned){
    target=selected;hostAvailable=available;ownership=owned;
-    Children.Add(new TextBlock{Text=BridgeText.T("World calibration"),FontSize=20,Margin=new Thickness(0,18,0,3)});
-    Children.Add(new TextBlock{Text=BridgeText.T("Open is resource-free. Discover explicitly starts OpenVR Background and the selected loopback mirror. Choose measurement mode before Open. Static captures paired fresh points; it does not verify physical stillness or accuracy. Review and save the measured World to use it. Existing Mount is retained; physical quality is diagnostic."),TextWrapping=TextWrapping.Wrap});
-    Children.Add(new Label{Content=BridgeText.T("_Measurement mode"),Target=mode});Children.Add(mode);Children.Add(new Label{Content=BridgeText.T("Static _points (3..16)"),Target=points});Children.Add(points);Children.Add(new Label{Content=BridgeText.T("Fresh _pairs per point (1..4096; total <=16384)"),Target=pairs});Children.Add(pairs);
-    AutomationProperties.SetName(mode,"Measurement mode");AutomationProperties.SetName(points,"Static point count");AutomationProperties.SetName(pairs,"Fresh pairs per static point");AutomationProperties.SetName(state,"Calibration status and refusal reason");AutomationProperties.SetName(evidence,"Native witness and measurement result");AutomationProperties.SetName(preview,"Exact native candidate config and SHA-256");AutomationProperties.SetName(reviewed,"Confirm review of this exact candidate");
+   Children.Add(new TextBlock{Text=BridgeText.T("Calibration"),FontSize=22,Margin=new Thickness(0,8,0,4)});
+   Children.Add(instructions);
+   Field("Reference",reference);Field("Tracker",tracker);Field("Method",method);
    var actions=new WrapPanel();Children.Add(actions);
-   open=Button(actions,"Open session",delegate{return Open();});
-   discover=Button(actions,"Discover target",delegate{return Command(delegate{return client.DiscoverAsync();});});
-   confirm=Button(actions,"Confirm displayed witness",delegate{return Command(delegate{return client.ConfirmAsync();});});
-   begin=Button(actions,"Begin trajectory",delegate{return Command(delegate{return client.BeginAsync();});});
-    capturePoint=Button(actions,"_Capture static point",delegate{return Command(delegate{return client.CapturePointAsync();});});
-   prepare=Button(actions,"Prepare same result",Prepare);
-   save=Button(actions,"Save exact candidate",delegate{if(reviewed.IsChecked!=true)throw new InvalidOperationException("Review the exact candidate first");return Command(delegate{return client.CommitAsync();});});
-   cancel=Button(actions,"Cancel / close",StopAsync,true);
-   fresh=Button(actions,"New measurement",NewMeasurement);
-   Children.Add(state);Children.Add(evidence);Children.Add(new TextBlock{Text=BridgeText.T("Candidate config preview (bounded). Native commit rechecks exact bytes, identity, witness, lock and original config snapshot."),TextWrapping=TextWrapping.Wrap});Children.Add(preview);Children.Add(reviewed);
-   reviewed.Checked+=delegate{Refresh();};reviewed.Unchecked+=delegate{Refresh();};
+   start=new Button{Content=BridgeText.T("Start"),MinWidth=100,MinHeight=32,Margin=new Thickness(0,8,6,3)};
+   cancel=new Button{Content=BridgeText.T("Cancel"),MinWidth=100,MinHeight=32,Margin=new Thickness(0,8,0,3)};
+   actions.Children.Add(start);actions.Children.Add(cancel);Children.Add(progress);Children.Add(state);
+   AutomationProperties.SetName(reference,BridgeText.T("Calibration reference"));AutomationProperties.SetName(tracker,BridgeText.T("Calibration tracker"));AutomationProperties.SetName(method,BridgeText.T("Calibration method"));
+   AutomationProperties.SetName(start,BridgeText.T("Start calibration"));AutomationProperties.SetName(cancel,BridgeText.T("Cancel calibration"));AutomationProperties.SetName(state,BridgeText.T("Calibration progress and result"));AutomationProperties.SetName(progress,BridgeText.T("Calibration progress"));
+   start.Click+=async delegate{if(Active||disposed)return;running=StartAsync();await running;};
+   cancel.Click+=async delegate{try{await StopAsync();}catch(Exception e){detail=BridgeText.Diagnostic(e.GetBaseException().Message);Refresh();}};
+   tracker.SelectionChanged+=delegate{Refresh();};reference.SelectionChanged+=delegate{Refresh();};
    timer.Interval=TimeSpan.FromMilliseconds(200);timer.Tick+=delegate{Refresh();};timer.Start();Refresh();
   }
-  Button Button(Panel panel,string text,Func<Task> operation,bool independent=false) {
-   var button=new Button{Content=BridgeText.T(text),MinHeight=28,Margin=new Thickness(3),Padding=new Thickness(8,2,8,2)};
-   button.Click+=async delegate{if(disposed||(!independent&&pending))return;int token=generation;if(!independent)pending=true;
-    try{await operation();}catch(Exception e){if(!disposed&&token==generation)detail=BridgeText.Diagnostic(e.GetBaseException().Message);}
-    finally{if(!disposed&&token==generation){if(!independent)pending=false;Refresh();}}
-    };AutomationProperties.SetName(button,BridgeText.T(text).Replace("_",""));panel.Children.Add(button);return button;
+  void Field(string title,Control control){Children.Add(new Label{Content=BridgeText.T(title),Target=control,Padding=new Thickness(0,5,0,2)});Children.Add(control);}
+  internal bool Active {get{return pending||workflow.Active;}}
+  internal CalibrationClientSnapshot Snapshot(){return workflowStarted?workflow.Snapshot():new CalibrationClientSnapshot{Phase="NEW",Stopped=!pending,Fault=detail};}
+  internal void SetConfiguration(Dictionary<string,object> config){
+   if(Active)throw new InvalidOperationException("Finish calibration before loading configuration");
+   var previous=tracker.SelectedItem as TrackerChoice;configuration=config;tracker.Items.Clear();
+   if(config!=null){object rows;if(config.TryGetValue("mappings",out rows)&&rows is IEnumerable)foreach(Dictionary<string,object> mapping in (IEnumerable)rows){
+    var choice=new TrackerChoice{Mapping=mapping,Source=Convert.ToString(mapping["source_id"]),Device=Convert.ToString(mapping["device_id"])};tracker.Items.Add(choice);
+    if(previous!=null&&choice.Source==previous.Source&&choice.Device==previous.Device)tracker.SelectedItem=choice;
+   }}
+   if(tracker.SelectedIndex<0&&tracker.Items.Count>0)tracker.SelectedIndex=0;Refresh();
   }
-  internal bool Active {get{return client!=null&&!client.Snapshot().Stopped;}}
-   internal void SetTarget(GuiLaunchOptions selected){if(Active)throw new InvalidOperationException("Owned calibration shutdown must finish before changing target");if(client!=null)client.Dispose();client=null;target=selected;generation++;pending=false;detail=null;shownResult=shownCandidate=null;evidence.Text=preview.Text="";reviewed.IsChecked=false;Refresh();}
-   async Task Open(){if(!hostAvailable())throw new InvalidOperationException("Reload/review configuration and finish the current save first");if(target.Calibration==null)throw new InvalidOperationException("Create or explicitly open a v2 calibration installation profile first");if(client!=null)throw new InvalidOperationException("Use New measurement after the previous worker has stopped");var next=new CalibrationProcessClient(target.Calibration,target.ReadOnly);if(mode.SelectedIndex==1){int count,samples;if(!Int32.TryParse(points.Text,out count)||!Int32.TryParse(pairs.Text,out samples))throw new InvalidOperationException("Enter whole static point/pair counts");next.SelectStatic(count,samples);}client=next;ReportOwnership();await Command(delegate{return client.OpenAsync();});}
-  async Task Command(Func<Task<Dictionary<string,object>>> command){int token=generation;var value=await command();if(disposed||token!=generation)return;detail=CalibrationJson.Utf8.GetString(CalibrationJson.Encode(value,CalibrationContract.LineBytes));if(value.ContainsKey("witness"))evidence.Text=detail;}
-   async Task Prepare(){await Command(delegate{return client.PrepareAsync();});await ShowPrepared();}
-   async Task ShowPrepared(){int token=generation;reviewed.IsChecked=false;preview.Text="";var candidate=client.Snapshot().Prepared;if(candidate==null)throw new InvalidOperationException("Native prepared candidate unavailable");string text=await Task.Run(delegate{bool truncated;return candidate.ReadPreview(out truncated);});if(disposed||token!=generation)return;if(client.Snapshot().Prepared!=candidate)throw new InvalidOperationException("Native review expired during preview");shownCandidate=candidate.CandidateSha256;preview.Text="WORLD ALIGNMENT SAVE\n"+"SHA-256: "+candidate.CandidateSha256+"\nBytes: "+candidate.CandidateBytes+"\nPath: "+candidate.CandidatePath+"\n"+text;}
-  async Task NewMeasurement(){await StopAsync();if(!hostAvailable())throw new InvalidOperationException("Reload/review saved or unknown configuration before a new measurement");SetTarget(target);}
-  internal async Task StopAsync(){var owned=client;if(owned==null)return;try{await owned.CancelAsync();if(!owned.Snapshot().Stopped)throw new InvalidOperationException("Owned worker shutdown is unconfirmed; a new worker cannot start");}finally{if(!disposed){ReportOwnership();Refresh();}}}
-  void ReportOwnership(){bool active=Active;if(active!=reportedActive){reportedActive=active;ownership(active,client!=null&&client.Snapshot().CommitMayHaveStarted);}}
-  void Refresh(){if(disposed)return;ReportOwnership();var s=client==null?null:client.Snapshot();bool ready=!pending&&!disposed;
-    mode.IsEnabled=points.IsEnabled=pairs.IsEnabled=client==null&&!pending;
-    open.IsEnabled=ready&&client==null&&target.Calibration!=null&&hostAvailable();discover.IsEnabled=ready&&s!=null&&!s.Stopping&&s.Phase=="OPEN";confirm.IsEnabled=ready&&s!=null&&!s.Stopping&&s.Phase=="DISCOVERED";begin.IsEnabled=ready&&s!=null&&!s.Stopping&&s.Phase=="CONFIRMED";begin.Content=BridgeText.T(mode.SelectedIndex==1?"Begin static plan":"Begin trajectory");
-    capturePoint.IsEnabled=ready&&s!=null&&!s.Stopping&&s.Phase=="WAITING_POINT"&&s.PointToken!=null;
-    prepare.IsEnabled=ready&&s!=null&&s.CanPrepare;save.IsEnabled=ready&&s!=null&&s.CanCommit&&!s.Prepared.OutputApproval&&shownCandidate==s.Prepared.CandidateSha256&&reviewed.IsChecked==true;
-   cancel.IsEnabled=s!=null&&!s.Stopped;fresh.IsEnabled=ready&&s!=null&&s.Stopped;
-   if(s!=null&&s.Prepared==null&&shownCandidate!=null){shownCandidate=null;reviewed.IsChecked=false;}
-    if(s!=null&&s.Result!=null){shownResult=s.Result.ResultId;string resultStage=s.ActualOutcome=="UNKNOWN"?"UNKNOWN":s.ActualOutcome!=null&&s.ActualOutcome.StartsWith("SAVED",StringComparison.Ordinal)?s.ActualOutcome:s.Prepared!=null?"PREPARED (NOT SAVED)":"MEASURED (NOT SAVED)";evidence.Text=resultStage+". W: measured world alignment. "+(s.Result.Static?"Static E and orientation residual: NOT ESTIMATED / NOT APPLICABLE.":"E: holding extrinsic, NOT mount.")+" M: existing mount, unchanged.\nSaving changes only the measured World group. An identical transform preserves the revision. Runtime application and downstream output remain unconfirmed.\n"+s.Result.NativeJson;}
-   string phase=s==null?BridgeText.T("No native worker"):s.Phase+(s.Stopped?" | owned worker stopped":"")+(s.ActualOutcome==null?"":" | actual native outcome: "+s.ActualOutcome);
-    state.Text=(target.Calibration==null?"v2 profile required. Use Create calibration profile (Save As).\n":"Profile: "+target.Calibration.ProfilePath+"\nSnapshot SHA-256: "+target.Calibration.ProfileSha256+"\n")+phase+(target.ReadOnly?" | READ ONLY (measurement allowed)":"")+"\n"+(s==null?"":s.Fault??"")+"\n"+(s!=null&&s.PointToken!=null?s.PointInstruction:"")+"\n"+(detail??"")+"\n"+(s==null?"":s.Progress??"");
-   if(s!=null){string[] notices=client.DrainNotifications();if(notices.Length!=0)detail=notices[notices.Length-1];}
+  internal void SetTarget(GuiLaunchOptions selected){
+   if(Active)throw new InvalidOperationException("Owned calibration shutdown must finish before changing target");
+   target=selected;configuration=null;tracker.Items.Clear();workflow.Dispose();workflow=new CalibrationWorkflow();generation++;detail=null;stopping=false;workflowStarted=false;Refresh();
   }
-  public void Dispose(){if(disposed)return;if(Active)throw new InvalidOperationException("Wait for owned worker shutdown before disposing calibration view");disposed=true;generation++;timer.Stop();if(client!=null)client.Dispose();}
+  async Task StartAsync(){
+   if(!hostAvailable()||configuration==null||tracker.SelectedItem==null)return;
+   var selected=target;var config=configuration;var mapping=((TrackerChoice)tracker.SelectedItem).Mapping;
+   string role=reference.SelectedIndex==0?"left":reference.SelectedIndex==1?"right":"hmd";int token=generation;
+   pending=true;stopping=false;detail=null;workflowStarted=false;Refresh();
+   try{
+    await Task.Run(async delegate{
+     var installation=CalibrationInstallation.ForSelection(selected,config,mapping,role);
+     Task operation;lock(dispatchGate){if(disposed||token!=generation||stopping)return;operation=workflow.StartAsync(installation,selected.ReadOnly);workflowStarted=true;}
+     await operation.ConfigureAwait(false);
+    });
+   }catch(Exception e){if(!disposed&&token==generation)detail=BridgeText.Diagnostic(e.GetBaseException().Message);}
+   finally{if(!disposed&&token==generation){pending=false;Refresh();}}
+  }
+  internal async Task StopAsync(){
+   Task stop;lock(dispatchGate){stopping=true;stop=workflow.StopAsync();}await stop;var work=running;if(work!=null)await work;
+   if(Active)throw new InvalidOperationException("Owned calibration shutdown is unconfirmed");if(!disposed)Refresh();
+  }
+  void Refresh(){
+   if(disposed)return;var s=Snapshot();bool active=Active;
+   reference.IsEnabled=tracker.IsEnabled=method.IsEnabled=!active;
+   start.IsEnabled=!active&&configuration!=null&&tracker.SelectedItem!=null&&hostAvailable();cancel.IsEnabled=active&&!stopping;
+   progress.IsIndeterminate=active;progress.Value=!active&&s!=null&&s.ActualOutcome!=null&&s.ActualOutcome.StartsWith("SAVED",StringComparison.Ordinal)?100:0;
+   instructions.Text=BridgeText.T(target.ReadOnly?"Select a reference and tracker, then Start. Hold them rigidly together and move in a figure-eight. Read-only measurement will not save configuration.":"Select a reference and tracker, then Start. Hold them rigidly together and move in a figure-eight until calibration finishes and saves automatically.");
+   string message;
+   if(active)message=stopping?"Cancelling calibration…":s!=null&&(s.Phase=="RECORDING"||s.Phase=="SOLVING")?"Move the reference and tracker rigidly together in a figure-eight…":"Starting calibration…";
+   else if(s!=null&&s.ActualOutcome=="UNKNOWN")message="Save outcome unknown. Reload configuration before starting again.";
+   else if(s!=null&&s.ActualOutcome=="SAVED_CONFIG_EVIDENCE_STALE")message="Done — calibration saved. Configuration evidence is stale; runtime application is unconfirmed.";
+   else if(s!=null&&s.ActualOutcome=="SAVED")message="Done — calibration saved. Runtime application is unconfirmed.";
+   else if(s!=null&&s.ActualOutcome=="MEASURED_READ_ONLY")message="Measurement complete (read-only, not saved).";
+   else if(s!=null&&(s.Phase=="CANCELLED"||s.ActualOutcome=="CANCELLED")||stopping)message="Calibration cancelled.";
+   else if(detail!=null||s!=null&&s.Fault!=null)message=BridgeText.T("Calibration did not finish. ")+(detail??s.Fault);
+   else if(target.ReadOnly)message="Read-only installation. Measurement is available; configuration will not be saved.";
+   else if(tracker.Items.Count==0)message="No persisted tracker mappings. Add a tracker in Advanced settings first.";
+   else message="Ready. Select the reference and tracker, then Start.";
+   state.Text=BridgeText.T(message);
+   if(!active&&s!=null&&s.ActualOutcome!=null&&(s.ActualOutcome.StartsWith("SAVED",StringComparison.Ordinal)||s.ActualOutcome=="MEASURED_READ_ONLY")&&s.Fault!=null)state.Text+="\n"+BridgeText.Diagnostic(s.Fault);
+   if(active&&s!=null&&!String.IsNullOrEmpty(s.Progress))state.Text+="\n"+BridgeText.T("Measurement in progress");
+   // The host may reload synchronously after this callback. Keep the done state.
+   if(active!=reportedActive){reportedActive=active;ownership(active,s!=null&&s.CommitMayHaveStarted);}
+  }
+  public void Dispose(){if(disposed)return;if(Active)throw new InvalidOperationException("Wait for owned worker shutdown before disposing calibration view");disposed=true;generation++;timer.Stop();workflow.Dispose();}
  }
 }

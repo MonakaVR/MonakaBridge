@@ -2,11 +2,11 @@
 from pathlib import Path
 import argparse,json,subprocess,tempfile,time,hashlib,sys
 sys.stdout.reconfigure(encoding="utf-8",errors="replace");sys.stderr.reconfigure(encoding="utf-8",errors="replace")
-p=argparse.ArgumentParser();p.add_argument('--group',required=True,choices=['json','profile','models','job','launch','client','wpf','b4'])
+p=argparse.ArgumentParser();p.add_argument('--group',required=True,choices=['json','profile','models','job','launch','client','workflow','wpf','b4'])
 for name in ['root','out','compiler','references','native','config']:p.add_argument('--'+name,required=True)
 a=p.parse_args();root=Path(a.root).resolve();out=Path(a.out).resolve();out.mkdir(parents=True,exist_ok=True)
 base=['ui/control_models.cs','ui/installation_control.cs','ui/calibration_json.cs','ui/calibration_profile.cs']
-process=base+['ui/calibration_models.cs','ui/calibration_owned_process.cs','ui/calibration_pipe_frames.cs','ui/calibration_process_client.cs']
+process=base+['ui/calibration_models.cs','ui/calibration_owned_process.cs','ui/calibration_pipe_frames.cs','ui/calibration_process_client.cs','ui/calibration_workflow.cs']
 wpf=process+['ui/steamvr_control_gui_main.cs','ui/steamvr_control_wpf.cs','ui/steamvr_control_tray.cs','ui/calibration_panel.cs','ui/calibration_profile_dialog.cs','ui/discovery_models.cs','ui/discovery_panel.cs','ui/discovery_window.cs']
 wpf+=['ui/bridge_icons.cs','ui/service_lifecycle_control.cs']
 refs=['System.dll','System.Core.dll','System.Web.Extensions.dll'];records=[]
@@ -32,6 +32,8 @@ elif a.group=='launch':
  fixture=build('launch-fixture','CalibrationLaunchFixture',process+['tests/calibration_launch_tests.cs']);exe=build('launch-tests','CalibrationLaunchTests',process+['tests/calibration_launch_tests.cs']);run([exe,fixture,short],a.group)
 elif a.group=='client':
  fault=build('protocol-fault.fixture','CalibrationProtocolFaultFixture',['tests/calibration_protocol_fault_fixture.cs']);exe=build('client-tests','CalibrationClientProcessTests',process+['tests/calibration_client_process_tests.cs']);run([exe,a.native,fault,short],a.group)
+elif a.group=='workflow':
+ exe=build('workflow-tests','CalibrationWorkflowTests',process+['tests/calibration_workflow_tests.cs']);run([exe,a.native,a.config,short],a.group)
 elif a.group=='b4':
  exe=build('unshown-b4-tests','CalibrationB4GuiTests',wpf+['tests/calibration_wpf_tests.cs','tests/calibration_b4_gui_tests.cs'],True);run([exe,a.native,a.config,short],a.group)
 else:

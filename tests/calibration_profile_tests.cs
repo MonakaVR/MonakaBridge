@@ -7,7 +7,7 @@ using MonakaBridge;
 class CalibrationProfileTests {
  static int cases;static string directory,path,config,native,helper;static byte[] original;
  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CreateHardLink(string link,string target,IntPtr attributes);
- static void Check(bool ok){if(!ok)throw new Exception("profile assertion");}
+ static void Check(bool ok){if(!ok)throw new Exception("profile assertion after "+cases+" cases; Win32="+Marshal.GetLastWin32Error());}
  static void Reject(Action action){try{action();}catch(Exception e){if(!(e is InvalidOperationException)&&!(e is ArgumentException)&&!(e is IOException))throw;cases++;return;}throw new Exception("Expected profile rejection");}
  static Dictionary<string,object> Document(){return new Dictionary<string,object>{
   {"schema",CalibrationInstallation.Schema},{"name","profile 測定"},{"config","config 測定.json"},{"health","health.json"},{"config_helper","config-helper.fixture"},

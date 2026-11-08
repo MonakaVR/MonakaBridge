@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,6 +12,39 @@ namespace MonakaBridge {
  internal static class BridgeText {
   internal static string Language="en";
   static readonly Dictionary<string,string> Japanese=new Dictionary<string,string>(StringComparer.Ordinal){
+   {"Done — calibration saved. Configuration evidence is stale; runtime application is unconfirmed.","完了 — キャリブレーションを保存しました。設定の証跡が古くなっています。実行中の環境への適用は未確認です。"},
+   {"Calibration","キャリブレーション"},
+   {"Reference","基準デバイス"},
+   {"Tracker","トラッカー"},
+   {"Method","測定方式"},
+   {"Left controller","左コントローラー"},
+   {"Right controller","右コントローラー"},
+   {"HMD","HMD"},
+   {"Figure-eight","8の字"},
+   {"Cancel","キャンセル"},
+   {"Advanced settings","詳細設定"},
+   {"Calibration reference","キャリブレーションの基準デバイス"},
+   {"Calibration tracker","キャリブレーションのトラッカー"},
+   {"Calibration method","キャリブレーションの測定方式"},
+   {"Start calibration","キャリブレーションを開始"},
+   {"Cancel calibration","キャリブレーションをキャンセル"},
+   {"Calibration progress and result","キャリブレーションの進捗と結果"},
+   {"Calibration progress","キャリブレーションの進捗"},
+   {"Select a reference and tracker, then Start. Hold them rigidly together and move in a figure-eight until calibration finishes and saves automatically.","基準デバイスとトラッカーを選んで開始してください。2つの相対位置が動かないように一緒に持ち、8の字に動かすと測定が完了し、自動で保存します。"},
+   {"Select a reference and tracker, then Start. Hold them rigidly together and move in a figure-eight. Read-only measurement will not save configuration.","基準デバイスとトラッカーを選んで開始してください。2つの相対位置が動かないように一緒に持ち、8の字に動かしてください。読み取り専用のため、測定後も設定は保存しません。"},
+   {"Cancelling calibration…","キャリブレーションをキャンセルしています…"},
+   {"Starting calibration…","キャリブレーションを開始しています…"},
+   {"Move the reference and tracker rigidly together in a figure-eight…","基準デバイスとトラッカーを固定して一緒に8の字に動かしてください…"},
+   {"Measurement in progress","測定中です"},
+   {"Save outcome unknown. Reload configuration before starting again.","保存結果を確認できません。設定を再読み込みしてから再開してください。"},
+   {"Done — calibration saved. Runtime application is unconfirmed.","完了 — キャリブレーションを保存しました。実行中の環境への適用は未確認です。"},
+   {"Calibration cancelled.","キャリブレーションをキャンセルしました。"},
+   {"Calibration did not finish. ","キャリブレーションが完了しませんでした。"},
+   {"Measurement complete (read-only, not saved).","測定完了（読み取り専用・未保存）"},
+   {"Read-only installation. Measurement is available; configuration will not be saved.","読み取り専用です。測定できますが、設定は保存しません。"},
+   {"No persisted tracker mappings. Add a tracker in Advanced settings first.","保存済みのトラッカーがありません。先に詳細設定でトラッカーを追加してください。"},
+   {"Ready. Select the reference and tracker, then Start.","準備完了。基準デバイスとトラッカーを選んで開始してください。"},
+   {"Calibration saved; configuration reload failed: ","キャリブレーションは保存しましたが、設定の再読み込みに失敗しました: "},
    {"World calibration","ワールド校正"},
    {"Defined coordinate profile","定義済みの座標変換プロファイル"},
    {"Declared static capabilities / saved contract","デバイスの静的能力宣言／保存済み設定"},
