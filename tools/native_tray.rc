@@ -1,0 +1,3 @@
+#include "native_tray_resources.h"
+IDI_MONAKA_TRAY_BLACK ICON "../ui/assets/monaka-bridge-tray-black.ico"
+IDI_MONAKA_TRAY_WHITE ICON "../ui/assets/monaka-bridge-tray-white.ico"

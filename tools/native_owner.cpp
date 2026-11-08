@@ -2,6 +2,8 @@
 #include "monaka_bridge/service_runtime.hpp"
 #include "monaka_bridge/native_owner_runtime.hpp"
 #include "monaka_bridge/service_lifecycle.hpp"
+#include "monaka_bridge/config_transaction.hpp"
+#include "native_tray_resources.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <bcrypt.h>
@@ -20,6 +22,7 @@ namespace mb { namespace {
 using Handle=pc_service_lifecycle::Handle;
 namespace fs=std::filesystem;
 constexpr UINT OpenMessage=WM_APP+41,ExitMessage=WM_APP+42,TrayMessage=WM_APP+43,CloseMessage=WM_APP+44,StatusMessage=WM_APP+45;
+constexpr UINT OutputMonaka=21,OutputSteamvr=22,OutputDisabled=23;
 void need(bool value,const char* reason){if(!value)throw std::runtime_error(reason);}
 void detachConsole(){
  // Detach only our console. Preserve redirected diagnostic handles before
@@ -79,36 +82,67 @@ class Owner {
  fs::path config_,gui_,helper_,profile_;std::string key_,guiHash_,helperHash_,selfHash_,profileHash_;std::wstring self_,pipeName_;Runtime runtime_;
  Handle mapping_,cancel_,job_,guiProcess_;Identity* view_=nullptr;std::thread pipeWorker_,watchdog_;std::mutex guiLock_;
  std::atomic<ULONGLONG> heartbeat_{0};std::mutex runtimeGate_;
- HWND window_=nullptr;NOTIFYICONDATAW icon_{};UINT taskbar_=0;std::atomic_bool exiting_{false};bool iconAdded_=false,readOnly_=false,japanese_=false;
+ HWND window_=nullptr;NOTIFYICONDATAW icon_{};UINT taskbar_=0;std::atomic_bool exiting_{false};bool iconAdded_=false,readOnly_=false,japanese_=false;HICON trayIcon_=nullptr;int trayResource_=0;
  std::string diagnostic_="Starting";std::mutex diagnosticLock_;
  static LRESULT CALLBACK Window(HWND window,UINT message,WPARAM w,LPARAM l){
   auto owner=reinterpret_cast<Owner*>(GetWindowLongPtrW(window,GWLP_USERDATA));if(message==WM_NCCREATE){owner=static_cast<Owner*>(reinterpret_cast<CREATESTRUCTW*>(l)->lpCreateParams);SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(owner));owner->window_=window;}
   if(!owner)return DefWindowProcW(window,message,w,l);
   owner->heartbeat_=GetTickCount64();
-  if(message==WM_TIMER)return 0;
-  if(message==owner->taskbar_&&owner->taskbar_){owner->addIcon();return 0;}
   try{
+   if(message==WM_TIMER){if(!owner->iconAdded_)owner->addIcon();return 0;}
+   if(message==owner->taskbar_&&owner->taskbar_){owner->iconAdded_=false;owner->addIcon();return 0;}
+   if(message==WM_SETTINGCHANGE||message==WM_THEMECHANGED){owner->addIcon();return 0;}
    if(message==StatusMessage){owner->notifyState();return 0;}
    if(message==OpenMessage){owner->openGui();return 0;}
    if(message==CloseMessage){owner->closeGui();return 0;}
    if(message==ExitMessage||message==WM_CLOSE){owner->exit();return 0;}
    if(message==TrayMessage){if(l==WM_LBUTTONDBLCLK)owner->openGui();else if(l==WM_RBUTTONUP||l==WM_CONTEXTMENU)owner->menu();return 0;}
-   if(message==WM_COMMAND){auto id=LOWORD(w);if(id==4)owner->openGui();else if(id==5)owner->exit();else if(id==11||id==12)owner->selectLanguage(id==12);else if(id>=1&&id<=3)owner->runtimeCommand(static_cast<unsigned char>(id));return 0;}
-  }catch(const std::exception& e){owner->note(std::string("UNCONFIRMED: ")+e.what());}
+   if(message==WM_COMMAND){auto id=LOWORD(w);if(id==4)owner->openGui();else if(id==5)owner->exit();else if(id==11||id==12)owner->selectLanguage(id==12);else if(id==OutputMonaka||id==OutputSteamvr||id==OutputDisabled)owner->selectOutput(id);else if(id>=1&&id<=3)owner->runtimeCommand(static_cast<unsigned char>(id));return 0;}
+  }catch(const std::exception& e){owner->note(std::string("UNCONFIRMED: ")+e.what(),message!=StatusMessage);}
   return DefWindowProcW(window,message,w,l);
  }
  std::string runtimeCommand(unsigned char op,bool internal=false){std::lock_guard<std::mutex> lock(runtimeGate_);try{need(!exiting_,"Native owner exit has started");need(internal||!readOnly_,"Read-only installation: runtime commands refused");auto result=runtime_.command(op);note(result);return result;}catch(const std::exception& e){note(std::string("UNCONFIRMED: ")+e.what());throw;}}
- std::string status(){auto current=runtime_.snapshot();std::lock_guard<std::mutex> lock(diagnosticLock_);return diagnostic_.rfind("UNCONFIRMED",0)==0?current+"; last request: "+diagnostic_:current;}
+ std::string status(){auto current=runtime_.snapshot();std::lock_guard<std::mutex> lock(diagnosticLock_);return diagnostic_.rfind("UNCONFIRMED",0)==0||diagnostic_.rfind("OUTPUT ",0)==0?current+"; last request: "+diagnostic_:current;}
  const wchar_t* label(const wchar_t* english,const wchar_t* japanese){return japanese_?japanese:english;}
- std::wstring displayStatus(){auto current=status();if(!japanese_)return wide(current);const wchar_t* heading=current.rfind("RUNNING",0)==0?L"\u7a3c\u50cd\u4e2d":current.rfind("STOPPED",0)==0?L"\u505c\u6b62\u78ba\u8a8d\u6e08\u307f":L"\u672a\u78ba\u8a8d";return std::wstring(heading)+L" / \u8a3a\u65ad: "+wide(current);}
- void note(const std::string& text){
+ std::wstring displayStatus(){auto current=status();if(!japanese_)return wide(current);const wchar_t* heading=current.rfind("RUNNING",0)==0?L"\u7a3c\u50cd\u4e2d":current.rfind("STOPPED",0)==0?L"\u505c\u6b62\u78ba\u8a8d\u6e08\u307f":L"\u672a\u78ba\u8a8d";auto output=current.find("OUTPUT ");if(output!=std::string::npos){const auto saved=current.substr(output);const auto destination=saved.find("monaka")!=std::string::npos?L"MonakaVR":saved.find("steamvr")!=std::string::npos?L"SteamVR":L"\u7121\u52b9";return std::wstring(heading)+L" / \u51fa\u529b\u5148: "+destination+(saved.rfind("OUTPUT UNCHANGED",0)==0?L"\uff08\u4fdd\u5b58\u6e08\u307f\u3068\u540c\u3058\uff09":L"\uff08\u4fdd\u5b58\u6e08\u307f\uff09")+L" / \u53cd\u6620\u672a\u78ba\u8a8d";}return std::wstring(heading)+L" / \u8a3a\u65ad: "+wide(current);}
+ void note(const std::string& text,bool publish=true){
   {std::lock_guard<std::mutex> lock(diagnosticLock_);diagnostic_=text;std::cout<<nlohmann::json{{"event","native_owner"},{"state",text},{"pid",GetCurrentProcessId()}}.dump()<<std::endl;}
   // IPC/runtime threads publish data only. All NOTIFYICONDATA and shell icon
   // mutation stays on the owning window thread, including failure messages.
-  if(window_)PostMessageW(window_,StatusMessage,0,0);
+  if(window_&&publish)PostMessageW(window_,StatusMessage,0,0);
  }
- void notifyState(){auto text=displayStatus();wcsncpy_s(icon_.szInfo,text.c_str(),_TRUNCATE);wcscpy_s(icon_.szInfoTitle,L"Monaka Bridge");icon_.uFlags=NIF_INFO;Shell_NotifyIconW(NIM_MODIFY,&icon_);}
- void addIcon(){icon_.cbSize=sizeof(icon_);icon_.hWnd=window_;icon_.uID=1;icon_.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;icon_.uCallbackMessage=TrayMessage;icon_.hIcon=LoadIconW(nullptr,MAKEINTRESOURCEW(32512));wcscpy_s(icon_.szTip,L"Monaka Bridge native owner");iconAdded_=Shell_NotifyIconW(NIM_ADD,&icon_)!=FALSE;}
+ void notifyState(){if(!iconAdded_)addIcon();auto text=displayStatus();wcsncpy_s(icon_.szInfo,text.c_str(),_TRUNCATE);wcscpy_s(icon_.szInfoTitle,L"Monaka Bridge");icon_.uFlags=NIF_INFO;if(!Shell_NotifyIconW(NIM_MODIFY,&icon_))iconAdded_=false;}
+ static bool lightTaskbar(){DWORD value=0,size=sizeof(value);return RegGetValueW(HKEY_CURRENT_USER,L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",L"SystemUsesLightTheme",RRF_RT_REG_DWORD,nullptr,&value,&size)==ERROR_SUCCESS&&value!=0;}
+ void addIcon(){
+  const int resource=lightTaskbar()?IDI_MONAKA_TRAY_BLACK:IDI_MONAKA_TRAY_WHITE;
+  HICON replacement=nullptr;if(!trayIcon_||resource!=trayResource_){replacement=static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(resource),IMAGE_ICON,GetSystemMetrics(SM_CXSMICON),GetSystemMetrics(SM_CYSMICON),LR_DEFAULTCOLOR));need(replacement!=nullptr,"Embedded Bridge tray icon unavailable");}
+  icon_.cbSize=sizeof(icon_);icon_.hWnd=window_;icon_.uID=1;icon_.uFlags=NIF_MESSAGE|NIF_ICON|NIF_TIP;icon_.uCallbackMessage=TrayMessage;icon_.hIcon=replacement?replacement:trayIcon_;wcscpy_s(icon_.szTip,L"Monaka Bridge");
+  // Keep the same shell identity and callback format. Explorer may still know
+  // this icon (a duplicate ADD fails), or may have lost it during recreation.
+  bool present=Shell_NotifyIconW(NIM_MODIFY,&icon_)!=FALSE;
+  if(!present)present=Shell_NotifyIconW(NIM_ADD,&icon_)!=FALSE;
+  if(!present)present=Shell_NotifyIconW(NIM_MODIFY,&icon_)!=FALSE;
+  iconAdded_=present;
+  if(replacement){auto previous=trayIcon_;trayIcon_=replacement;trayResource_=resource;if(previous)DestroyIcon(previous);}
+ }
+ void selectOutput(UINT id){
+  need(!exiting_,"Native owner exit has started");need(!readOnly_,"Read-only installation: output changes refused");
+  // Backend allowlist is independent of menu presentation. No Both command.
+  const char* policy=id==OutputMonaka?"monaka":id==OutputSteamvr?"steamvr":id==OutputDisabled?"disabled":nullptr;need(policy!=nullptr,"Unsupported tray output selection");
+  const auto verifyTarget=[&]{
+   need(scope(fs::canonical(config_))==key_,"Native owner configuration path alias refused");
+   Handle file(CreateFileW(config_.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr));BY_HANDLE_FILE_INFORMATION info{};
+   need(file.value!=INVALID_HANDLE_VALUE&&GetFileInformationByHandle(file.value,&info)&&info.nNumberOfLinks==1&&!(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT),"Native owner configuration alias refused");
+   if(!profile_.empty())need(fileHash(profile_)==profileHash_,"Selected installation profile changed; relaunch explicitly");
+  };
+  verifyTarget();auto current=loadConfig(config_);need(scope(current.sourcePath)==key_,"Native owner configuration path alias refused");const auto selected=parsePolicy(policy);const bool unchanged=current.policy==selected;
+  auto candidate=nlohmann::json::parse(current.sourceDocument);
+  if(!unchanged){need(current.revision!=UINT32_MAX,"Mapping revision exhausted; output was not saved");candidate["policy"]=policy;candidate["mapping_revision"]=current.revision+1;}
+  // Save only these two fields, retaining unknown members and omitted optional
+  // fields. CAS also protects a no-op against concurrent external edits.
+  verifyTarget();commitConfigDocument(config_,current.sourceDocument,unchanged?current.sourceDocument:candidate.dump(2)+'\n',[&](const char*){verifyTarget();});
+  note(std::string("OUTPUT ")+(unchanged?"UNCHANGED: ":"SAVED: ")+policy+"; runtime reload unconfirmed");
+ }
  DWORD jobCount(){if(!job_.value)return 0;JOBOBJECT_BASIC_ACCOUNTING_INFORMATION info{};need(QueryInformationJobObject(job_.value,JobObjectBasicAccountingInformation,&info,sizeof(info),nullptr)!=0,"GUI Job ownership unavailable");return info.ActiveProcesses;}
  static BOOL CALLBACK closeWindow(HWND window,LPARAM parameter){DWORD id=0;GetWindowThreadProcessId(window,&id);if(id==static_cast<DWORD>(parameter))PostMessageW(window,WM_CLOSE,0,0);return TRUE;}
  struct Focus {DWORD pid;bool found=false;};
@@ -134,7 +168,20 @@ class Owner {
   if(!AssignProcessToJobObject(job_.value,guiProcess_.value)){need(TerminateProcess(guiProcess_.value,2)&&WaitForSingleObject(guiProcess_.value,5000)==WAIT_OBJECT_0,"Suspended GUI cleanup unconfirmed; retained process handle");releaseGui();throw std::runtime_error("Suspended GUI could not enter owned Job");}
   need(ResumeThread(thread.value)!=static_cast<DWORD>(-1),"Owned GUI resume failed; owner retained");
  }
- void menu(){HMENU menu=CreatePopupMenu();need(menu!=nullptr,"Tray menu unavailable");AppendMenuW(menu,MF_STRING|MF_GRAYED,0,displayStatus().c_str());AppendMenuW(menu,MF_STRING,4,label(L"Open Bridge Control...",L"Bridge \u7ba1\u7406\u753b\u9762\u3092\u958b\u304f..."));UINT permission=MF_STRING|(readOnly_?MF_GRAYED:0);AppendMenuW(menu,permission,1,label(L"Start Bridge",L"Bridge \u3092\u958b\u59cb"));AppendMenuW(menu,permission,2,label(L"Stop Bridge",L"Bridge \u3092\u505c\u6b62"));AppendMenuW(menu,permission,3,label(L"Restart Bridge",L"Bridge \u3092\u518d\u8d77\u52d5"));AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING|(!japanese_?MF_CHECKED:0),11,L"English");AppendMenuW(menu,MF_STRING|(japanese_?MF_CHECKED:0),12,L"\u65e5\u672c\u8a9e");AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING,5,label(L"Exit",L"\u7d42\u4e86"));POINT at{};GetCursorPos(&at);SetForegroundWindow(window_);TrackPopupMenu(menu,TPM_RIGHTBUTTON,at.x,at.y,0,window_,nullptr);DestroyMenu(menu);}
+ void menu(){
+  HMENU menu=CreatePopupMenu();need(menu!=nullptr,"Tray menu unavailable");
+  struct Cleanup{HMENU value;~Cleanup(){DestroyMenu(value);}} cleanup{menu};
+  AppendMenuW(menu,MF_STRING|MF_GRAYED,0,displayStatus().c_str());AppendMenuW(menu,MF_STRING,4,label(L"Open Bridge Control...",L"Bridge \u7ba1\u7406\u753b\u9762\u3092\u958b\u304f..."));UINT permission=MF_STRING|((readOnly_||exiting_)?MF_GRAYED:0);
+  AppendMenuW(menu,permission,1,label(L"Start Bridge",L"Bridge \u3092\u958b\u59cb"));AppendMenuW(menu,permission,2,label(L"Stop Bridge",L"Bridge \u3092\u505c\u6b62"));AppendMenuW(menu,permission,3,label(L"Restart Bridge",L"Bridge \u3092\u518d\u8d77\u52d5"));
+  HMENU outputs=CreatePopupMenu();need(outputs!=nullptr,"Output menu unavailable");
+  if(!AppendMenuW(menu,MF_POPUP,reinterpret_cast<UINT_PTR>(outputs),label(L"Output destination (saved)",L"\u51fa\u529b\u5148\uff08\u4fdd\u5b58\u6e08\u307f\uff09"))){DestroyMenu(outputs);throw std::runtime_error("Output menu unavailable");}
+  bool loaded=false;Policy selected=Policy::Disabled;
+  try{selected=loadConfig(config_).policy;loaded=true;}catch(const std::exception&){AppendMenuW(outputs,MF_STRING|MF_GRAYED,0,label(L"Configuration unavailable; reload/review",L"\u8a2d\u5b9a\u3092\u8aad\u307f\u8fbc\u3081\u307e\u305b\u3093"));}
+  if(loaded&&selected==Policy::Both)AppendMenuW(outputs,MF_STRING|MF_GRAYED,0,label(L"Legacy Both saved; choose one destination",L"\u65e7 Both \u8a2d\u5b9a: \u51fa\u529b\u5148\u3092\u9078\u629e"));
+  const auto output=[&](UINT id,Policy policy,const wchar_t* title){AppendMenuW(outputs,permission|(!loaded?MF_GRAYED:0)|(loaded&&selected==policy?MF_CHECKED:0),id,title);};
+  output(OutputMonaka,Policy::Monaka,L"MonakaVR");output(OutputSteamvr,Policy::Steamvr,L"SteamVR");output(OutputDisabled,Policy::Disabled,label(L"Disabled",L"\u7121\u52b9"));
+  AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING|(!japanese_?MF_CHECKED:0),11,L"English");AppendMenuW(menu,MF_STRING|(japanese_?MF_CHECKED:0),12,L"\u65e5\u672c\u8a9e");AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,MF_STRING,5,label(L"Exit",L"\u7d42\u4e86"));POINT at{};GetCursorPos(&at);SetForegroundWindow(window_);TrackPopupMenu(menu,TPM_RIGHTBUTTON,at.x,at.y,0,window_,nullptr);
+ }
  void exit(){
   if(exiting_.exchange(true))return;
   try{closeGui();heartbeat_=GetTickCount64();{std::lock_guard<std::mutex> lock(runtimeGate_);note(runtime_.command(2));}heartbeat_=GetTickCount64();SetEvent(cancel_.value);PostQuitMessage(0);}
@@ -157,7 +204,7 @@ class Owner {
  }
 public:
  Owner(fs::path config,fs::path gui,fs::path helper,const std::uint16_t (&ports)[4],bool readOnly,fs::path profile,bool japanese):config_(std::move(config)),gui_(std::move(gui)),helper_(std::move(helper)),profile_(std::move(profile)),key_(scope(config_)),guiHash_(fileHash(gui_)),helperHash_(fileHash(helper_)),self_(executable(GetCurrentProcess())),runtime_([this,values=std::array<std::uint16_t,4>{ports[0],ports[1],ports[2],ports[3]}](const auto& stop,const auto& ready){const std::uint16_t copied[4]={values[0],values[1],values[2],values[3]};runService(config_,copied,0,stop,ready);},[this]{if(window_)PostMessageW(window_,StatusMessage,0,0);}),readOnly_(readOnly),japanese_(japanese){if(!profile_.empty())profileHash_=fileHash(profile_);selfHash_=fileHash(self_);auto nonce=uuid();nonce.erase(std::remove(nonce.begin(),nonce.end(),'-'),nonce.end());pipeName_=L"MonakaBridgeOwnerV1_"+wide(nonce);cancel_.value=CreateEventW(nullptr,TRUE,FALSE,nullptr);need(cancel_.value!=nullptr,"Native owner stop event unavailable");}
- ~Owner(){exiting_=true;{std::lock_guard<std::mutex> lock(runtimeGate_);runtime_.finish();}SetEvent(cancel_.value);if(watchdog_.joinable())watchdog_.join();if(pipeWorker_.joinable())pipeWorker_.join();if(iconAdded_)Shell_NotifyIconW(NIM_DELETE,&icon_);if(view_)UnmapViewOfFile(view_);if(window_)DestroyWindow(window_);}
+ ~Owner(){exiting_=true;{std::lock_guard<std::mutex> lock(runtimeGate_);runtime_.finish();}SetEvent(cancel_.value);if(watchdog_.joinable())watchdog_.join();if(pipeWorker_.joinable())pipeWorker_.join();if(iconAdded_)Shell_NotifyIconW(NIM_DELETE,&icon_);if(trayIcon_)DestroyIcon(trayIcon_);if(view_)UnmapViewOfFile(view_);if(window_)DestroyWindow(window_);}
  int run(bool trayOnly){
   WNDCLASSW type{};type.lpfnWndProc=Window;type.hInstance=GetModuleHandleW(nullptr);type.lpszClassName=L"MonakaBridgeNativeOwnerV1";need(RegisterClassW(&type)!=0||GetLastError()==ERROR_CLASS_ALREADY_EXISTS,"Native owner window class unavailable");
   taskbar_=RegisterWindowMessageW(L"TaskbarCreated");need(CreateWindowExW(0,type.lpszClassName,wide(key_).c_str(),WS_OVERLAPPED,0,0,0,0,nullptr,nullptr,type.hInstance,this)!=nullptr,"Native owner window unavailable");addIcon();need(iconAdded_,"Native tray icon unavailable");

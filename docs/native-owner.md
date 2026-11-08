@@ -49,8 +49,28 @@ native owner death closes its Job and owned descendants. Exit waits for the GUI
 and its descendants before stopping the runtime; failure retains ownership and
 reports UNCONFIRMED. No same-name process termination is used.
 
-The native loop refreshes a heartbeat and re-registers its tray icon on
-TaskbarCreated. A fifteen-second loop stall causes the watchdog to terminate only its
+The native tray's Output destination / 出力先 submenu offers MonakaVR, SteamVR,
+and Disabled / 無効. Its checks reflect the currently saved configuration.
+Legacy `both` stays saved until an explicit choice, with a diagnostic and none
+of the three choices checked. Selection uses the normal atomic configuration
+transaction: only `policy` and `mapping_revision` change, all other fields remain
+intact, and a concurrent edit is rejected. Selecting the saved route is a
+CAS-checked no-op, without revision or backup changes. Read-only installations
+refuse changes at both the menu and command boundary. An open management GUI
+stays open; a later save of its stale snapshot is rejected and requires reload.
+The tray reports SAVED/UNCHANGED with runtime reload unconfirmed. The existing
+runtime reloads configuration every 500 ms without restarting; a saved route
+does not by itself establish runtime application or downstream output.
+
+The native executable embeds the existing black/white Bridge tray artwork and
+reads the current Windows taskbar theme preference to select the contrast.
+Shell changes stay on the window thread. Startup, theme/settings changes and
+TaskbarCreated refresh the same HWND/uID identity using modify/add recovery;
+the heartbeat retries if the shell was unavailable. Owned icon handles are
+released when replaced and on exit. This preserves the original tray callback
+format and config-path singleton (the managed tray is not launched).
+
+The native loop refreshes a heartbeat. A fifteen-second loop stall causes the watchdog to terminate only its
 own native process, releasing sockets and its GUI Job. This is a fatal path, not
 a graceful exit confirmation. Explorer restart handling does not restart or
 kill the runtime. The watchdog deadline exceeds bounded GUI-close/runtime-stop

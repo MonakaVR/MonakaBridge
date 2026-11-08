@@ -1,0 +1,3 @@
+#pragma once
+#define IDI_MONAKA_TRAY_BLACK 201
+#define IDI_MONAKA_TRAY_WHITE 202
