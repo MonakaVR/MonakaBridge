@@ -8,10 +8,10 @@ namespace MonakaBridge {
  // Diagnostic claims never authorize tracking. Only an explicitly selected
  // persisted source contract and verified coordinate profile can make a draft.
  internal sealed class DiscoveryObservation {
-  internal string Source,Device,Session,Clock,Space,Convention,Reason;
+  internal string Source,Device,Session,Clock,Space,Convention,Reason,DisplayLabel;
   internal uint Revision;internal string[] Claims;internal bool Configured,Fresh;
   internal double SeenAge;
-  public override string ToString(){return Source+" / "+Device+" | "+Reason+" | "+Space+" @"+Revision+" | "+(Fresh?"fresh":"stale");}
+  public override string ToString(){return (DisplayLabel??Device)+" | "+Reason+" | "+(Fresh?"fresh":"stale");}
   internal bool Same(DiscoveryObservation other){return other!=null&&Source==other.Source&&Device==other.Device&&Session==other.Session&&Clock==other.Clock&&Space==other.Space&&Convention==other.Convention&&Revision==other.Revision&&DiscoveryModel.SetEqual(Claims,other.Claims);}
  }
  internal sealed class DiscoveryContract {
@@ -110,6 +110,7 @@ namespace MonakaBridge {
     else if(Text(old,"device_id")!=current.Device||!current.Configured||Text(old,"input_space")==current.Space&&Convert.ToUInt32(old["input_revision"])==current.Revision)throw new InvalidOperationException("Select a known device with a changed input frame/revision");
    }
    if(action!=DiscoveryAction.UpdateRevision&&current.Configured)throw new InvalidOperationException("Device is already configured");
+   if(action==DiscoveryAction.Create)tracker=TrackerPresentation.NewLogicalId(tracker,current.Device);
    if(string.IsNullOrWhiteSpace(tracker)||tracker.Length>128||tracker.IndexOfAny(new[]{'\r','\n','\0'})>=0)throw new InvalidOperationException("Enter an explicit unique logical tracker ID");
    for(int n=0;n<mappings.Count;++n){if(n==oldIndex&&action!=DiscoveryAction.Create)continue;var b=(Dictionary<string,object>)mappings[n];if(Text(b,"source_id")==current.Source&&(Text(b,"device_id")==current.Device||Text(b,"tracker_id")==tracker))throw new InvalidOperationException("Duplicate source/device or logical tracker assignment");}
    var baseDoc=MappingEditor.Clone(loaded);var list=new ArrayList((ICollection)baseDoc["mappings"]);if(old!=null)list.RemoveAt(oldIndex);baseDoc["mappings"]=list.ToArray();

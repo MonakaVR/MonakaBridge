@@ -44,6 +44,7 @@ namespace MonakaBridge {
    readonly TextBlock mappingStatus=new TextBlock{TextWrapping=TextWrapping.Wrap};readonly MappingEditorState editor=new MappingEditorState();
    readonly ListBox devices=new ListBox{Height=160};readonly ListBox mappings=new ListBox{Height=130};
    readonly TextBox source=new TextBox(),device=new TextBox(),tracker=new TextBox(),space=new TextBox(),revision=new TextBox(),world=new TextBox();
+   bool trackerIdEdited,suggestingTrackerId;
    readonly ComboBox profile=new ComboBox{IsEditable=false};
    readonly TextBox x=new TextBox{Text="0"},y=new TextBox{Text="0"},z=new TextBox{Text="0"};readonly CheckBox approved=new CheckBox{Content=BridgeText.T("Existing space approval (new approval requires separate native review)")};
    readonly ComboBox routes=new ComboBox{ItemsSource=new[]{"steamvr","monaka","disabled"}};
@@ -62,8 +63,9 @@ namespace MonakaBridge {
     reloadConfiguration=Add(panel,"Refresh / load configuration",delegate{if(busy||calibration.Active)throw new InvalidOperationException("Finish the pending save or close calibration first");Reload();});AddEdit(panel,"Use selected observation",SelectObservation);
     panel.Children.Add(new TextBlock{Text=BridgeText.T("Persistent tracker mapping and profile"),FontSize=18});panel.Children.Add(mappingStatus);panel.Children.Add(mappings);mappings.SelectionChanged+=delegate{if(!editor.Updating)SelectMapping();};
     AddEdit(panel,"New mapping / clear selection",delegate{editor.Select(map,-1,RenderMapping);status.Text=BridgeText.T("No mapping selected; select a profile explicitly. Save updates the exact source/device or creates a new mapping.");});
-    Field(panel,"Source",source);Field(panel,"Device",device);Field(panel,"Logical tracker",tracker);Field(panel,"Profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);
+    Field(panel,"Source ID",source);Field(panel,"Physical device ID",device);Field(panel,"Logical tracker ID",tracker);Field(panel,"Coordinate profile",profile);Field(panel,"Input map",space);Field(panel,"Input map revision",revision);Field(panel,"World map",world);
     foreach(var identityField in new[]{source,device,space,revision})identityField.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
+    tracker.TextChanged+=delegate{if(!editor.Updating&&!suggestingTrackerId)trackerIdEdited=true;};
     approved.Checked+=delegate{if(!editor.Updating)editor.Approved=true;};approved.Unchecked+=delegate{if(!editor.Updating)editor.Approved=false;};
     profile.SelectionChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};world.TextChanged+=delegate{if(editor.IdentityEdited())approved.IsChecked=false;};
 
@@ -138,7 +140,7 @@ namespace MonakaBridge {
     configBytes=loadedBytes;config=persisted;map=nextMap;DiscoveryConfigurationLoaded();needsReload=false;calibration.SetConfiguration(config);RefreshAvailability();
     status.Text=BridgeText.T("Loaded revision ")+config["mapping_revision"]+"; defined axes and fresh components are required. Calibration quality is diagnostic.";
     editor.Programmatic(delegate{
-     mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(b["tracker_id"]+" | "+b["source_id"]+" / "+b["device_id"]);
+     mappings.Items.Clear();foreach(Dictionary<string,object> b in map)mappings.Items.Add(new ListBoxItem{Content=TrackerPresentation.MappingLabel(b,map),ToolTip=TrackerPresentation.Details((string)b["source_id"],(string)b["device_id"],(string)b["tracker_id"])});
      var names=new List<string>(((Dictionary<string,object>)config["profiles"]).Keys);names.Sort(StringComparer.Ordinal);profile.ItemsSource=names;
      routes.SelectedItem=Convert.ToString(config["policy"],CultureInfo.InvariantCulture);
      if(Convert.ToString(config["policy"],CultureInfo.InvariantCulture)=="both")status.Text+=" Both outputs use the same normalized logical tracker state.";
@@ -158,11 +160,12 @@ namespace MonakaBridge {
     healthSnapshotUtc=result.SnapshotUtc;healthAvailable=true;currentPolicy=Convert.ToString(h["policy"],CultureInfo.InvariantCulture);
     healthRevision=h.ContainsKey("mapping_revision")?h["mapping_revision"]:null;healthPublisher=h.ContainsKey("publisher_id")?Convert.ToString(h["publisher_id"],CultureInfo.InvariantCulture):null;
     poseTimeoutMs=h.ContainsKey("pose_timeout_ms")?Convert.ToDouble(h["pose_timeout_ms"],CultureInfo.InvariantCulture):500;
+    var identities=new List<Tuple<string,string>>();foreach(Dictionary<string,object> d in observations)identities.Add(Tuple.Create((string)d["source"],(string)d["device"]));
     foreach(Dictionary<string,object> d in observations){
      var tracking=d.ContainsKey("tracking_state")?Convert.ToString(d["tracking_state"],CultureInfo.InvariantCulture):"unknown";
      var pos=d.ContainsKey("position_valid")&&Convert.ToBoolean(d["position_valid"],CultureInfo.InvariantCulture);
      var rot=d.ContainsKey("orientation_valid")&&Convert.ToBoolean(d["orientation_valid"],CultureInfo.InvariantCulture);
-     devices.Items.Add(d["source"]+" / "+d["device"]+" | "+d["tracker"]+" | tracking="+tracking+" | pos="+pos+" rot="+rot+" | snapshot fresh="+d["fresh"]);
+     devices.Items.Add(new ListBoxItem{Content=TrackerPresentation.Label((string)d["source"],(string)d["device"],identities)+" | tracking="+tracking+" | pos="+pos+" rot="+rot+" | snapshot fresh="+d["fresh"],ToolTip=TrackerPresentation.Details((string)d["source"],(string)d["device"],Convert.ToString(d["tracker"]))});
      var publisher=d.ContainsKey("publisher_id")?(string)d["publisher_id"]:null;
      if(selectedPublisher==publisher&&selectedSource==(string)d["source"]&&selectedDevice==(string)d["device"])restore=index;++index;
     }
@@ -185,11 +188,17 @@ namespace MonakaBridge {
     var alignment=new Microsoft.Win32.OpenFileDialog{Title=BridgeText.T("Select the legacy alignment JSON")};if(alignment.ShowDialog(this)!=true)return;
     SaveNativeDraft("migrate "+Quote(route.FileName)+" "+Quote(alignment.FileName),true);
    }
-   void SelectObservation(){RequireSave();if(!healthAvailable||!HealthPresentation.Current(healthSnapshotUtc,DateTime.UtcNow)||config==null||healthPublisher!=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture))throw new InvalidOperationException("Current matching-instance health is required to adopt an observation");if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);editor.Approved=false;approved.IsChecked=false;status.Text=(editor.SelectedIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select an explicitly defined matching coordinate profile. Uncalibrated W/M use Identity.";}
+   void SelectObservation(){RequireSave();if(!healthAvailable||!HealthPresentation.Current(healthSnapshotUtc,DateTime.UtcNow)||config==null||healthPublisher!=Convert.ToString(config["bridge_id"],CultureInfo.InvariantCulture))throw new InvalidOperationException("Current matching-instance health is required to adopt an observation");if(devices.SelectedIndex<0)return;var d=(Dictionary<string,object>)observations[devices.SelectedIndex];source.Text=(string)d["source"];device.Text=(string)d["device"];space.Text=(string)d["space"];revision.Text=Convert.ToString(d["revision"],CultureInfo.InvariantCulture);SuggestTrackerId();editor.Approved=false;approved.IsChecked=false;status.Text=(editor.SelectedIndex>=0?"Selected mapping will be rebound to this observation on Save mapping. ":"")+"Observed convention: "+d["convention"]+". Select an explicitly defined matching coordinate profile. Uncalibrated W/M use Identity.";}
+   void SuggestTrackerId(){
+    if(editor.SelectedIndex>=0||trackerIdEdited&&!string.IsNullOrWhiteSpace(tracker.Text)||string.IsNullOrWhiteSpace(device.Text))return;
+    string value=device.Text;
+    foreach(Dictionary<string,object> row in map)if((string)row["source_id"]==source.Text&&(string)row["device_id"]==device.Text){value=(string)row["tracker_id"];break;}
+    suggestingTrackerId=true;try{tracker.Text=value;}finally{suggestingTrackerId=false;}
+   }
    void SelectMapping(){editor.Select(map,mappings.SelectedIndex,RenderMapping);}
    void RenderMapping(Dictionary<string,object> b){
     mappings.SelectedIndex=editor.SelectedIndex;
-    if(b==null){foreach(var field in new[]{source,device,tracker,space,revision,world})field.Text="";profile.SelectedIndex=-1;approved.IsChecked=false;x.Text=y.Text=z.Text="0";return;}
+    if(b==null){foreach(var field in new[]{source,device,tracker,space,revision,world})field.Text="";trackerIdEdited=false;profile.SelectedIndex=-1;approved.IsChecked=false;x.Text=y.Text=z.Text="0";return;}
     source.Text=(string)b["source_id"];device.Text=(string)b["device_id"];tracker.Text=(string)b["tracker_id"];space.Text=(string)b["input_space"];revision.Text=Convert.ToString(b["input_revision"],CultureInfo.InvariantCulture);world.Text=(string)b["world_space"];
     profile.SelectedIndex=-1;if(profile.Items.Contains((string)b["profile"]))profile.SelectedItem=(string)b["profile"];
     if(profile.SelectedItem==null)status.Text=BridgeText.T("Unknown profile: ")+b["profile"]+". Select an existing profile before saving or viewing approval.";
@@ -197,6 +206,7 @@ namespace MonakaBridge {
    }
    void SaveMapping(){
     RequireSave();if(config==null||configBytes==null)throw new InvalidOperationException("Load the configuration first");
+    SuggestTrackerId();
     MappingEditor.RequireProfile(config,profile.SelectedItem as string);
     var edit=new Dictionary<string,object>{{"source_id",source.Text},{"device_id",device.Text},{"tracker_id",tracker.Text},{"profile",profile.SelectedItem as string},{"input_space",space.Text},{"input_revision",UInt32.Parse(revision.Text)},{"world_space",world.Text},{"space_approved",approved.IsChecked==true}};
     var updated=MappingEditor.Candidate(config,editor.SelectedIndex,edit);

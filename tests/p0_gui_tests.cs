@@ -55,15 +55,19 @@ class P0GuiTests {
    string wantedSource=args.Length>=8?args[7]:"",wantedDevice=args.Length>=9?args[8]:"";
    int choice=-1;for(int n=0;n<panel.Candidates.Items.Count;++n){var item=(DiscoveryObservation)panel.Candidates.Items[n];if((wantedSource==""||item.Source==wantedSource)&&(wantedDevice==""||item.Device==wantedDevice)){choice=n;break;}}
    Check(choice>=0,"explicit test-operator source/device candidate not found");
-   panel.Candidates.SelectedIndex=choice;var selected=(DiscoveryObservation)panel.Candidates.SelectedItem;
+   string beforeSelection=Convert.ToBase64String(File.ReadAllBytes(path));panel.Candidates.SelectedIndex=choice;var selected=(DiscoveryObservation)panel.Candidates.SelectedItem;
    Check(panel.Contracts.Items.Count>0&&panel.Profiles.Items.Count>0,"normal source bootstrap contract/profile missing");
    panel.Contracts.SelectedIndex=0;if(args.Length>=10&&args[9]!="")panel.Profiles.SelectedItem=args[9];else panel.Profiles.SelectedIndex=0;
-   Check(panel.Profiles.SelectedIndex>=0,"explicit test-operator profile not found");panel.Logical.Text=args.Length>=5?args[4]:"logical";
+   Check(panel.Profiles.SelectedIndex>=0,"explicit test-operator profile not found");
+   Check(panel.Logical.Text==selected.Device,"new logical ID must visibly default to selected physical device ID");
+   Check(beforeSelection==Convert.ToBase64String(File.ReadAllBytes(path)),"selecting a default wrote configuration");
+   if(integrated&&args.Length>=5&&!string.IsNullOrWhiteSpace(args[4]))panel.Logical.Text=args[4];else panel.Logical.Text="";
    panel.Create.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Until(delegate{return !(bool)Field(host,"busy");});
    Check(confirmed&&!(bool)Field(host,"needsReload"),"normal Create handler did not save");
    var saved=Read(path);Dictionary<string,object> mapping=null;int selectedIndex=-1,index=0;
    foreach(Dictionary<string,object> row in DiscoveryModel.Mappings(saved)){if((string)row["source_id"]==selected.Source&&(string)row["device_id"]==selected.Device){mapping=row;selectedIndex=index;}index++;}
    Check(mapping!=null&&mapping.ContainsKey("runtime_contract"),"normal helper save omitted exact binding/contract");
+   if(!integrated)Check((string)mapping["tracker_id"]==selected.Device,"actual Create handler did not persist exact device-ID default");
    Check(IsRigid(mapping["mount"],0),"new physical Mount must be Identity");
    if(!integrated){
     // Existing uncalibrated documents can omit optional geometry and quality

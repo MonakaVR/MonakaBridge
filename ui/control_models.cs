@@ -8,6 +8,25 @@ using System.Threading;
 using System.Web.Script.Serialization;
 [assembly:System.Runtime.CompilerServices.InternalsVisibleTo("bridge_ui_tests")]
 namespace MonakaBridge {
+ // Presentation never changes the source/device key or the persisted output ID.
+ internal static class TrackerPresentation {
+  internal static string Label(string source,string device,IEnumerable<Tuple<string,string>> identities){
+   var sources=new SortedSet<string>(StringComparer.Ordinal);
+   foreach(var key in identities)if(key.Item2==device)sources.Add(key.Item1);
+   if(sources.Count<2)return device;
+   int ordinal=0;foreach(string candidate in sources){++ordinal;if(candidate==source)return device+" ["+ordinal+"]";}
+   return device;
+  }
+  internal static string MappingLabel(Dictionary<string,object> row,IList mappings){
+   var keys=new List<Tuple<string,string>>();foreach(Dictionary<string,object> item in mappings)keys.Add(MappingEditorState.Key(item));
+   return Label(Convert.ToString(row["source_id"]),Convert.ToString(row["device_id"]),keys);
+  }
+  internal static string Details(string source,string device,string tracker){
+   return BridgeText.T("Physical device ID")+": "+device+"\n"+BridgeText.T("Source ID")+": "+source+
+    (string.IsNullOrEmpty(tracker)?"":"\n"+BridgeText.T("Logical tracker ID")+": "+tracker);
+  }
+  internal static string NewLogicalId(string typed,string device){return string.IsNullOrWhiteSpace(typed)?device:typed;}
+ }
  // The selection key refers to the loaded mapping, never to in-progress edits.
  // Programmatic updates are synchronous and nest safely even when WPF fires events.
  internal sealed class MappingEditorState {
@@ -155,7 +174,7 @@ namespace MonakaBridge {
    string freshness=available?(fresh?"fresh":"stale"):"unavailable / historical";
    var p=row.ContainsKey("position")?ArrayText(row["position"],3):"-";
    var q=row.ContainsKey("orientation_xyzw")?ArrayText(row["orientation_xyzw"],4):"-";
-   return "Pose stage: "+stage+" (not final SteamVR output)\nCoordinate space: "+Text(row,"space")+" | convention="+Text(row,"convention")+" | revision="+Text(row,"revision")+
+   return TrackerPresentation.Details(Text(row,"source"),Text(row,"device"),Text(row,"tracker"))+"\nPose stage: "+stage+" (not final SteamVR output)\nCoordinate space: "+Text(row,"space")+" | convention="+Text(row,"convention")+" | revision="+Text(row,"revision")+
     "\nTracking: "+Text(row,"tracking_state")+" | "+freshness+" | sample position valid="+Flag(row,"position_valid")+" | sample orientation valid="+Flag(row,"orientation_valid")+
     "\nCalibration: "+Text(row,"calibration_status")+" (physical quality unverified)"+
     "\nPosition [m]: "+p+"\nQuaternion xyzw: "+q;

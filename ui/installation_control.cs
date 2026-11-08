@@ -12,6 +12,10 @@ namespace MonakaBridge {
  internal static class BridgeText {
   internal static string Language="en";
   static readonly Dictionary<string,string> Japanese=new Dictionary<string,string>(StringComparer.Ordinal){
+   {"Physical device ID","物理デバイスID"},
+   {"Source ID","入力ソースID"},
+   {"Logical tracker ID","論理トラッカーID"},
+   {"Coordinate profile","座標プロファイル"},
    {"Done — calibration saved. Configuration evidence is stale; runtime application is unconfirmed.","完了 — キャリブレーションを保存しました。設定の証跡が古くなっています。実行中の環境への適用は未確認です。"},
    {"Calibration","キャリブレーション"},
    {"Reference","基準デバイス"},

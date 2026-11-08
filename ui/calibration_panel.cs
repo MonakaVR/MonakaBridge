@@ -11,8 +11,8 @@ namespace MonakaBridge {
  // Native owns capture, solving and the atomic World transaction.
  internal sealed class CalibrationPanel:StackPanel,IDisposable {
   sealed class TrackerChoice {
-   internal Dictionary<string,object> Mapping;internal string Source,Device;
-   public override string ToString(){return Convert.ToString(Mapping["tracker_id"])+" | "+Source+" / "+Device;}
+   internal Dictionary<string,object> Mapping;internal string Source,Device,Label;
+   public override string ToString(){return Label;}
   }
   GuiLaunchOptions target;Dictionary<string,object> configuration;
   CalibrationWorkflow workflow=new CalibrationWorkflow();readonly object dispatchGate=new object();
@@ -39,7 +39,7 @@ namespace MonakaBridge {
    AutomationProperties.SetName(start,BridgeText.T("Start calibration"));AutomationProperties.SetName(cancel,BridgeText.T("Cancel calibration"));AutomationProperties.SetName(state,BridgeText.T("Calibration progress and result"));AutomationProperties.SetName(progress,BridgeText.T("Calibration progress"));
    start.Click+=async delegate{if(Active||disposed)return;running=StartAsync();await running;};
    cancel.Click+=async delegate{try{await StopAsync();}catch(Exception e){detail=BridgeText.Diagnostic(e.GetBaseException().Message);Refresh();}};
-   tracker.SelectionChanged+=delegate{Refresh();};reference.SelectionChanged+=delegate{Refresh();};
+   tracker.SelectionChanged+=delegate{var choice=tracker.SelectedItem as TrackerChoice;tracker.ToolTip=choice==null?null:TrackerPresentation.Details(choice.Source,choice.Device,Convert.ToString(choice.Mapping["tracker_id"]));Refresh();};reference.SelectionChanged+=delegate{Refresh();};
    timer.Interval=TimeSpan.FromMilliseconds(200);timer.Tick+=delegate{Refresh();};timer.Start();Refresh();
   }
   void Field(string title,Control control){Children.Add(new Label{Content=BridgeText.T(title),Target=control,Padding=new Thickness(0,5,0,2)});Children.Add(control);}
@@ -48,8 +48,8 @@ namespace MonakaBridge {
   internal void SetConfiguration(Dictionary<string,object> config){
    if(Active)throw new InvalidOperationException("Finish calibration before loading configuration");
    var previous=tracker.SelectedItem as TrackerChoice;configuration=config;tracker.Items.Clear();
-   if(config!=null){object rows;if(config.TryGetValue("mappings",out rows)&&rows is IEnumerable)foreach(Dictionary<string,object> mapping in (IEnumerable)rows){
-    var choice=new TrackerChoice{Mapping=mapping,Source=Convert.ToString(mapping["source_id"]),Device=Convert.ToString(mapping["device_id"])};tracker.Items.Add(choice);
+   if(config!=null){object rows;if(config.TryGetValue("mappings",out rows)&&rows is IList)foreach(Dictionary<string,object> mapping in (IList)rows){
+    var choice=new TrackerChoice{Mapping=mapping,Source=Convert.ToString(mapping["source_id"]),Device=Convert.ToString(mapping["device_id"]),Label=TrackerPresentation.MappingLabel(mapping,(IList)rows)};tracker.Items.Add(choice);
     if(previous!=null&&choice.Source==previous.Source&&choice.Device==previous.Device)tracker.SelectedItem=choice;
    }}
    if(tracker.SelectedIndex<0&&tracker.Items.Count>0)tracker.SelectedIndex=0;Refresh();

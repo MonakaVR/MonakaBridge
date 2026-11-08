@@ -55,8 +55,8 @@ class CalibrationWpfTests {
    Check(Options.Calibration==null,"normal flow unexpectedly requires installation profile");
    Environment.SetEnvironmentVariable("MONAKA_CALIBRATION_TEST_ROOT",Path.Combine(Directory,"worker"));Environment.SetEnvironmentVariable("MONAKA_CALIBRATION_TEST_MODE",mode);
    Host=(Window)Activator.CreateInstance(typeof(SteamVrControlWpf).GetNestedType("ControlWindow",BindingFlags.NonPublic),new object[]{Options});View=(CalibrationPanel)Field(Host,"calibration");Invoke(Host,"Reload");
-   var choices=(ComboBox)Field(View,"tracker");for(int i=0;i<choices.Items.Count;i++)if(choices.Items[i].ToString()=="logical-pico | pico / device")choices.SelectedIndex=i;
-   Check(choices.SelectedItem!=null&&choices.SelectedItem.ToString()=="logical-pico | pico / device","persisted identity selector missing");Check(!View.Active&&View.Snapshot().Phase=="NEW","constructor/reload started native worker");
+   var choices=(ComboBox)Field(View,"tracker");for(int i=0;i<choices.Items.Count;i++){var item=choices.Items[i];if((string)Field(item,"Source")=="pico"&&(string)Field(item,"Device")=="device")choices.SelectedIndex=i;}
+   Check(choices.SelectedItem!=null&&choices.SelectedItem.ToString().StartsWith("device",StringComparison.Ordinal)&&Convert.ToString(choices.ToolTip).Contains("Source ID: pico")&&Convert.ToString(choices.ToolTip).Contains("Logical tracker ID: logical-pico"),"physical label or exact persisted identity details missing");Check(!View.Active&&View.Snapshot().Phase=="NEW","constructor/reload started native worker");
   }
   internal void Result(bool stallUi=false){
    Click(View,"start");Check(View.Active,"Start did not take ownership");
