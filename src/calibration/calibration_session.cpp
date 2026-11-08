@@ -127,7 +127,12 @@ struct CalibrationSession::Impl {
   if(scope)try{current();}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
   auto wait=10*second;
   if(confirmationLimit){auto t=now();checkCancel();if(t>=confirmationLimit)invalidate("CONFIRMATION_EXPIRED");if(t-created>=20*60*second)invalidate("WORKER_TTL_EXPIRED");wait=std::min({wait,confirmationLimit-t,created+20*60*second-t});}
-  if(owner)try{owner->barrier(opaqueId(),wait);}catch(const std::exception& e){auto reason=diagnostic(e);invalidate(reason.c_str());}
+  if(owner)try{owner->barrier(opaqueId(),wait);}catch(const std::exception& e){
+   // Close/cancel can arrive while the owner acknowledges this barrier. It is
+   // an intentional terminal transition, not a new monitor fault.
+   if(owner->snapshot().fault.empty())checkCancel();
+   auto reason=diagnostic(e);invalidate(reason.c_str());
+  }
   live(fresh);
  }
  void beginReady(){
@@ -224,8 +229,13 @@ struct CalibrationSession::Impl {
    need(j.at("bridge_id")==nextConfig.bridgeId&&j.at("input_revision").get<std::uint64_t>()<=UINT32_MAX,"TARGET_OWNER_REVISION_MISMATCH");
    auto target=freezeMeasurementTarget(nextConfig,text(j,"source"),text(j,"device"),text(j,"tracker"),text(j,"input_space"),j.at("input_revision").get<std::uint32_t>());
    auto options=CalibrationSession::makeProviderOptions(nextConfig,std::move(target),{path,installation,sha256(nextOriginal),text(j,"mirror_address"),text(j,"reference_role"),j.at("mirror_port").get<std::uint16_t>(),j.at("readonly").get<bool>(),nextStaticMode});
+   // Stage path validation before provider configuration: an invalid Open must
+   // leave the session retryable and must not create a directory or capture
+   // resource. Explicit native fixture roots retain their existing behavior.
+   DraftStore nextDrafts(env.draftRoot.empty()?path.parent_path()/"CalibrationDrafts":env.draftRoot);
    Json reply={{"status","OPEN"},{"config_sha256",options->configSha256()},{"capture_supported",provider.supported()},{"readonly",options->readOnly()},{"association",options->association()}};
    try{provider.configure(options);}catch(...){state=FAILED;throw;}
+   drafts=std::move(nextDrafts);
    staticMode=nextStaticMode;approvalPurpose=nextApprovalPurpose;staticOptions=nextStaticOptions;
    original=std::move(nextOriginal);config=std::move(nextConfig);providerOptions=std::move(options);frozen=&providerOptions->measurementTarget();state=OPEN;
    return reply;
@@ -293,7 +303,9 @@ struct CalibrationSession::Impl {
   }
   need(state==RESULT_READY||state==PREPARED,"STATE_REJECTED");
   need(text(j,"result_id")==resultId,"WRONG_RESULT");
-  try{guards(true);}catch(...){review.clear();if(state==PREPARED)state=RESULT_READY;throw;}
+  // The immutable completed measurement is saved here; instantaneous pose
+  // freshness is a capture condition. Retain identity, liveness and config guards.
+  try{guards(false);}catch(...){review.clear();if(state==PREPARED)state=RESULT_READY;throw;}
   try{artifactCheck();}catch(...){invalidate("DRAFT_ARTIFACT_CHANGED");}
   if(op=="prepare_commit"){
    need(!providerOptions->readOnly(),"READONLY_COMMIT_REJECTED");
@@ -316,7 +328,7 @@ struct CalibrationSession::Impl {
    auto commitBarrier=owner->barrier(text(j,"request_id"),remaining);
    if(env.ioHook)env.ioHook("precommit-barrier-acked");
    auto admissionAt=now();checkCancel();need(admissionAt<reviewDeadline,"REVIEW_TOKEN_EXPIRED_REPREPARE");need(admissionAt<resultDeadline&&admissionAt-created<20*60*second,"RESULT_REVIEW_EXPIRED");
-   auto admission=owner->admit(commitBarrier,admissionAt);state=COMMITTING;
+   auto admission=owner->admit(commitBarrier,admissionAt,false);state=COMMITTING;
   }catch(const std::exception& e){
    review.clear();if(state==PREPARED)state=RESULT_READY;
    if(!owner->snapshot().fault.empty()){auto reason=diagnostic(e);invalidate(reason.c_str());}throw;
@@ -325,7 +337,7 @@ struct CalibrationSession::Impl {
   try{
    commitConfigDocument(providerOptions->configPath(),original,candidate,[&](const char* stage){if(env.transactionHook)env.transactionHook(stage);if(cancel)evidenceStale=true;try{guards(false,false);}catch(...){evidenceStale=true;}});
    if(env.afterReplace)env.afterReplace();
-   try{guards(true,false);}catch(...){evidenceStale=true;}
+   try{guards(false,false);}catch(...){evidenceStale=true;}
    if(now()-started>=15*second){state=UNKNOWN;drafts.terminal("UNKNOWN");return {{"status","UNKNOWN"},{"reason","COMMIT_TIMEOUT_NO_RETRY"}};}
    if(cancel)evidenceStale=true;
    if(readConfigBytes(providerOptions->configPath())!=candidate)evidenceStale=true;
@@ -352,7 +364,7 @@ Json CalibrationSession::execute(const Json& j){
   if(hit->second.canonical!=canonical)return {{"status","REJECTED"},{"reason","REQUEST_ID_REUSE_MISMATCH"},{"phase",phase()},{"eligible",false}};
   if(hit->second.outcome.is_null())return {{"status","IN_PROGRESS"},{"phase",phase()},{"replayed",true}};
   auto cached=hit->second.outcome;cacheLock.unlock();
-  bool eligible=false;if(x.state>=DISCOVERED&&x.state<=PREPARED)try{x.guards(true);eligible=x.state==PREPARED&&x.now()<x.reviewDeadline&&!x.cancel;}catch(...){}
+  bool eligible=false;if(x.state>=DISCOVERED&&x.state<=PREPARED)try{x.guards(x.approvalPurpose||x.state<RESULT_READY);eligible=x.state==PREPARED&&x.now()<x.reviewDeadline&&!x.cancel;}catch(...){}
   auto out=cached;if(!x.firstFailure.empty())out["first_failure"]=x.firstFailure;out["replayed"]=true;out["current_phase"]=phase();out["eligible"]=eligible;if(expired)out["worker_lifetime_expired"]=true;return out;
  }
  if(expired)return {{"status","REJECTED"},{"reason","WORKER_TTL_EXPIRED"},{"phase",phase()},{"eligible",false}};

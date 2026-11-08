@@ -96,18 +96,41 @@ void reviewCase(const std::filesystem::path& base,const std::string& mode){
   CHECK(out["reason"]=="INPUT_BARRIER_TIMEOUT"&&elapsed<1s&&r.provider.captures==0&&!std::filesystem::exists(r.env.draftRoot/r.session->runId()));armed=false;blocked.release();
   pass("review R2 begin barrier uses remaining confirmation budget, not a new ten seconds");return;
  }
+ if(mode=="review-close-during-idle-barrier"){
+  fixture::Run r(base);Gate ownerBlocked;std::atomic<bool> blockOwner{false},recordTickClock{false},tickClockSeen{false};std::thread::id tickThread;
+  r.provider.guardHook=[&](auto&){if(blockOwner)ownerBlocked.pause();};
+  r.env.clock=[&]{if(recordTickClock.load()&&std::this_thread::get_id()==tickThread)tickClockSeen=true;return r.time.load();};r.reset();
+  auto open=r.open();open["readonly"]=true;CHECK(r.execute(open)["status"]=="OPEN");CHECK(r.execute(r.command("discover"))["status"]=="DISCOVERED");
+  auto confirmed=r.execute(r.command("confirm_target"));CHECK(confirmed["status"]=="CONFIRMED");auto begin=r.command("begin");begin["confirmation_token"]=confirmed["confirmation_token"];
+  auto measured=r.execute(begin);if(measured["status"]!="RESULT_READY")throw std::runtime_error(measured.dump());
+  const auto resultPath=r.env.draftRoot/r.session->runId()/"result.json";const auto resultBytes=mb::readConfigBytes(resultPath);
+  CHECK(r.provider.captures==1&&r.session->solveCalls()==1&&r.session->commitCalls()==0);
+  blockOwner=true;ownerBlocked.wait();
+  GuardedWorker tick(ownerBlocked,[&]{tickThread=std::this_thread::get_id();recordTickClock=true;r.session->tick();});
+  // tick samples its clock after its initial checkCancel. The owner is held,
+  // so its subsequent idle barrier cannot ACK before this Close is latched.
+  until([&]{return tickClockSeen.load();});auto close=r.command("close");r.session->latchControl(close);tick.join();
+  CHECK(r.session->phase()=="CLOSED"&&r.session->invalidationDiagnostic()["first_failure"]==""&&r.session->captureSnapshot().fault.empty());
+  CHECK(mb::readConfigBytes(resultPath)==resultBytes&&mb::readConfigBytes(r.path)==r.original&&r.session->commitCalls()==0);
+  blockOwner=false;ownerBlocked.release();auto closed=r.execute(close);
+  CHECK(closed["status"]=="CLOSED"&&closed["closed"]==true&&!closed.contains("first_failure")&&r.session->captureSnapshot().fault.empty());
+  CHECK(mb::readConfigBytes(resultPath)==resultBytes&&mb::readConfigBytes(r.path)==r.original&&r.provider.captures==1&&r.session->solveCalls()==1&&r.session->commitCalls()==0);
+  pass("review close during readonly-result idle barrier stays CLOSED without invalidation; result/config preserved and no commit");return;
+ }
  if(mode=="review-stale-admission"){
   fixture::Run r(base);Gate ack;std::atomic<bool> armed{false};r.env.ioHook=[&](const char* p){if(armed&&std::string(p)=="precommit-barrier-acked")ack.pause();};r.reset();auto prepared=r.prepared();auto command=r.commit(prepared);armed=true;lc::Json out;
-  auto captures=r.provider.captures;auto solves=r.session->solveCalls();auto bytes=mb::readConfigBytes(std::filesystem::u8path(prepared["candidate_path"].get<std::string>()));
+  const auto captures=r.provider.captures;const auto solves=r.session->solveCalls();const auto before=r.session->captureSnapshot();
+  const auto bytes=mb::readConfigBytes(std::filesystem::u8path(prepared["candidate_path"].get<std::string>()));
   GuardedWorker worker(ack,[&]{out=r.execute(command);});ack.wait();r.time+=50000001;ack.release();worker.join();armed=false;
-  std::cout<<"REVIEW_STALE "<<out.dump()<<std::endl;CHECK(out["reason"]=="NOT_READY_STALE"&&r.session->captureSnapshot().fault.empty()&&r.session->commitCalls()==0);
-  auto before=r.session->captureSnapshot().poseHigh;r.provider.fresh();until([&]{return r.session->captureSnapshot().poseHigh>before;});
-  auto reuse=r.execute(r.commit(prepared));std::cout<<"REVIEW_REUSE "<<reuse.dump()<<std::endl;
-  CHECK(reuse["status"]=="REJECTED"&&r.session->phase()=="RESULT_READY"&&r.session->commitCalls()==0&&mb::readConfigBytes(r.path)==r.original);
-  auto prepare=r.command("prepare_commit");prepare["result_id"]=prepared["result_id"];auto next=r.execute(prepare);
-  CHECK(next["status"]=="PREPARED"&&next["review_token"]!=prepared["review_token"]&&next["candidate_sha256"]==prepared["candidate_sha256"]&&mb::readConfigBytes(std::filesystem::u8path(next["candidate_path"].get<std::string>()))==bytes&&r.provider.captures==captures&&r.session->solveCalls()==solves);
-  CHECK(r.execute(r.commit(next))["status"]=="SAVED"&&r.session->commitCalls()==1);pass("review R3 post-ACK transient stale destroys token; fresh requires explicit reprepare same bytes without capture/solve");return;
+  std::cout<<"REVIEW_STALE "<<out.dump()<<std::endl;
+  CHECK(out["status"]=="SAVED"&&r.session->phase()=="SAVED"&&r.session->captureSnapshot().fault.empty()&&r.session->commitCalls()==1&&mb::readConfigBytes(r.path)==bytes);
+  // No new pose/reference or Prepare: admission accepts this exact prepared
+  // token/candidate after the capture freshness window, within hard liveness.
+  const auto after=r.session->captureSnapshot();CHECK(after.poseHigh==before.poseHigh&&after.invalidationEpoch==before.invalidationEpoch&&r.provider.captures==captures&&r.session->solveCalls()==solves);
+  const auto replay=r.execute(command);CHECK(replay["status"]=="SAVED"&&replay["replayed"]==true&&r.session->commitCalls()==1&&mb::readConfigBytes(r.path)==bytes&&r.provider.captures==captures&&r.session->solveCalls()==solves);
+  pass("review R3 post-ACK50ms staleness admits same prepared token/exact bytes once without fresh input, reprepare, capture or solve");return;
  }
+
  throw std::runtime_error("UNKNOWN_REVIEW_CASE");
 }
 }
@@ -227,6 +250,6 @@ int main(int argc,char** argv)try{
    lc::CaptureOwner owner(p,[&]{++clockCalls;return r.time.load();},cancel,r.time,"old-generation");owner.discover();owner.record([](const auto&){});late=p.callback();cancel=true;owner.shutdown();}
   auto before=clockCalls.load();late(value);CHECK(clockCalls==before);pass("late callback after owner/provider/Session destruction retains closed context; no clock/Session access");
  }
- for(const auto* mode:{"review-clock-guard","review-clock-record","review-begin-scope","review-begin-barrier","review-begin-draft-created","review-begin-draft-written","review-begin-draft-cancel","review-begin-draft-ttl","review-begin-barrier-budget","review-stale-admission"})reviewCase(base,mode);
+ for(const auto* mode:{"review-clock-guard","review-clock-record","review-begin-scope","review-begin-barrier","review-begin-draft-created","review-begin-draft-written","review-begin-draft-cancel","review-begin-draft-ttl","review-begin-barrier-budget","review-stale-admission","review-close-during-idle-barrier"})reviewCase(base,mode);
  std::cout<<"PASS N0b continuous monitor "<<groups<<" groups; no SDK/socket/GUI/HIL"<<std::endl;return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<std::endl;return 1;}

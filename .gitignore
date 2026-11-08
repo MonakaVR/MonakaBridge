@@ -4,3 +4,4 @@ __pycache__/
 config/bridge.json
 config/bridge.json.*
 *.user
+/config/CalibrationDrafts/

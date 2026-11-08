@@ -170,11 +170,11 @@ CaptureOwner::Barrier CaptureOwner::barrier(const std::string& request,std::int6
  if(c->cancel||c->stopping){c->usedBarrier=std::max(c->usedBarrier,id);throw std::runtime_error("CANCELLED_BARRIER");}if(!c->error.empty())throw std::runtime_error(c->error);
  return {c->run,request,c->generation,id,c->barrierEpoch,c->barrierReceived};
 }
-CaptureOwner::Admission CaptureOwner::admit(const Barrier& b,std::int64_t now){
+CaptureOwner::Admission CaptureOwner::admit(const Barrier& b,std::int64_t now,bool fresh){
  auto c=context_;std::unique_lock<std::mutex> lock(c->mutex);
  need(c->active&&!c->stopping&&!c->cancel,"CANCELLED_BARRIER");need(b.run==c->run&&b.request==c->barrierRequest&&b.generation==c->generation&&b.id==c->ackedBarrier&&b.id==c->pendingBarrier&&b.id>c->usedBarrier,"STALE_INPUT_BARRIER");
  c->usedBarrier=b.id;need(c->monitor->snapshot().invalidationEpoch==b.epoch,"INVALIDATED_INPUT_BARRIER");
- if(!c->error.empty())throw std::runtime_error(c->error);c->monitor->requireLive(now,true);return Admission(std::move(lock));
+ if(!c->error.empty())throw std::runtime_error(c->error);c->monitor->requireLive(now,fresh);return Admission(std::move(lock));
 }
 void CaptureOwner::record(const std::function<void(const RecordingDelivery&)>& sink){
  auto c=context_;{std::lock_guard<std::mutex> lock(c->mutex);need(c->active&&!c->stopping&&!c->cancel&&!c->recordingStarted,"CAPTURE_STATE_REJECTED");c->recordingStarted=true;c->captureDone=false;c->recordRequested=true;}c->changed.notify_all();

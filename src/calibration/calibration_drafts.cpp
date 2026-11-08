@@ -6,6 +6,7 @@
 #include <fstream>
 #include <set>
 #include <algorithm>
+#include <limits>
 
 namespace mb::local_calibration {
 namespace fs=std::filesystem;
@@ -25,30 +26,50 @@ void atomic(const fs::path& p,const std::string& bytes){
  {std::ofstream f(temp,std::ios::binary|std::ios::trunc);f.write(bytes.data(),std::streamsize(bytes.size()));f.flush();need(bool(f),"DRAFT_IO_ERROR");}
  need(MoveFileExW(temp.c_str(),p.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0,"DRAFT_PUBLISH_ERROR");
 }
-Json scan(const fs::path& root){
- Json rows=Json::array();std::uintmax_t total=0;std::size_t dirs=0;
- if(!fs::exists(root))return {{"runs",rows},{"charged_bytes",0}};
- requirePlainPath(root);
- for(const auto& entry:fs::directory_iterator(root)){
-  requirePlainPath(entry.path());if(entry.path().filename()=="quota.lock")continue;
-  need(entry.is_directory()&&++dirs<=16,"DRAFT_ROOT_QUOTA_OR_UNKNOWN_ENTRY");
-  std::uintmax_t bytes=0;std::size_t count=0;
-  for(const auto& item:fs::directory_iterator(entry.path())){requirePlainPath(item.path());need(item.is_regular_file()&&++count<=32,"DRAFT_UNKNOWN_OR_FILE_QUOTA");bytes+=item.file_size();need(bytes<=64*MiB,"DRAFT_QUOTA_EXCEEDED");}
-  auto p=entry.path()/"manifest.json";need(fs::exists(p),"DRAFT_PARTIAL_INSPECT_ONLY");
-  auto manifest=Json::parse(readConfigBytes(p));
-  need(manifest.at("version")==1&&manifest.at("files").is_object(),"DRAFT_MANIFEST_INVALID");
-  std::size_t knownCount=0;
-  for(const auto& item:fs::directory_iterator(entry.path()))if(item.path().filename()!="manifest.json"){
-   auto n=item.path().filename().u8string();need(names.count(n)&&manifest.at("files").contains(n),"DRAFT_UNKNOWN_INSPECT_ONLY");++knownCount;
-   need(sha256(readDraft(item.path(),limit(n)))==manifest.at("files").at(n).at("sha256"),"DRAFT_HASH_INSPECT_ONLY");
+bool lowerHash(const std::string& value){return value.size()==64&&value.find_first_not_of("0123456789abcdef")==std::string::npos;}
+std::optional<Json> recognizedRun(const fs::directory_entry& entry){
+ // Historical files grant no ownership. Filter names before consulting paths
+ // or following directory metadata, then recognize only our exact v1 manifest.
+ try{
+  const auto id=entry.path().filename().u8string();if(!lowerHash(id))return {};
+  requirePlainPath(entry.path());if(!entry.is_directory())return {};
+  auto p=entry.path()/"manifest.json";requirePlainPath(p);if(!fs::is_regular_file(p))return {};
+  const auto raw=readDraft(p,2*MiB);
+  std::map<int,std::set<std::string>> keys;
+  const auto manifest=Json::parse(raw,[&](int depth,Json::parse_event_t event,Json& value){
+   if(event==Json::parse_event_t::object_start)keys[depth+1].clear();
+   if(event==Json::parse_event_t::key)need(keys[depth].insert(value.get<std::string>()).second,"DRAFT_MANIFEST_DUPLICATE_KEY");
+   return true;
+  });
+  if(!manifest.is_object()||manifest.size()!=4||!manifest.contains("version")||!manifest.contains("status")||!manifest.contains("created_utc_seconds")||!manifest.contains("files"))return {};
+  if(!manifest.at("version").is_number_integer()||manifest.at("version")!=1||!manifest.at("status").is_string()||!manifest.at("files").is_object())return {};
+  const std::set<std::string> statuses={"ACTIVE","SAVED","SAVED_CONFIG_EVIDENCE_STALE","CANCELLED","CLOSED","FAILED","INSPECT_ONLY","UNKNOWN"};
+  const auto status=manifest.at("status").get<std::string>();if(!statuses.count(status))return {};
+  const auto& timestamp=manifest.at("created_utc_seconds");if(!timestamp.is_number_integer()||timestamp<0||timestamp>std::numeric_limits<std::int64_t>::max())return {};
+  const auto created=timestamp.get<std::int64_t>();std::uintmax_t bytes=raw.size();std::size_t count=1;
+  for(auto it=manifest.at("files").begin();it!=manifest.at("files").end();++it){
+   const auto& name=it.key();const auto& file=it.value();
+   if(!names.count(name)||!file.is_object()||file.size()!=2||!file.contains("sha256")||!file.contains("bytes")||!file.at("sha256").is_string()||!lowerHash(file.at("sha256").get<std::string>())||!file.at("bytes").is_number_integer()||file.at("bytes")<0||file.at("bytes")>limit(name))return {};
+   const auto artifact=entry.path()/name;requirePlainPath(artifact);if(!fs::is_regular_file(artifact))return {};
+   const auto actual=readDraft(artifact,limit(name));
+   if(actual.size()!=file.at("bytes").get<std::uintmax_t>()||sha256(actual)!=file.at("sha256"))return {};
+   bytes+=actual.size();++count;if(bytes>64*MiB)return {};
   }
-  need(knownCount==manifest.at("files").size(),"DRAFT_PARTIAL_INSPECT_ONLY");
-  auto status=manifest.at("status").get<std::string>();auto created=manifest.at("created_utc_seconds").get<std::int64_t>();
+  // Unlisted files/ZIPs/directories are not draft artifacts, reservations or
+  // deletion authority. Owned-run verify and explicit cleanup remain strict.
   const auto now=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  bool expired=now>=created&&now-created>=30*24*60*60;
-  auto charged=status=="ACTIVE"?std::max<std::uintmax_t>(bytes,64*MiB):bytes;total+=charged;
-  need(total<=512*MiB,"DRAFT_ROOT_QUOTA_EXCEEDED");
-  rows.push_back({{"run_id",entry.path().filename().u8string()},{"bytes",bytes},{"files",count},{"status",status},{"expired_inspect_only",expired},{"charged_bytes",charged}});
+  const bool expired=now>=created&&now-created>=30*24*60*60;
+  const auto charged=status=="ACTIVE"?std::max<std::uintmax_t>(bytes,64*MiB):bytes;
+  return Json{{"run_id",id},{"bytes",bytes},{"files",count},{"status",status},{"expired_inspect_only",expired},{"charged_bytes",charged}};
+ }catch(const std::exception&){return {};}
+}
+Json scan(const fs::path& root){
+ Json rows=Json::array();std::uintmax_t total=0;requirePlainPath(root);
+ if(!fs::exists(root))return {{"runs",rows},{"charged_bytes",0}};
+ for(const auto& entry:fs::directory_iterator(root)){
+  const auto recognized=recognizedRun(entry);if(!recognized)continue;
+  need(rows.size()<16,"DRAFT_ROOT_QUOTA_OR_UNKNOWN_ENTRY");
+  total+=recognized->at("charged_bytes").get<std::uintmax_t>();need(total<=512*MiB,"DRAFT_ROOT_QUOTA_EXCEEDED");rows.push_back(*recognized);
  }
  return {{"runs",rows},{"charged_bytes",total}};
 }
@@ -71,7 +92,7 @@ void requirePlainPath(const fs::path& p){
  for(const auto& part:p){current/=part;auto a=GetFileAttributesW(current.c_str());if(a==INVALID_FILE_ATTRIBUTES){need(GetLastError()==ERROR_FILE_NOT_FOUND||GetLastError()==ERROR_PATH_NOT_FOUND,"PATH_UNAVAILABLE");continue;}need(!(a&FILE_ATTRIBUTE_REPARSE_POINT),"PATH_ALIAS_REJECTED");}
  if(fs::exists(p)&&fs::is_regular_file(p))need(fs::hard_link_count(p)==1,"PATH_HARDLINK_REJECTED");
 }
-DraftStore::DraftStore(fs::path root,std::function<std::uintmax_t(const fs::path&)> freeBytes):root_(std::move(root)),freeBytes_(std::move(freeBytes)){requirePlainPath(root_);}
+DraftStore::DraftStore(fs::path root,std::function<std::uintmax_t(const fs::path&)> freeBytes):root_(std::move(root)),freeBytes_(std::move(freeBytes)){if(!root_.empty())requirePlainPath(root_);}
 fs::path DraftStore::path(const std::string& name)const{need(!run_.empty()&&names.count(name),"DRAFT_NAME_REJECTED");auto p=run_/name;requirePlainPath(p);return p;}
 void DraftStore::begin(const std::string& id){
  need(run_.empty()&&id.size()==64&&id.find_first_not_of("0123456789abcdef")==std::string::npos,"DRAFT_RUN_REJECTED");

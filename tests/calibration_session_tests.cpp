@@ -126,7 +126,23 @@ int main(int argc,char** argv)try{
  {fixture::Run r(base);r.confirmed();auto w=*r.session->frozenInput();r.provider.fresh();r.provider.edit([&]{auto s=state(std::get<mb::c1::TrackerObservation>(r.provider.latest.frames.front().envelope),77);r.provider.latest.frames.push_back({s,"fixture-peer",r.time});});r.session->tick();CHECK(r.session->frozenInput()->initialPoseFloor==w.initialPoseFloor&&!r.session->frozenInput()->initialStateFloor);CHECK(r.session->highwaters().first>w.initialPoseFloor&&r.session->highwaters().second==77);pass("T08 immutable pose/state None floors vs independent moving highwaters");}
  for(int mode=0;mode<7;++mode){fixture::Run r(base);r.confirmed();r.provider.edit([&]{if(mode==0)r.provider.latest.identity.session=S2;if(mode==1)r.provider.latest.identity.clock=S2;if(mode==2)r.provider.latest.identity.standing="reset";if(mode==3)++r.provider.latest.identity.referenceGeneration;if(mode==4)r.provider.latest.absent=true;if(mode==5)r.provider.latest.eventOverflow=true;if(mode==6)r.provider.latest.identity.peer="foreign";});r.session->tick();CHECK(r.session->phase()=="INSPECT_ONLY");pass("T07/T08/T10 sticky lifetime/reference/absence/overflow/peer change");}
  {fixture::Run r(base);r.confirmed();r.provider.edit([&]{auto& p=std::get<mb::c1::TrackerObservation>(r.provider.latest.frames.front().envelope);p.position=mb::Vec{9,8,7};});r.session->tick();CHECK(r.session->phase()=="INSPECT_ONLY");pass("T08 same sequence different content rejected");}
- {fixture::Run r(base);auto p=r.prepared();auto old=r.time.load();r.time+=50000001;CHECK(r.execute(r.commit(p))["reason"]=="NOT_READY_STALE");r.provider.fresh();auto j=r.command("prepare_commit");j["result_id"]=p["result_id"];auto fresh=r.execute(j);CHECK(fresh["status"]=="PREPARED"&&fresh["candidate_sha256"]==p["candidate_sha256"]&&fresh["review_token"]!=p["review_token"]);CHECK(r.session->frozenInput()->initialPoseFloor==0&&r.time>old);pass("T09 transient stale blocks; explicit reprepare same candidate/new token");}
+ // A completed normal measurement is immutable. The short capture-freshness
+ // window no longer gates its preparation or save; one-second liveness still
+ // invalidates below, and recording freshness remains covered separately.
+ for(bool preparedBeforeDelay:{false,true})for(auto delay:{50000001LL,lc::second-1}){
+  fixture::Run r(base);auto measured=r.result();const auto resultId=measured["result"]["result_id"];
+  auto resultPath=r.env.draftRoot/r.session->runId()/"result.json";const auto resultBytes=mb::readConfigBytes(resultPath);const auto high=r.session->highwaters();
+  auto prepare=[&]{auto j=r.command("prepare_commit");j["result_id"]=resultId;return r.execute(j);};
+  lc::Json p;if(preparedBeforeDelay){p=prepare();CHECK(p["status"]=="PREPARED");}
+  r.time+=delay; // No new valid pose/reference is supplied to renew liveness.
+  auto ready=prepare();CHECK(ready["status"]=="PREPARED"&&ready["result_id"]==resultId);
+  if(preparedBeforeDelay)CHECK(ready["candidate_sha256"]==p["candidate_sha256"]&&ready["review_token"]!=p["review_token"]);
+  const auto candidate=mb::readConfigBytes(std::filesystem::u8path(ready["candidate_path"].get<std::string>()));
+  CHECK(mb::readConfigBytes(resultPath)==resultBytes&&r.session->solveCalls()==1&&r.provider.captures==1&&r.session->highwaters()==high);
+  CHECK(r.execute(r.commit(ready))["status"]=="SAVED"&&mb::readConfigBytes(r.path)==candidate&&r.session->commitCalls()==1);
+  CHECK(mb::readConfigBytes(resultPath)==resultBytes&&r.session->frozenInput()->initialPoseFloor==0&&r.session->solveCalls()==1&&r.provider.captures==1);
+  pass("T09 completed normal RESULT_READY/PREPARED survives50ms..less-than1s staleness; immutable result/exact candidate saved once without recapture");
+ }
  for(auto delta:{lc::second,10*60*lc::second}){fixture::Run r(base);auto p=r.prepared();r.time+=delta;r.session->tick();CHECK(r.session->phase()=="INSPECT_ONLY"&&mb::readConfigBytes(r.path)==r.original);pass("T09/T23 liveness/review expiry cannot revive");}
  {fixture::Run r(base);auto c=r.confirmed();r.time+=10*lc::second;r.provider.fresh();auto j=r.command("begin");j["confirmation_token"]=c["confirmation_token"];CHECK(r.execute(j)["reason"]=="CONFIRMATION_EXPIRED");CHECK(r.provider.captures==0);pass("T06 confirmation equal-deadline expired before capture");}
  {fixture::Run r(base);auto p=r.prepared();auto changed=r.original+" ";{std::ofstream f(r.path,std::ios::binary|std::ios::trunc);f<<changed;}CHECK(r.execute(r.commit(p))["status"]=="REJECTED"&&r.session->commitCalls()==0&&mb::readConfigBytes(r.path)==changed);pass("T07/T16 exact bytes detect same-revision whitespace drift before CAS");}

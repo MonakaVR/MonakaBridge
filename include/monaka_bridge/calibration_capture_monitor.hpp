@@ -67,7 +67,7 @@ public:
  CaptureSnapshot snapshot()const;
  CaptureSnapshot check(std::int64_t now,bool fresh);
  Barrier barrier(const std::string& request,std::int64_t maximumWait=10*second);
- Admission admit(const Barrier&,std::int64_t now);
+ Admission admit(const Barrier&,std::int64_t now,bool fresh=true);
  void record(const std::function<void(const RecordingDelivery&)>&);
   void recordPoint(const std::function<bool(const RecordingDelivery&)>&,std::int64_t deadline);
  void invalidate(const std::string&);
