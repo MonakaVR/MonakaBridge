@@ -31,7 +31,11 @@ struct Api final:lc::CalibrationReferenceApi {
  bool event(vr::VREvent_t& e)override{s.thread();++s.eventCalls;if(s.events.empty())return false;e=s.events.front();s.events.pop_front();return true;}
  vr::HmdMatrix34_t standing()override{s.thread();return s.frame;}
  void poses(vr::ETrackingUniverseOrigin origin,float prediction,std::array<vr::TrackedDevicePose_t,vr::k_unMaxTrackedDeviceCount>& out)override{
-  s.thread();++s.poseCalls;s.origin=origin;s.prediction=prediction;if(s.poseHook)s.poseHook();for(auto index:{0,1}){auto& p=out[index];p.bDeviceIsConnected=s.connected;p.bPoseIsValid=s.valid;p.eTrackingResult=vr::TrackingResult_Running_OK;p.mDeviceToAbsoluteTracking=matrix(mb::composeRigid(mb::composeRigid(s.world,s.source()),s.extrinsic));}s.time+=s.queryDelay;
+  s.thread();++s.poseCalls;s.origin=origin;s.prediction=prediction;if(s.poseHook)s.poseHook();
+  auto pose=mb::composeRigid(mb::composeRigid(s.world,s.source()),s.extrinsic);
+  if(origin==vr::TrackingUniverseStanding)pose=mb::composeRigid(lc::calibrationReferenceRigid(s.frame),pose);
+  else CHECK(origin==vr::TrackingUniverseRawAndUncalibrated);
+  for(auto index:{0,1}){auto& p=out[index];p.bDeviceIsConnected=s.connected;p.bPoseIsValid=s.valid;p.eTrackingResult=vr::TrackingResult_Running_OK;p.mDeviceToAbsoluteTracking=matrix(pose);}s.time+=s.queryDelay;
  }
  vr::ETrackedDeviceClass deviceClass(vr::TrackedDeviceIndex_t i)override{s.thread();return i==0?vr::TrackedDeviceClass_HMD:(i==1||(i==2&&s.ambiguous)?vr::TrackedDeviceClass_Controller:vr::TrackedDeviceClass_Invalid);}
  vr::ETrackedControllerRole role(vr::TrackedDeviceIndex_t i)override{s.thread();return i==1||i==2?s.controllerRole:vr::TrackedControllerRole_Invalid;}

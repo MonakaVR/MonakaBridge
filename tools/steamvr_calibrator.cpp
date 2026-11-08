@@ -217,15 +217,23 @@ bool OpenAlignmentMapping(AlignmentMapping& ipc, const Options& options, std::st
 }
 bool CheckMapping(const AlignmentMapping& ipc,std::string& error) {
  try {
-  mb::validateWorldCalibrationTarget(mb::loadConfig(ipc.path),ipc.target);return true;
+  const auto current=mb::loadConfig(ipc.path);
+  if(current.policy!=ipc.config.policy)throw std::invalid_argument("calibration output policy changed; select and measure again");
+  mb::validateWorldCalibrationTarget(current,ipc.target);return true;
  }catch(const std::exception& e){error=e.what();return false;}
 }
 bool WriteAlignment(const AlignmentMapping& ipc,const mb::Rigid& transform,std::string& error) {
  try {
   auto current=mb::loadConfig(ipc.path);
+  if(current.policy!=ipc.config.policy)throw std::invalid_argument("calibration output policy changed; select and measure again");
   auto candidate=mb::worldCalibrationCandidate(current,ipc.target,transform,true);
   mb::saveConfig(ipc.path,candidate);return true;
  }catch(const std::exception& e){error=e.what();return false;}
+}
+
+template<class System>void PollReferencePoses(System* system,const AlignmentMapping& mapping,vr::TrackedDevicePose_t* poses){
+ const auto origin=mapping.config.policy==mb::Policy::Steamvr?vr::TrackingUniverseRawAndUncalibrated:vr::TrackingUniverseStanding;
+ system->GetDeviceToAbsoluteTrackingPose(origin,0.0F,poses,vr::k_unMaxTrackedDeviceCount);
 }
 
 std::string GetDeviceStringProperty(vr::IVRSystem* system,
@@ -455,8 +463,7 @@ std::optional<mb::PointCorrespondence> CapturePoint(
         static_cast<std::int64_t>(options.samples)*options.intervalMs*30));
     const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(timeoutMs);
     while(valid<options.samples&&std::chrono::steady_clock::now()<deadline){
-        system->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding,0.0F,
-            poses,vr::k_unMaxTrackedDeviceCount);
+        PollReferencePoses(system,mapping,poses);
         const auto native=mirror.receivePoint();
         const auto& reference=poses[referenceIndex];
         if(native&&reference.bDeviceIsConnected&&reference.bPoseIsValid){
@@ -557,7 +564,7 @@ int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options&
         <<" source="<<options.source<<" device="<<options.device<<" tracker="<<options.tracker
         <<" input-space="<<options.inputSpace<<" coordinate-revision="<<options.inputRevision
         <<" mapping-revision="<<mapping.target.mappingRevision<<" profile="<<mapping.target.binding.profile
-        <<" reference="<<ReferenceName(options.reference)<<" serial="<<serial<<" universe=Standing\n"
+        <<" reference="<<ReferenceName(options.reference)<<" serial="<<serial<<" universe="<<(mapping.config.policy==mb::Policy::Steamvr?"Raw":"Standing")<<"\n"
         <<"Keep the two devices rigidly fixed. Move left/right in a figure-eight, up/down,\n"
         <<"and forward/back while rotating yaw, pitch and roll. Avoid abrupt motion.\n"
         <<"Press Enter to record "<<options.trajectory.durationSeconds<<" seconds.\n";
@@ -575,7 +582,7 @@ int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options&
         const auto before=mb::monotonicNs();
         if(before-lastPoll>options.trajectory.maxAgeNs)throw std::invalid_argument("trajectory polling stalled; queued packet timing is unreliable");
         lastPoll=before;
-        system->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding,0.0F,poses,vr::k_unMaxTrackedDeviceCount);const auto after=mb::monotonicNs();
+        PollReferencePoses(system,mapping,poses);const auto after=mb::monotonicNs();
         const auto selected=FindReference(system,options.reference);
         if(selected&&(*selected!=*referenceIndex||GetDeviceSerial(system,*selected)!=serial))throw std::invalid_argument("reference device identity changed during recording");
         const auto& reference=poses[*referenceIndex];
@@ -592,10 +599,12 @@ int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options&
                 if(state->source_id==options.source&&state->device_id==options.device)recorder.deviceState(*state);
             }
         }
+        std::string mappingError;if(!CheckMapping(mapping,mappingError))throw std::invalid_argument(mappingError);
         recorder.checkConfig(mb::loadConfig(mapping.path));
         if(after>=nextStatus){auto q=recorder.quality();std::cout<<"Recording elapsed="<<double(after-start)/1e9<<"s paired="<<q.samples<<" extent="<<q.extent[0]<<","<<q.extent[1]<<","<<q.extent[2]<<"m rotation="<<q.rotation<<"rad diversity="<<q.axisDiversity<<"\n";nextStatus=after+1000000000;}
         std::this_thread::sleep_for(std::chrono::milliseconds(options.intervalMs));
     }
+    std::string mappingError;if(!CheckMapping(mapping,mappingError))throw std::invalid_argument(mappingError);
     recorder.checkConfig(mb::loadConfig(mapping.path));const auto solved=recorder.solve();
     // Solver time is outside capture, but a new Standing origin invalidates W.
     for(int i=0;i<1024;++i){
@@ -627,8 +636,10 @@ int RunTrajectory(vr::IVRSystem* system,AlignmentMapping& mapping,const Options&
         <<"\nAll-pair residual position RMS/max m: "<<all.rmsPosition<<" / "<<all.maxPosition<<"\nAll-pair orientation RMS/max rad: "<<all.rmsOrientation<<" / "<<all.maxOrientation
         <<"\nTimestamp model: local arrival minus packet age; nearest pairing bound="<<options.trajectory.maxPairingDeltaNs/1000000<<"ms. Device/transport delay NOT calibrated.\n"
         <<"Input session: "<<recorder.session().value_or("unknown")<<"\n";
+    if(!CheckMapping(mapping,mappingError))throw std::invalid_argument(mappingError);
     if(!options.apply){std::cout<<"Measurement only; configuration unchanged. Explicit --apply is required.\n";return 0;}
     const auto current=mb::loadConfig(mapping.path);recorder.checkConfig(current);
+    if(current.policy!=mapping.config.policy)throw std::invalid_argument("calibration output policy changed; select and measure again");
     mb::saveConfig(mapping.path,mb::worldCalibrationCandidate(current,mapping.target,solved.world,true));
     std::cout<<"Applied source-side world transform; mapping_revision incremented once. Extrinsic/mount/profile unchanged. Service not restarted.\n";return 0;
 }

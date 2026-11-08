@@ -75,7 +75,8 @@ ProviderBatch RuntimeCaptureProvider::poll(){
  const auto before=clock_();need(before>=0&&(lastPoll_<0||before>=lastPoll_),"MONOTONIC_CLOCK_ROLLBACK");
  need(lastPoll_<0||before-lastPoll_<=50000000,"REFERENCE_POLL_STALLED");lastPoll_=before;
  std::array<vr::TrackedDevicePose_t,vr::k_unMaxTrackedDeviceCount> poses{};
- api_->poses(vr::TrackingUniverseStanding,0.0F,poses);const auto after=clock_();need(after>=before,"MONOTONIC_CLOCK_ROLLBACK");
+ const auto origin=configuration()->referenceOrigin()==ReferenceOrigin::Raw?vr::TrackingUniverseRawAndUncalibrated:vr::TrackingUniverseStanding;
+ api_->poses(origin,0.0F,poses);const auto after=clock_();need(after>=before,"MONOTONIC_CLOCK_ROLLBACK");
  need(after-before<=50000000,"REFERENCE_QUERY_STALLED");
  auto afterFrame=api_->standing();calibrationReferenceRigid(afterFrame);
  need(sameStandingValues(beforeFrame,afterFrame)&&selectReference()==index&&api_->serial(index)==serial&&api_->universe()==universe&&api_->generation()==generation,"REFERENCE_QUERY_FRAME_CHANGED");

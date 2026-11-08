@@ -40,7 +40,28 @@ The alignment command updates all mappings sharing the selected source/input-map
 OpenVR calibrator now obtains the exact native tracker pose from the existing read-only Utility
 Observation mirror on `127.0.0.1:29813`; it does not require the Monaka Direct driver and never
 uses health JSON as a correctness input. The mirror is before profile/world/mount transformation,
-while the left/right controller or HMD reference is read from SteamVR's standing universe.
+while the left/right controller or HMD reference origin follows the selected output policy.
+
+For `steamvr` only, both local-API calibration and the legacy static/trajectory
+calibrator sample the reference in OpenVR Raw space. The thin Direct driver submits
+already calibrated poses with an identity WorldFromDriver transform; SteamVR then
+applies its Raw-to-Standing room transform once. Saving Standing-space numbers as
+Raw would apply that room transform twice, affecting both position and orientation.
+The internal reference-origin choice is frozen from the validated config at Open;
+it adds no JSON/wire field and does not change solver, World, Mount or driver math.
+The native provider's Standing matrix, universe, reset-event, serial, generation
+and timing guards still apply when its reference pose is sampled in Raw.
+
+`monaka`, `both` and `disabled` retain Standing reference capture. Generic Monaka
+routing is unchanged. **The Direct frame mismatch under `both` remains unresolved**;
+this SteamVR-only correction does not make a shared World correct for both routes.
+Changing between a Raw-target and Standing-target policy requires recalibration
+against the intended destination space and its correct `world_revision`. Never
+reuse a Raw World as a Standing World by changing only the policy. Calibration
+retains the explicitly selected destination revision; it does not infer or migrate
+existing Worlds. Any repair of an already saved transform is a separately reviewed
+explicit migration. Software fixture checks do not establish overall runtime or
+physical HIL acceptance.
 
 Calibration requires explicit logical tracker, source, device, input-space and input-revision
 selection. It locks the first source session and aborts if session or coordinate-space revision

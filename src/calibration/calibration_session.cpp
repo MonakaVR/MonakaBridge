@@ -68,7 +68,8 @@ std::shared_ptr<const ProviderOpenOptions> CalibrationSession::makeProviderOptio
  FrozenMeasurementTarget target,ProviderOpenOptions::Deployment deployment){
  const auto& b=target.target().binding;std::optional<CapabilityProfile> contract;
  auto found=config.contracts.find({b.source,b.device});if(found!=config.contracts.end())contract=found->second;
- return std::shared_ptr<const ProviderOpenOptions>(new ProviderOpenOptions(std::move(target),std::move(contract),std::move(deployment)));
+ const auto origin=config.policy==Policy::Steamvr?ReferenceOrigin::Raw:ReferenceOrigin::Standing;
+ return std::shared_ptr<const ProviderOpenOptions>(new ProviderOpenOptions(std::move(target),std::move(contract),std::move(deployment),origin));
 }
 
 struct CalibrationSession::Impl {

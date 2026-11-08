@@ -24,6 +24,7 @@ Json parseRequest(const std::string&);
 
 // Internal owning configuration, not a source/session witness or wire model.
 // Identity/profile/revision are accessed through the existing Frozen type.
+enum class ReferenceOrigin { Raw, Standing };
 class ProviderOpenOptions {
 public:
     ProviderOpenOptions(const ProviderOpenOptions&)=default;
@@ -37,6 +38,7 @@ public:
     const std::string& referenceRole()const{return deployment_.referenceRole;}
     bool readOnly()const{return deployment_.readOnly;}
     bool staticMode()const{return deployment_.staticMode;}
+    ReferenceOrigin referenceOrigin()const{return referenceOrigin_;}
     const char* association()const{return "operator_declared / process_owner_unverified";}
 private:
     struct Deployment {
@@ -49,8 +51,9 @@ private:
     const FrozenMeasurementTarget target_;
     const std::optional<CapabilityProfile> contract_;
     const Deployment deployment_;
-    ProviderOpenOptions(FrozenMeasurementTarget target,std::optional<CapabilityProfile> contract,Deployment deployment)
-        :target_(std::move(target)),contract_(std::move(contract)),deployment_(std::move(deployment)){}
+    const ReferenceOrigin referenceOrigin_;
+    ProviderOpenOptions(FrozenMeasurementTarget target,std::optional<CapabilityProfile> contract,Deployment deployment,ReferenceOrigin origin)
+        :target_(std::move(target)),contract_(std::move(contract)),deployment_(std::move(deployment)),referenceOrigin_(origin){}
     friend class CalibrationSession;
 };
 
